@@ -1,0 +1,246 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C5255191-ACB0-453F-AFD8-9E3E2ED07038}</ProjectGuid>
+    <RootNamespace>VelocityProvider</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">obj64\Release\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkIncremental>
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+    <CodeAnalysisRuleSet Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AllRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+    <CodeAnalysisRuleAssemblies Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>X64</TargetEnvironment>
+      <TypeLibraryName>..\..\bin64\Release\VelocityProvider.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <AdditionalIncludeDirectories>..\..\TBSDK\include;include;..\..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\include;..\..\..\ThirdParty\rfa_6.5.0.E2\Include\rwf;..\..\..\ThirdParty\rfa_6.5.0.E2\Include\;..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\include;..\..\ThirdParty\rfa_6.5.0.E2\Include\rwf;..\..\ThirdParty\rfa_6.5.0.E2\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;WIN64;NDEBUG;_WINDOWS;_USRDLL;VelocityProvider_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>false</StringPooling>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeaderOutputFile>obj64\Release\RFAVelocityProvider.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>obj64\Release\</AssemblerListingLocation>
+      <ObjectFileName>obj64\Release\</ObjectFileName>
+      <ProgramDataBaseFileName>obj64\Release\</ProgramDataBaseFileName>
+      <BrowseInformation>
+      </BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>/nodefaultlib:"MSVCRTd.LIB"  /nodefaultlib:"MSVCPRTd.LIB" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MSVCRT.LIB;MSVCPRT.LIB;PluginFramework.lib;Utility.lib;SEDll.lib;xerces-c_3.lib;RFA6_Common100_x64.lib;RFA6_Config100_x64.lib;RFA6_Connections100_x64.lib;RFA6_Connections_OMM100_x64.lib;RFA6_Data100_x64.lib;RFA6_Logger100_x64.lib;RFA6_Sessionlayer100_x64.lib;FlexRecord.lib</AdditionalDependencies>
+      <ShowProgress>NotSet</ShowProgress>
+      <OutputFile>..\bin64\Release\RFAVelocityProvider.dll</OutputFile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>..\..\TBSDK\lib64\Release;..\..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\lib;..\..\..\ThirdParty\rfa_6.5.0.E2\Libs\WIN_64_VS100;..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\lib;..\..\ThirdParty\rfa_6.5.0.E2\Libs\WIN_64_VS100;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>..\..\bin64\Release\RFAVelocityProvider.pdb</ProgramDatabaseFile>
+      <SetChecksum>false</SetChecksum>
+      <ImportLibrary>..\..\bin64\Release\RFAVelocityProvider.lib</ImportLibrary>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TargetEnvironment>X64</TargetEnvironment>
+      <TypeLibraryName>..\..\bin64\Release\VelocityProvider.tlb</TypeLibraryName>
+      <HeaderFileName>
+      </HeaderFileName>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <AdditionalIncludeDirectories>include;..\..\TBSDK\include;..\..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\include;..\..\..\ThirdParty\rfa_6.5.0.E2\Include\rwf;..\..\..\ThirdParty\rfa_6.5.0.E2\Include\;..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\include;..\..\ThirdParty\rfa_6.5.0.E2\Include\rwf;..\..\ThirdParty\rfa_6.5.0.E2\Include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;WIN64;_DEBUG;_WINDOWS;_USRDLL;VelocityProvider_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <StringPooling>true</StringPooling>
+      <MinimalRebuild>false</MinimalRebuild>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <PrecompiledHeaderOutputFile>obj64\Debug\RFAVelocityProvider.pch</PrecompiledHeaderOutputFile>
+      <AssemblerListingLocation>obj64\Debug\</AssemblerListingLocation>
+      <ObjectFileName>obj64\Debug\</ObjectFileName>
+      <ProgramDataBaseFileName>obj64\Debug\</ProgramDataBaseFileName>
+      <BrowseInformation>true</BrowseInformation>
+      <WarningLevel>Level3</WarningLevel>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+    </ResourceCompile>
+    <Link>
+      <AdditionalOptions>/nodefaultlib:"MSVCRTd.LIB"  /nodefaultlib:"MSVCPRTd.LIB" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>MSVCRTD.LIB;MSVCPRTD.LIB;PluginFramework.lib;Utility.lib;SEDll.lib;xerces-c_3D.lib;RFA6_Common100_x64.lib;RFA6_Config100_x64.lib;RFA6_Connections100_x64.lib;RFA6_Connections_OMM100_x64.lib;RFA6_Data100_x64.lib;RFA6_Logger100_x64.lib;RFA6_Sessionlayer100_x64.lib;FlexRecord.Lib</AdditionalDependencies>
+      <ShowProgress>NotSet</ShowProgress>
+      <OutputFile>..\bin64\Debug\RFAVelocityProvider.dll</OutputFile>
+      <SuppressStartupBanner>false</SuppressStartupBanner>
+      <AdditionalLibraryDirectories>..\..\TBSDK\lib64\Debug;..\..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\lib;..\..\..\ThirdParty\rfa_6.5.0.E2\Libs\WIN_64_VS100;..\..\ThirdParty\xerces-c-3.1.1-x86_64-windows-vc-10.0\lib;..\..\ThirdParty\rfa_6.5.0.E2\Libs\WIN_64_VS100;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>..\..\bin64\Debug\RFAVelocityProvider.pdb</ProgramDatabaseFile>
+      <ImportLibrary>..\..\bin64\Debug\RFAVelocityProvider.lib</ImportLibrary>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+    <PostBuildEvent>
+      <Command>
+      </Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\ApplicationManager.cpp" />
+    <ClCompile Include="src\Authorizer.cpp" />
+    <ClCompile Include="src\ClientManager.cpp" />
+    <ClCompile Include="src\ConfigManager.cpp" />
+    <ClCompile Include="src\DataGenerator.cpp" />
+    <ClCompile Include="src\DictionaryGenerator.cpp" />
+    <ClCompile Include="src\DictionaryManager.cpp" />
+    <ClCompile Include="src\DictionaryStreamItem.cpp" />
+    <ClCompile Include="src\DirectoryManager.cpp" />
+    <ClCompile Include="src\DomainManager.cpp" />
+    <ClCompile Include="src\InstrumentManager.cpp" />
+    <ClCompile Include="src\InstrumentStreamItem.cpp" />
+    <ClCompile Include="src\LoginManager.cpp" />
+    <ClCompile Include="src\MarketPriceGenerator.cpp" />
+    <ClCompile Include="src\MarketPriceStreamItem.cpp" />
+    <ClCompile Include="src\RDMDict.cpp" />
+    <ClCompile Include="src\RDMDictDef.cpp" />
+    <ClCompile Include="src\RDMDictionaryDecoder.cpp" />
+    <ClCompile Include="src\RDMDictionaryEncoder.cpp" />
+    <ClCompile Include="src\ReqRouter.cpp" />
+    <ClCompile Include="src\ServiceDirectory.cpp" />
+    <ClCompile Include="src\ServiceDirectoryStreamItem.cpp" />
+    <ClCompile Include="src\SessionManager.cpp" />
+    <ClCompile Include="src\StreamItem.cpp" />
+    <ClCompile Include="src\UserContext.cpp" />
+    <ClCompile Include="src\VelocityProvider.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\ApplicationManager.h" />
+    <ClInclude Include="include\Authorizer.h" />
+    <ClInclude Include="include\ClientManager.h" />
+    <ClInclude Include="include\ConfigManager.h" />
+    <ClInclude Include="include\DataGenerator.h" />
+    <ClInclude Include="include\DictionaryGenerator.h" />
+    <ClInclude Include="include\DictionaryManager.h" />
+    <ClInclude Include="include\DictionaryStreamItem.h" />
+    <ClInclude Include="include\DirectoryManager.h" />
+    <ClInclude Include="include\DomainManager.h" />
+    <ClInclude Include="include\EventQueueDispatcher.h" />
+    <ClInclude Include="include\InstrumentManager.h" />
+    <ClInclude Include="include\InstrumentStreamItem.h" />
+    <ClInclude Include="include\LoginManager.h" />
+    <ClInclude Include="include\MarketPriceGenerator.h" />
+    <ClInclude Include="include\MarketPriceStreamItem.h" />
+    <ClInclude Include="include\RDMDict.h" />
+    <ClInclude Include="include\RDMDictDef.h" />
+    <ClInclude Include="include\rdmdictionarydecoder.h" />
+    <ClInclude Include="include\RDMDictionaryEncoder.h" />
+    <ClInclude Include="include\RDMHeaders.h" />
+    <ClInclude Include="include\ReqRouter.h" />
+    <ClInclude Include="include\ServiceDirectory.h" />
+    <ClInclude Include="include\ServiceDirectoryStreamItem.h" />
+    <ClInclude Include="include\SessionManager.h" />
+    <ClInclude Include="include\StreamItem.h" />
+    <ClInclude Include="include\UserContext.h" />
+    <ClInclude Include="include\VelocityProvider.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
