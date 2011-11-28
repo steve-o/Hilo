@@ -85,6 +85,9 @@ private:
 	MarketPriceGenerator*	_marketPriceGenerator;
     EventQueueDispatcher*	_mDispatcher;
 
+	// RMDS service name
+	RFA_String					_mServiceName;
+
 	//Map of FlexRecord Definitions
 	typedef map<U32, vpf::FlexRecData*>	INT2FRDATA_MAP;
 	INT2FRDATA_MAP					mFlexRecDataMap;

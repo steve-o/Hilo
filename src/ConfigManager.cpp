@@ -105,6 +105,7 @@ void ConfigManager::populateAPPConfig()
 		_configDatabase = rfa::config::ConfigDatabase::acquire(_configName);
 		assert(_configDatabase);
 
+		RFA_String serviceName = _configTree->getChildAsString("serviceName", "VTA");
 		RFA_String fieldDictionaryFilename = _configTree->getChildAsString("FieldDictionaryFilename", "./SampleRDMFieldDictionary");
 		RFA_String enumDictionaryFilename = _configTree->getChildAsString("EnumDictionaryFilename", "./SampleRDMEnumType.def");
 
@@ -112,6 +113,7 @@ void ConfigManager::populateAPPConfig()
 		assert(_stagingConfigDatabase);
 
 		_stagingConfigDatabase->setString("\\Session", "VelocitySession");
+		_stagingConfigDatabase->setString("\\ServiceName", serviceName.c_str());
 		_stagingConfigDatabase->setString("\\FieldDictionaryFilename", fieldDictionaryFilename.c_str());
 		_stagingConfigDatabase->setString("\\EnumDictionaryFilename", enumDictionaryFilename.c_str());
 		
@@ -121,20 +123,20 @@ void ConfigManager::populateAPPConfig()
 		_stagingConfigDatabase->setString("\\Login\\userNames", "user,user1");
 
 		_stagingConfigDatabase->setString("\\Services" ,NULL);
-		_stagingConfigDatabase->setString("\\Services\\VelocityService", "");
-		_stagingConfigDatabase->setString("\\Services\\VelocityService\\Vendor", "VelocityVendor" );
-		_stagingConfigDatabase->setBool("\\Services\\VelocityService\\IsSource", true);
-		_stagingConfigDatabase->setString("\\Services\\VelocityService\\QoS", "");
-		_stagingConfigDatabase->setLong("\\Services\\VelocityService\\QoS\\Rate", 0);
-		_stagingConfigDatabase->setLong("\\Services\\VelocityService\\QoS\\Timeliness", 0);
-		_stagingConfigDatabase->setLong("\\Services\\VelocityService\\MaxNumRequests", 1000);
-		_stagingConfigDatabase->setBool("\\Services\\VelocityService\\AcceptingRequests", true);
-		_stagingConfigDatabase->setString("\\Services\\VelocityService\\Capabilities" , "5,6,7,9");
+		_stagingConfigDatabase->setString("\\Services\\VTA", "");
+		_stagingConfigDatabase->setString("\\Services\\VTA\\Vendor", "VelocityAnalytics" );
+		_stagingConfigDatabase->setBool("\\Services\\VTA\\IsSource", true);
+		_stagingConfigDatabase->setString("\\Services\\VTA\\QoS", "");
+		_stagingConfigDatabase->setLong("\\Services\\VTA\\QoS\\Rate", 0);
+		_stagingConfigDatabase->setLong("\\Services\\VTA\\QoS\\Timeliness", 0);
+		_stagingConfigDatabase->setLong("\\Services\\VTA\\MaxNumRequests", 1000);
+		_stagingConfigDatabase->setBool("\\Services\\VTA\\AcceptingRequests", true);
+		_stagingConfigDatabase->setString("\\Services\\VTA\\Capabilities" , "5,6,7,9");
 
 		_stagingConfigDatabase->setString("\\MarketPrice", NULL);
-		_stagingConfigDatabase->setString("\\MarketPrice\\VelocityService", NULL);
-		_stagingConfigDatabase->setLong("\\MarketPrice\\VelocityService\\UpdateInterval", 100);
-		_stagingConfigDatabase->setString("\\MarketPrice\\VelocityService\\ItemList", "");
+		_stagingConfigDatabase->setString("\\MarketPrice\\VTA", NULL);
+		_stagingConfigDatabase->setLong("\\MarketPrice\\VTA\\UpdateInterval", 100);
+		_stagingConfigDatabase->setString("\\MarketPrice\\VTA\\ItemList", "");
 
 
 		initTree();

@@ -301,11 +301,10 @@ void VelocityProvider::processEvent (vpf::Event* event)
 	}
 
 
-	rfa::common::RFA_String serviceName = "VelocityService";
 	rfa::common::RFA_String itemName = _subject.c_str();
 
 	AttribInfo attrib;
-	attrib.setServiceName(serviceName);
+	attrib.setServiceName(_mServiceName);
 	attrib.setName(itemName);
 	attrib.setNameType(INSTRUMENT_NAME_RIC);
 
@@ -501,7 +500,7 @@ bool  VelocityProvider::initConfig(const char *rfaConfigFile,const char *appConf
 Method Name	    : initDomainManagers
 
 Description     : Initializes helper classes like RequestRouter, Authorizer, LoginManger,
-				  DirectoryManger, etc.
+					  DirectoryManger, etc.
 
 Parameter(s)    : None
 
@@ -559,9 +558,11 @@ bool  VelocityProvider::initDictionary()
  
 	_appManager.rdmFieldDict = new RDMFieldDict();
 	RDMFileDictionaryDecoder decoder(*(_appManager.rdmFieldDict));
+	_mServiceName = _appManager.getAppConfigManager()->getString("ServiceName", "VTA");
     RFA_String fieldDictionaryFilename = _appManager.getAppConfigManager()->getString("FieldDictionaryFilename", "./SampleRDMFieldDictionary");
 	RFA_String enumDictionaryFilename = _appManager.getAppConfigManager()->getString("EnumDictionaryFilename", "./SampleRDMEnumType.def");
 
+	MsgLog (eMsgInfo, 1299952, "Velocity Provider: service name %s", _mServiceName.c_str());
 	MsgLog (eMsgInfo, 1299953, "Velocity Provider: field Dictionary File is %s", fieldDictionaryFilename.c_str());
 	MsgLog (eMsgInfo, 1299954, "Velocity Provider: enum Dictionary File is %s", enumDictionaryFilename.c_str());
 
@@ -602,7 +603,7 @@ Internals       : None
 bool VelocityProvider::initProvider()
 {
 	// Acquire a session
-    RFA_String sessionName = _appManager.appConfigManager->getString("Session", "RDMProvider");
+    RFA_String sessionName = _appManager.appConfigManager->getString("Session", "VelocitySession");
     _appManager.session = Session::acquire(sessionName);
 	assert (_appManager.session);
 
