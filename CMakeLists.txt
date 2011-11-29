@@ -38,42 +38,14 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 # platform specifics
 
 add_definitions(
-	-D_CRT_SECURE_NO_DEPRECATE
-# Vhayu developers haven't heard of _WIN64
-	-DWIN64
-	-DVelocityProvider_EXPORTS
 )
 
 #-----------------------------------------------------------------------------
 # source files
 
 set(cxx-sources
-	src/ApplicationManager.cpp
-	src/Authorizer.cpp
-	src/ClientManager.cpp
-	src/ConfigManager.cpp
-	src/DataGenerator.cpp
-	src/DictionaryGenerator.cpp
-	src/DictionaryManager.cpp
-	src/DictionaryStreamItem.cpp
-	src/DirectoryManager.cpp
-	src/DomainManager.cpp
-	src/InstrumentManager.cpp
-	src/InstrumentStreamItem.cpp
-	src/LoginManager.cpp
-	src/MarketPriceGenerator.cpp
-	src/MarketPriceStreamItem.cpp
-	src/RDMDict.cpp
-	src/RDMDictDef.cpp
-	src/RDMDictionaryDecoder.cpp
-	src/RDMDictionaryEncoder.cpp
-	src/ReqRouter.cpp
-	src/ServiceDirectory.cpp
-	src/ServiceDirectoryStreamItem.cpp
-	src/SessionManager.cpp
-	src/StreamItem.cpp
-	src/UserContext.cpp
-	src/VelocityProvider.cpp
+	src/velocity_receiver.cc
+	src/plugin.cc
 )
 
 include_directories(
@@ -100,14 +72,6 @@ target_link_libraries(RDMPublisher
 	PluginFramework.lib
 	Utility.lib
 	SEDll.lib
-	xerces-c_3.lib
-	RFA6_Common100_x64.lib
-	RFA6_Config100_x64.lib
-	RFA6_Connections100_x64.lib
-	RFA6_Connections_OMM100_x64.lib
-	RFA6_Data100_x64.lib
-	RFA6_Logger100_x64.lib
-	RFA6_Sessionlayer100_x64.lib
 )
 
 # end of file
