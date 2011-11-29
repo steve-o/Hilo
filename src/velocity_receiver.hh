@@ -37,10 +37,12 @@ namespace temp
 			MsgLog (eMsgFatal, __LINE__, __VA_ARGS__); \
 		} while (0)
 
+	typedef std::map<uint32_t, std::unique_ptr<vpf::FlexRecData>> flexrecord_map_t;
 
 	class velocity_receiver_t : public vpf::AbstractEventConsumer
 	{
 	public:
+
 		velocity_receiver_t();
 		virtual ~velocity_receiver_t();
 		virtual void init (const vpf::UserPluginConfig& config);
@@ -48,10 +50,21 @@ namespace temp
 		virtual void processEvent (vpf::Event* event);
 
 	protected:
+
+/* FlexRecord definition id => definition */
+		flexrecord_map_t m_flexrecord_map;
+
+/* Count of incoming FlexRecord events */
 		uint64_t m_flexrecord_events;
+
+/* Count of FlexRecord events with unknown identifier */
+		uint64_t m_unknown_flexrecords;
+
+/* Count of all discarded events */
 		uint64_t m_discarded_events;
 
-		void get_flexrecord_dictionary();
+		void on_flexrecord (std::unique_ptr<vpf::FlexRecordEvent> event);
+		void get_flexrecord_map();
 	};
 
 } /* namespace temp */
