@@ -7,10 +7,10 @@
 
 #include "velocity_receiver.hh"
 
-temp::velocity_receiver_t::velocity_receiver_t()
-	: m_flexrecord_events (0)
-	, m_unknown_flexrecords (0)
-	, m_discarded_events (0)
+temp::velocity_receiver_t::velocity_receiver_t() :
+	flexrecord_event_count (0),
+	unknown_flexrecord_count (0),
+	discarded_event_count (0)
 {
 }
 
@@ -23,12 +23,12 @@ temp::velocity_receiver_t::~velocity_receiver_t()
 
 void
 temp::velocity_receiver_t::init (
-	const vpf::UserPluginConfig& config
+	const vpf::UserPluginConfig& config_
 	)
 {
 	temp_info ("init: start");
 
-	vpf::AbstractEventConsumer::init (config);
+	vpf::AbstractEventConsumer::init (config_);
 
 	get_flexrecord_map();
 
@@ -46,8 +46,8 @@ temp::velocity_receiver_t::destroy()
 	temp_info ("summary: events={FlexRecord=%" PRIu64
 			", discarded=%" PRIu64
 			"}",
-			m_flexrecord_events,
-			m_discarded_events);
+			flexrecord_event_count,
+			discarded_event_count);
 
 	vpf::AbstractEventConsumer::destroy();
 
@@ -59,45 +59,45 @@ temp::velocity_receiver_t::destroy()
 
 void
 temp::velocity_receiver_t::processEvent (
-	vpf::Event*	pevent
+	vpf::Event*	event_
 	)
 {
-	std::unique_ptr<vpf::Event> vpf_event (pevent);
+	std::unique_ptr<vpf::Event> vpf_event (event_);
 
 	if (!vpf_event->isOfType (vpf::FlexRecordEvent::getEventType())) {
-		m_discarded_events++;
+		discarded_event_count++;
 		return;
 	}
 
 /* move to derived class */
 	std::unique_ptr<vpf::FlexRecordEvent> fr_event (static_cast<vpf::FlexRecordEvent*> (vpf_event.release()));
 
-	on_flexrecord (std::move (fr_event));
-	m_flexrecord_events++;
+	processFlexRecord (std::move (fr_event));
+	flexrecord_event_count++;
 }
 
 /* Incoming FlexRecord formatted update.
  */
 
 void
-temp::velocity_receiver_t::on_flexrecord (
-	std::unique_ptr<vpf::FlexRecordEvent> event
+temp::velocity_receiver_t::processFlexRecord (
+	std::unique_ptr<vpf::FlexRecordEvent> event_
 	)
 {
-	const uint32_t fr_id = event->getFlexRecBase()->fDefinitionId;
+	const uint32_t fr_id = event_->getFlexRecBase()->fDefinitionId;
 
 /* verify we have the FlexRecord identifier to decompress the contents */
-	flexrecord_map_t::const_iterator it = m_flexrecord_map.find (fr_id);
-	if (it == m_flexrecord_map.end()) {
+	const auto it = flexrecord_map.find (fr_id);
+	if (it == flexrecord_map.end()) {
 		temp_warn ("Unknown FlexRecord id %" PRIu32 " on symbol name '%s'",
 			fr_id,
-			event->getSymbolName());
-		m_unknown_flexrecords++;
+			event_->getSymbolName());
+		unknown_flexrecord_count++;
 		return;
 	}
 
 	temp_info ("symbol name=%s, flexrecord id=%" PRIu32,
-		event->getSymbolName(),
+		event_->getSymbolName(),
 		fr_id);
 }
 
@@ -116,15 +116,15 @@ temp::velocity_receiver_t::get_flexrecord_map()
 
 	for (std::vector<std::string>::const_iterator it = names.begin();
 	     it != names.end();
-	     it++)
+	     ++it)
 	{
 		const std::string& name = *it;
 		std::unique_ptr<vpf::FlexRecData> data (new vpf::FlexRecData (name.c_str()));
 
-		m_flexrecord_map.insert (make_pair (data->getDefinitionId(), std::move (data)));
+		flexrecord_map.insert (make_pair (data->getDefinitionId(), std::move (data)));
 	}
 
-	temp_info ("get_flexrecord_map: complete: %u entries.", m_flexrecord_map.size());
+	temp_info ("get_flexrecord_map: complete: %u entries.", flexrecord_map.size());
 }
 
 /* eof */
