@@ -11,10 +11,10 @@
 namespace temp
 {
 
-	class velocity_plugin_t : public vpf::ObjectFactory
+	class PluginFactory : public vpf::ObjectFactory
 	{
 	public:
-		velocity_plugin_t();
+		PluginFactory();
 		virtual void* newInstance (const char* type);
 	};
 

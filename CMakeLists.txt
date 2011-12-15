@@ -6,7 +6,14 @@ cmake_minimum_required (VERSION 2.8)
 
 project (RDMPublisher)
 
-set(VHAYU_DIR C:/Vhayu)
+set(VHAYU_ROOT C:/Vhayu)
+set(RFA_ROOT C:/rfa7.2.0.L1.win-shared.rrg)
+set(BOOST_ROOT C:/boost_1_48_0)
+set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
+
+set(Boost_USE_STATIC_LIBS ON)
+
+find_package (Boost 1.44 COMPONENTS thread REQUIRED)
 
 #-----------------------------------------------------------------------------
 # force off-tree build
@@ -44,22 +51,31 @@ add_definitions(
 # source files
 
 set(cxx-sources
-	src/velocity_receiver.cc
+	src/config.cc
+	src/error.cc
+	src/lock_impl_win.cc
+	src/logging.cc
 	src/plugin.cc
+	src/provider.cc
+	src/rfa.cc
+	src/rfa_logging.cc
+	src/temp.cc
 )
 
 include_directories(
 	include
-	${VHAYU_DIR}/Engine/TBSDK/Include
-	${VHAYU_DIR}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/include
-	${VHAYU_DIR}/Engine/ThirdParty/rfa_6.5.0.E2/Include/rwf
-	${VHAYU_DIR}/Engine/ThirdParty/rfa_6.5.0.E2/Include
+	${VHAYU_ROOT}/Engine/TBSDK/Include
+	${VHAYU_ROOT}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/include
+	${RFA_ROOT}/Include
+	${RFA_ROOT}/Include/rwf
+	${Boost_INCLUDE_DIRS}
 )
 
 link_directories(
-	${VHAYU_DIR}/Engine/TBSDK/Lib64/Release
-	${VHAYU_DIR}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/lib
-	${VHAYU_DIR}/Engine/ThirdParty/rfa_6.5.0.E2/Libs/WIN_64_VS100
+	${VHAYU_ROOT}/Engine/TBSDK/Lib64/Release
+	${VHAYU_ROOT}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/lib
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD
+	${Boost_LIBRARY_DIRS}
 )
 
 #-----------------------------------------------------------------------------
@@ -72,6 +88,15 @@ target_link_libraries(RDMPublisher
 	PluginFramework.lib
 	Utility.lib
 	SEDll.lib
+	RFA7_Common100_x64.lib
+	RFA7_Config100_x64.lib
+	RFA7_Logger100_x64.lib
+	RFA7_Data100_x64.lib
+	RFA7_Connections100_x64.lib
+	RFA7_Connections_OMM100_x64.lib
+	RFA7_SessionLayer100_x64.lib
+	${Boost_LIBRARIES}
+	ws2_32.lib
 )
 
 # end of file

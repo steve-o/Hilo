@@ -1,22 +1,23 @@
 
 #include "plugin.hh"
-#include "velocity_receiver.hh"
+#include "temp.hh"
 
-static temp::velocity_plugin_t g_factory_instance;
+static const char* kPluginType = "TempPlugin";
 
+static temp::PluginFactory g_factory_instance;
 
-temp::velocity_plugin_t::velocity_plugin_t()
+temp::PluginFactory::PluginFactory()
 {
-	registerType ("TempPlugin");
+	registerType (kPluginType);
 }
 
 void*
-temp::velocity_plugin_t::newInstance (
+temp::PluginFactory::newInstance (
 	const char*	type
 	)
 {
-	printf ("type: %s\n", type);
-	return new temp::velocity_receiver_t();
+	assert (0 == strcmp (kPluginType, type));
+	return new temp::temp_t();
 }
 
 /* eof */
