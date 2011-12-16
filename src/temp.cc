@@ -61,6 +61,19 @@ temp::temp_t::init (
 	if (!processFlexRecordDictionary())
 		goto cleanup;
 
+/* Verify we have the FlexRecord Quote record. */
+	CHECK(flexrecord_map_.end() != flexrecord_map_.find (kQuoteId));
+
+/* Create FlexRecord filter. */
+	binding_ = new FlexRecBinding (kQuoteId);
+	CHECK(nullptr == binding_);
+	binding_->Bind ("BidPrice", &filter_.bid_price);
+	binding_->Bind ("AskPrice", &filter_.ask_price);
+
+/* FlexRecord definition from the dictionary. */
+	quote_flexrecord_ = new vpf::FlexRecData (binding_);
+	CHECK(nullptr != quote_flexrecord_);
+
 /** RFA initialisation. **/
 	try {
 /* RFA context. */
@@ -137,6 +150,8 @@ temp::temp_t::clear()
 		event_queue_->destroy();
 	event_queue_ = nullptr;
 	delete rfa_; rfa_ = nullptr;
+	delete binding_; binding_ = nullptr;
+	flexrecord_map_.clear();
 }
 
 /* Plugin exit point.
@@ -201,13 +216,13 @@ temp::temp_t::processFlexRecord (
 /* Decompress the content using the FlexRecord definition.
  * FlexRecBlob will assumed not be nullptr but subject to ctor.
  */
-	VarFieldsView* view = quote_flexrecord_->deblobToView (fr_event->getFlexRecBlob());
-	if (nullptr == view) {
+	/* int = */ quote_flexrecord_->deblob (fr_event->getFlexRecBlob());
+/*	if (nullptr == view) {
 		LOG(WARNING) << "FlexRecord unpack failed for symbol name '" << fr_event->getSymbolName() << "'";
 		corrupt_flexrecord_count_++;
 		discarded_event_count_++;
 		return;
-	}
+	} */
 
 /* 7.5.9.1 Create a response message (4.2.2) */
 	rfa::message::RespMsg response;
@@ -251,8 +266,8 @@ temp::temp_t::processFlexRecord (
 		rfa::data::FieldListWriteIterator it;
 		it.start (fields_);
 
-		static const int kFlexBidPriceId = 24, kRdmBidPriceId = 22;
-		static const int kFlexAskPriceId = 30, kRdmAskPriceId = 25;
+		static const int kRdmBidPriceId = 22;
+		static const int kRdmAskPriceId = 25;
 
 static const int kRdmRdnDisplayId = 2;		/* RDNDISPLAY */
 static const int kRdmTradePriceId = 6;		/* TRDPRC_1 */
@@ -261,36 +276,22 @@ static const int kRdmTradePriceId = 6;		/* TRDPRC_1 */
 		rfa::data::DataBuffer dataBuffer;
 		rfa::data::Real64 real64;
 
-		const int fieldCount = quote_flexrecord_->getFieldCount();
-
-		for (int i = kFRFixedFields, j = 2 /* copy only two fields */;
-			i < fieldCount;
-			++i)
-		{
-			if ((0 == view[i].length) || (view[i].theType != VarFieldsEnums::t_double))
-				continue;
-
-			switch (view[i].fieldId) {
-			case kFlexBidPriceId:	field.setFieldID (kRdmBidPriceId); break;
-			case kFlexAskPriceId:	field.setFieldID (kRdmAskPriceId); break;
-/* Ignore all other fields. */
-			default: continue;
-			}
-
+		field.setFieldID (kRdmBidPriceId);
 /* PRICE field is a rfa::Real64 value specified as <mantissa> × 10⁴.
  * Rfa deprecates setting via <double> data types so we create a mantissa from
  * source value and consider that we publish to 4 decimal places.
  */
-			const int64_t mantissa = (int64_t)(*(const double*)view[i].data * 1000.0);
-			real64.setValue (mantissa);
-			real64.setMagnitudeType (rfa::data::ExponentNeg4);
-			dataBuffer.setReal64 (real64);
-			field.setData (dataBuffer);
-			it.bind (field);
-			if (0 == --j) break;
-/* FieldEntry::clear() is optional. */
-/* DataBuffer::clear() is optional. */
-		}
+		real64.setValue ((int64_t)(filter_.bid_price * 100000.0));
+		real64.setMagnitudeType (rfa::data::ExponentNeg6);
+		dataBuffer.setReal64 (real64);
+		field.setData (dataBuffer);
+		it.bind (field);
+
+		field.setFieldID (kRdmAskPriceId);
+		real64.setValue ((int64_t)(filter_.ask_price * 100000.0));
+		dataBuffer.setReal64 (real64);
+		field.setData (dataBuffer);
+		it.bind (field);
 
 {
 		field.setFieldID (kRdmRdnDisplayId);
@@ -302,6 +303,7 @@ static const int kRdmTradePriceId = 6;		/* TRDPRC_1 */
 		real64.setValue (++msft_stream_.count);
 		real64.setMagnitudeType (rfa::data::ExponentNeg2);
 		dataBuffer.setReal64 (real64);
+		field.setData (dataBuffer);
 		it.bind (field);
 }
 
@@ -355,16 +357,7 @@ temp::temp_t::processFlexRecordDictionary()
 		flexrecord_map_.insert (make_pair (data->getDefinitionId(), std::move (data)));
 	}
 	LOG(INFO) << "FlexRecord dictionary with " << flexrecord_map_.size() << " entries";
-
 	CHECK(!flexrecord_map_.empty());
-
-/* Verify we have the FlexRecord Quote record. */
-	const auto it = flexrecord_map_.find (kQuoteId);
-	CHECK(it != flexrecord_map_.end());
-
-/* FlexRecord definition from the dictionary. */
-	quote_flexrecord_ = it->second.get();
-	CHECK(nullptr != quote_flexrecord_);
 	return true;
 }
 

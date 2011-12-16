@@ -37,6 +37,12 @@ namespace temp
 		uint64_t	count;
 	};
 
+	struct flex_filter_t
+	{
+		double bid_price;
+		double ask_price;
+	};
+
 	class event_pump_t
 	{
 	public:
@@ -98,6 +104,10 @@ namespace temp
 
 /* Quote FlexRecord definition. */
 		vpf::FlexRecData* quote_flexrecord_;
+
+/* FlexRecord FID filter. */
+		flex_filter_t filter_;
+		FlexRecBinding* binding_;
 
 /* RFA context */
 		rfa_t* rfa_;
