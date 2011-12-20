@@ -90,17 +90,11 @@ namespace temp
 /* Event handler for incoming FlexRecords. */
 		void processFlexRecord (std::unique_ptr<vpf::FlexRecordEvent> event_);
 
-/* Load FlexRecord dictionary. */
-		bool processFlexRecordDictionary();
-
 /* Application configuration. */
 		const config_t config_;
 
 /* Significant failure has occurred, so ignore all runtime events flag */
 		bool is_shutdown_;
-
-/* FlexRecord definition id => definition */
-		std::map<uint32_t, std::unique_ptr<vpf::FlexRecData>> flexrecord_map_;
 
 /* Quote FlexRecord definition. */
 		vpf::FlexRecData* quote_flexrecord_;

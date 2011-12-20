@@ -57,13 +57,6 @@ temp::temp_t::init (
 
 	LOG(INFO) << config_;
 
-/* Retrieve FlexRecord dictionary. */
-	if (!processFlexRecordDictionary())
-		goto cleanup;
-
-/* Verify we have the FlexRecord Quote record. */
-	CHECK(flexrecord_map_.end() != flexrecord_map_.find (kQuoteId));
-
 /* Create FlexRecord filter. */
 	binding_ = new FlexRecBinding (kQuoteId);
 	CHECK(nullptr == binding_);
@@ -151,7 +144,6 @@ temp::temp_t::clear()
 	event_queue_ = nullptr;
 	delete rfa_; rfa_ = nullptr;
 	delete binding_; binding_ = nullptr;
-	flexrecord_map_.clear();
 }
 
 /* Plugin exit point.
@@ -336,29 +328,6 @@ static const int kRdmTradePriceId = 6;		/* TRDPRC_1 */
 
 	provider_->send (msft_stream_, static_cast<rfa::common::Msg&> (response));
 //	LOG(INFO) << "sent";
-}
-
-/* Enumerate the FlexRecord dictionary from the Analytic Engine process.
- */
-
-bool
-temp::temp_t::processFlexRecordDictionary()
-{
-	FlexRecDefinitionManager* manager = FlexRecDefinitionManager::GetInstance (nullptr);
-	std::vector<std::string> names;
-
-	manager->GetAllDefinitionNames (names);
-
-	for (auto it = names.begin();
-	     it != names.end();
-	     ++it)
-	{
-		std::unique_ptr<vpf::FlexRecData> data (new vpf::FlexRecData (it->c_str()));
-		flexrecord_map_.insert (make_pair (data->getDefinitionId(), std::move (data)));
-	}
-	LOG(INFO) << "FlexRecord dictionary with " << flexrecord_map_.size() << " entries";
-	CHECK(!flexrecord_map_.empty());
-	return true;
 }
 
 /* eof */
