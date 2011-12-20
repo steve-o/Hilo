@@ -11,21 +11,8 @@
 	<EventProcessor id="Trade-Pipe" type="Vhayu::EventPipeline">
 
 		<EventMapper id="Trade-Pipe-Mapper" type="Vhayu::AllEventMapper"/>
-		<EventConsumer id="Trade-Pipe-Consumer" type="VelocityProvider">
+		<EventConsumer id="Trade-Pipe-Consumer" type="TempPlugin">
 
-<!-- RFA configuration absolute paths -->
-
-			<Config rfaConfigDB="%s\providerRFA.cfg" 
-				appConfigDB="%s\providerAPP.cfg" />
-
-<!-- Publish trades on subject <symbol>.T -->
-			<TradeConsumer id="vvp-trade-publisher" type="VelocityProvider">T</TradeConsumer>
-
-<!-- Publish quotes on subject <symbol>.Q -->
-			<QuoteConsumer id="vvp-quote-publisher" type="VelocityProvider">Q</QuoteConsumer>
-
-<!-- Publish "FlexRecords" on subject <symbol>.FR -->
-			<FlexRecordConsumer id="FlexRecord-Publisher" type="VelocityProvider"></FlexRecordConsumer>
 
 		</EventConsumer>
 	</EventProcessor>
