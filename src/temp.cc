@@ -59,7 +59,7 @@ temp::temp_t::init (
 
 /* Create FlexRecord filter. */
 	binding_ = new FlexRecBinding (kQuoteId);
-	CHECK(nullptr == binding_);
+	CHECK(nullptr != binding_);
 	binding_->Bind ("BidPrice", &filter_.bid_price);
 	binding_->Bind ("AskPrice", &filter_.ask_price);
 
@@ -208,8 +208,8 @@ temp::temp_t::processFlexRecord (
 /* Decompress the content using the FlexRecord definition.
  * FlexRecBlob will assumed not be nullptr but subject to ctor.
  */
-	const int retval = quote_flexrecord_->deblob (fr_event->getFlexRecBlob());
-	if (1 != retval) {
+	const int deblob_status = quote_flexrecord_->deblob (fr_event->getFlexRecBlob());
+	if (1 != deblob_status) {
 		LOG(WARNING) << "FlexRecord unpack failed for symbol name '" << fr_event->getSymbolName() << "'";
 		corrupt_flexrecord_count_++;
 		discarded_event_count_++;
