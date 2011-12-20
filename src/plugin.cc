@@ -11,6 +11,8 @@ temp::PluginFactory::PluginFactory()
 	registerType (kPluginType);
 }
 
+/* no API to unregister type. */
+
 void*
 temp::PluginFactory::newInstance (
 	const char*	type

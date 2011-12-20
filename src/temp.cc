@@ -208,8 +208,8 @@ temp::temp_t::processFlexRecord (
 /* Decompress the content using the FlexRecord definition.
  * FlexRecBlob will assumed not be nullptr but subject to ctor.
  */
-	int status = quote_flexrecord_->deblob (fr_event->getFlexRecBlob());
-	if (1 != status) {
+	const int retval = quote_flexrecord_->deblob (fr_event->getFlexRecBlob());
+	if (1 != retval) {
 		LOG(WARNING) << "FlexRecord unpack failed for symbol name '" << fr_event->getSymbolName() << "'";
 		corrupt_flexrecord_count_++;
 		discarded_event_count_++;
