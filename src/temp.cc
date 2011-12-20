@@ -208,13 +208,13 @@ temp::temp_t::processFlexRecord (
 /* Decompress the content using the FlexRecord definition.
  * FlexRecBlob will assumed not be nullptr but subject to ctor.
  */
-	/* int = */ quote_flexrecord_->deblob (fr_event->getFlexRecBlob());
-/*	if (nullptr == view) {
+	int status = quote_flexrecord_->deblob (fr_event->getFlexRecBlob());
+	if (1 != status) {
 		LOG(WARNING) << "FlexRecord unpack failed for symbol name '" << fr_event->getSymbolName() << "'";
 		corrupt_flexrecord_count_++;
 		discarded_event_count_++;
 		return;
-	} */
+	}
 
 /* 7.5.9.1 Create a response message (4.2.2) */
 	rfa::message::RespMsg response;
