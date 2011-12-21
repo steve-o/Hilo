@@ -22,7 +22,7 @@ using rfa::common::RFA_String;
 static const RFA_String kContextName ("RFA");
 
 logging::LogEventProvider::LogEventProvider (
-	const temp::config_t& config,
+	const hilo::config_t& config,
 	rfa::common::EventQueue& event_queue
 	) :
 	config_ (config),

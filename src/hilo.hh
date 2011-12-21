@@ -1,6 +1,6 @@
 
-#ifndef __TEMP_HH__
-#define __TEMP_HH__
+#ifndef __HILO_HH__
+#define __HILO_HH__
 
 #pragma once
 
@@ -24,7 +24,7 @@
 #include "rfa_logging.hh"
 #include "provider.hh"
 
-namespace temp
+namespace hilo
 {
 /* Basic state for each item stream. */
 	struct broadcast_stream_t : item_stream_t
@@ -62,13 +62,13 @@ namespace temp
 		rfa::common::EventQueue& event_queue_;
 	};
 
-	class temp_t :
+	class hilo_t :
 		public vpf::AbstractEventConsumer,
 		boost::noncopyable
 	{
 	public:
-		temp_t();
-		virtual ~temp_t();
+		hilo_t();
+		virtual ~hilo_t();
 
 /* Plugin entry point. */
 		virtual void init (const vpf::UserPluginConfig& config_);
@@ -140,8 +140,8 @@ namespace temp
 
 	};
 
-} /* namespace temp */
+} /* namespace hilo */
 
-#endif /* __TEMP_HH__ */
+#endif /* __HILO_HH__ */
 
 /* eof */

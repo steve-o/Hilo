@@ -7,7 +7,7 @@
 #include "error.hh"
 
 const char*
-temp::severity_string (
+hilo::severity_string (
 	const int severity_
 	)
 {
@@ -24,7 +24,7 @@ temp::severity_string (
 }
 
 const char*
-temp::classification_string (
+hilo::classification_string (
 	const int classification_
 	)
 {

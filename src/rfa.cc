@@ -14,13 +14,13 @@ using rfa::common::RFA_String;
 static const RFA_String kContextName ("RFA");
 static const RFA_String kConnectionType ("RSSL_NIPROV");
 
-temp::rfa_t::rfa_t (const config_t& config) :
+hilo::rfa_t::rfa_t (const config_t& config) :
 	config_ (config),
 	rfa_config_ (nullptr)
 {
 }
 
-temp::rfa_t::~rfa_t()
+hilo::rfa_t::~rfa_t()
 {
 	if (nullptr != rfa_config_)
 		rfa_config_->release();
@@ -28,7 +28,7 @@ temp::rfa_t::~rfa_t()
 }
 
 bool
-temp::rfa_t::init()
+hilo::rfa_t::init()
 {
 	const RFA_String sessionName (config_.session_name.c_str(), 0, false),
 		connectionName (config_.connection_name.c_str(), 0, false);

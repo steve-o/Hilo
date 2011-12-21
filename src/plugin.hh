@@ -1,6 +1,6 @@
 
-#ifndef __TEMP_VELOCITY_PLUGIN_HH__
-#define __TEMP_VELOCITY_PLUGIN_HH__
+#ifndef __HILO_VELOCITY_PLUGIN_HH__
+#define __HILO_VELOCITY_PLUGIN_HH__
 
 #pragma once
 
@@ -8,7 +8,7 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
-namespace temp
+namespace hilo
 {
 
 	class PluginFactory : public vpf::ObjectFactory
@@ -18,8 +18,8 @@ namespace temp
 		virtual void* newInstance (const char* type);
 	};
 
-} /* namespace temp */
+} /* namespace hilo */
 
-#endif /* __TEMP_VELOCITY_PLUGIN_HH__ */
+#endif /* __HILO_VELOCITY_PLUGIN_HH__ */
 
 /* eof */

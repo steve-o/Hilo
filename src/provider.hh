@@ -18,7 +18,7 @@
 #include "rfa.hh"
 #include "config.hh"
 
-namespace temp
+namespace hilo
 {
 
 	struct item_stream_t
@@ -106,7 +106,7 @@ namespace temp
 		std::unordered_map<std::string, item_stream_t*> directory_;
 	};
 
-} /* namespace temp */
+} /* namespace hilo */
 
 #endif /* __PROVIDER_HH__ */
 

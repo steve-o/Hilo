@@ -1,12 +1,12 @@
 
 #include "plugin.hh"
-#include "temp.hh"
+#include "hilo.hh"
 
-static const char* kPluginType = "TempPlugin";
+static const char* kPluginType = "HiloPlugin";
 
-static temp::PluginFactory g_factory_instance;
+static hilo::PluginFactory g_factory_instance;
 
-temp::PluginFactory::PluginFactory()
+hilo::PluginFactory::PluginFactory()
 {
 	registerType (kPluginType);
 }
@@ -14,12 +14,12 @@ temp::PluginFactory::PluginFactory()
 /* no API to unregister type. */
 
 void*
-temp::PluginFactory::newInstance (
+hilo::PluginFactory::newInstance (
 	const char*	type
 	)
 {
 	assert (0 == strcmp (kPluginType, type));
-	return new temp::temp_t();
+	return new hilo::hilo_t();
 }
 
 /* eof */

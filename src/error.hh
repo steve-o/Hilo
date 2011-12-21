@@ -6,13 +6,13 @@
 
 #pragma once
 
-namespace temp
+namespace hilo
 {
 
 	const char* severity_string (const int severity_);
 	const char* classification_string (const int classification_);
 
-} /* namespace temp */
+} /* namespace hilo */
 
 #endif /* __ERROR_HH__ */
 

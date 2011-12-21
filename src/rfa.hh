@@ -14,7 +14,7 @@
 
 #include "config.hh"
 
-namespace temp
+namespace hilo
 {
 
 	class rfa_t :
@@ -34,7 +34,7 @@ namespace temp
 		rfa::config::ConfigDatabase* rfa_config_;
 	};
 
-} /* namespace temp */
+} /* namespace hilo */
 
 namespace rfa {
 namespace common {

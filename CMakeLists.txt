@@ -1,10 +1,10 @@
-# CMake build script for Velocity RDM publisher plugin
+# CMake build script for Velocity FX High-Low plugin
 # x64 Windows Server-only
-# 2011/11/18 -- Steven.McCoy@thomsonreuters.com
+# 2011/12/21 -- Steven.McCoy@thomsonreuters.com
 
 cmake_minimum_required (VERSION 2.8)
 
-project (RDMPublisher)
+project (Hilo)
 
 set(VHAYU_ROOT C:/Vhayu)
 set(RFA_ROOT C:/rfa7.2.0.L1.win-shared.rrg)
@@ -59,7 +59,7 @@ set(cxx-sources
 	src/provider.cc
 	src/rfa.cc
 	src/rfa_logging.cc
-	src/temp.cc
+	src/hilo.cc
 )
 
 include_directories(
@@ -81,9 +81,9 @@ link_directories(
 #-----------------------------------------------------------------------------
 # output
 
-add_library(RDMPublisher SHARED ${cxx-sources})
+add_library(Hilo SHARED ${cxx-sources})
 
-target_link_libraries(RDMPublisher
+target_link_libraries(Hilo
 	FlexRecord.lib
 	PluginFramework.lib
 	Utility.lib

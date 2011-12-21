@@ -1,7 +1,7 @@
 ﻿/* RFA publisher plugin for Velocity Analytics Engine.
  */
 
-#include "temp.hh"
+#include "hilo.hh"
 
 #define __STDC_FORMAT_MACROS
 #include <cstdint>
@@ -23,7 +23,7 @@ static const uint32_t kQuoteId = 40002;
 
 using rfa::common::RFA_String;
 
-temp::temp_t::temp_t() :
+hilo::hilo_t::hilo_t() :
 	is_shutdown_ (false),
 	quote_flexrecord_ (nullptr),
 	rfa_ (nullptr),
@@ -39,7 +39,7 @@ temp::temp_t::temp_t() :
 {
 }
 
-temp::temp_t::~temp_t()
+hilo::hilo_t::~hilo_t()
 {
 	clear();
 }
@@ -48,7 +48,7 @@ temp::temp_t::~temp_t()
  */
 
 void
-temp::temp_t::init (
+hilo::hilo_t::init (
 	const vpf::UserPluginConfig& vpf_config
 	)
 {
@@ -127,7 +127,7 @@ cleanup:
 }
 
 void
-temp::temp_t::clear()
+hilo::hilo_t::clear()
 {
 /* Signal message pump thread to exit. */
 	if (nullptr != event_queue_)
@@ -150,7 +150,7 @@ temp::temp_t::clear()
  */
 
 void
-temp::temp_t::destroy()
+hilo::hilo_t::destroy()
 {
 	clear();
 	LOG(INFO) << "Runtime summary: { "
@@ -163,7 +163,7 @@ temp::temp_t::destroy()
  */
 
 void
-temp::temp_t::processEvent (
+hilo::hilo_t::processEvent (
 	vpf::Event*	vpf_event_
 	)
 {
@@ -189,7 +189,7 @@ temp::temp_t::processEvent (
  */
 
 void
-temp::temp_t::processFlexRecord (
+hilo::hilo_t::processFlexRecord (
 	std::unique_ptr<vpf::FlexRecordEvent> fr_event
 	)
 {

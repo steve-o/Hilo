@@ -1,0 +1,325 @@
+<?xml version="1.0"?>
+<!-- HiloAndStitch.xml
+     Velocity Analytics Engine plugin configuration file
+  -->
+<PluginFrameworkModule id="HiloAndStitch">
+
+<!-- Absolute path of plugin library -->
+	<Lib id="HiloLib" path="C:/Vhayu/Engine/Bin64/Hilo.dll"/>
+
+<!-- Velocity boiler plate -->
+	<EventProcessor id="HiloPipeline" type="Vhayu::EventPipeline">
+		<EventMapper id="HiloMapper" type="Vhayu::AllEventMapper"/>
+
+<!-- Send events to plugin type "HiloType" -->
+		<EventConsumer id="HiloEventConsumer" type="HiloPlugin">
+
+<!-- Subscribe to FlexRecord events rather than Trade or Quote Classic Records. -->
+			<FlexRecordConsumer id="HiloFlexRecordConsumer" type="HiloPlugin"/>
+
+<config>
+
+<!-- RFA settings, override with the Windows registry as preferred. -->
+	<Rfa key="HKLM/SOFTWARE/Reuters/RFA/HiloAndStitch">
+
+		<service name="NI_VTA"/>
+
+<!-- One or more servers may be listed -->
+		<connection>
+			<server>nylabadh2:14003</server>
+		</connection>
+		<login applicationId="256"
+			instanceId="Instance1"
+			userName="user1"/>
+
+<!-- Clutter -->
+		<session name="SessionName"/>
+		<monitor name="ApplicationLoggerMonitorName"/>
+		<eventQueue name="EventQueueName"/>
+		<connection name="ConnectionName"/>
+		<publisher name="PublisherName"/>
+		<vendor name="VendorName"/>
+	</Rfa>
+
+<!-- Cross currency pairs and synthetic pairs 
+
+     Each currency pair thus constitutes an individual trading product and is traditionally
+     noted XXXYYY or XXX/YYY, where XXX and YYY are the ISO 4217 international three-letter
+     code of the currencies involved. The first currency (XXX) is the base currency that is
+     quoted relative to the second currency (YYY), called the counter currency (or quote
+     currency). For instance, the quotation EURUSD (EUR/USD) 1.5465 is the price of the euro
+     expressed in US dollars, meaning 1 euro = 1.5465 dollars. The market convention is to
+     quote most exchange rates against the USD with the US dollar as the base currency (e.g.
+     USDJPY, USDCAD, USDCHF). The exceptions are the British pound (GBP), Australian dollar
+     (AUD), the New Zealand dollar (NZD) and the euro (EUR) where the USD is the counter
+     currency (e.g. GBPUSD, AUDUSD, NZDUSD, EURUSD).
+
+     http://en.wikipedia.org/wiki/Foreign_exchange_market#Trading_characteristics
+
+     Sometimes institutional traders can't trade certain currency crosses because they trade
+     in such high volume that there isn't enough liquidity to execute their order.
+     
+     In order to execute their desired trade, they have to create a "synthetic pair".
+
+     Let's say that an institutional trader wants to buy GBP/JPY but can't because there
+     isn't enough liquidity. To execute this trade, they would have to buy GBP/USD and sell
+     USD/JPY (these pairs are called its legs).
+
+     They are able to do this because there is plenty of liquidity in GBP/USD and USD/JPY
+     which means they can make large orders.
+
+     http://www.babypips.com/school/creating-synthetic-pairs.html
+
+  -->
+	<crosses interval="10"
+		reset="1700"
+		suffix="VTA"
+		path="C:/Vhayu/Feeds/Derived">
+
+<!-- Oz dollar
+     NB: USD is the counter currency, i.e. AUD= is AUD/USD
+  -->
+		<synthetic name="AUDBRL="><times/><leg>AUD=</leg><leg>BRL=</leg></synthetic>
+		<pair name="AUDCAD="/>
+		<synthetic name="AUDCLP="><times/><leg>AUD=</leg><leg>CLP=</leg></synthetic>
+		<synthetic name="AUDDKK="><times/><leg>AUD=</leg><leg>DKK=</leg></synthetic>
+		<synthetic name="AUDEGP="><times/><leg>AUD=</leg><leg>EGP=</leg></synthetic>
+		<synthetic name="AUDHKD="><times/><leg>AUD=</leg><leg>HKD=</leg></synthetic>
+		<pair name="AUDJPY="/>
+		<synthetic name="AUDPHP="><times/><leg>AUD=</leg><leg>PHP=</leg></synthetic>
+		<synthetic name="AUDSGD="><times/><leg>AUD=</leg><leg>SGD=</leg></synthetic>
+		<synthetic name="AUDTWD="><times/><leg>AUD=</leg><leg>TWD=</leg></synthetic>
+		<pair name="AUDUSD=" src="AUD="/>
+
+<!-- Brazilian real -->
+		<synthetic name="BRLCAD="><divide/><leg>BRL=</leg><leg>CAD=</leg></synthetic>
+		<synthetic name="BRLDKK="><divide/><leg>BRL=</leg><leg>DKK=</leg></synthetic>
+		
+<!-- Canadian dollar -->
+		<pair name="CADCHF="/>
+		<synthetic name="CADCLP="><divide/><leg>CAD=</leg><leg>CLP=</leg></synthetic>
+		<synthetic name="CADDKK="><divide/><leg>CAD=</leg><leg>DKK=</leg></synthetic>
+		<synthetic name="CADEGP="><divide/><leg>CAD=</leg><leg>EGP=</leg></synthetic>
+		<synthetic name="CADHKD="><divide/><leg>CAD=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="CADIDR="><divide/><leg>CAD=</leg><leg>IDR=</leg></synthetic>
+		<synthetic name="CADILS="><divide/><leg>CAD=</leg><leg>ILS=</leg></synthetic>
+		<synthetic name="CADINR="><divide/><leg>CAD=</leg><leg>INR=</leg></synthetic>
+		<pair name="CADJPY="/>
+		<synthetic name="CADKRW="><divide/><leg>CAD=</leg><leg>KRW=</leg></synthetic>
+		<synthetic name="CADMXN="><divide/><leg>CAD=</leg><leg>MXN=</leg></synthetic>
+		<synthetic name="CADMYR="><divide/><leg>CAD=</leg><leg>MYR=</leg></synthetic>
+		<synthetic name="CADNOK="><divide/><leg>CAD=</leg><leg>NOK=</leg></synthetic>
+		<synthetic name="CADPHP="><divide/><leg>CAD=</leg><leg>PHP=</leg></synthetic>
+		<pair name="CADPLN="/>
+		<synthetic name="CADSEK="><divide/><leg>CAD=</leg><leg>SEK=</leg></synthetic>
+		<synthetic name="CADSGD="><divide/><leg>CAD=</leg><leg>SGD=</leg></synthetic>
+		<synthetic name="CADTHB="><divide/><leg>CAD=</leg><leg>THB=</leg></synthetic>
+		<synthetic name="CADTRY="><divide/><leg>CAD=</leg><leg>TRY=</leg></synthetic>
+		<synthetic name="CADTWD="><divide/><leg>CAD=</leg><leg>TWD=</leg></synthetic>
+		<synthetic name="CADZAR="><divide/><leg>CAD=</leg><leg>ZAR=</leg></synthetic>
+
+<!-- Swiss franc -->
+		<synthetic name="CHFDKK="><divide/><leg>CHF=</leg><leg>DKK=</leg></synthetic>
+		<synthetic name="CHFHKD="><divide/><leg>CHF=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="CHFNOK="><divide/><leg>CHF=</leg><leg>NOK=</leg></synthetic>
+		<synthetic name="CHFSEK="><divide/><leg>CHF=</leg><leg>SEK=</leg></synthetic>
+
+<!-- Chinese yuan -->
+		<synthetic name="CNYJPY="><divide/><leg>CNY=</leg><leg>JPY=</leg></synthetic>
+
+<!-- Danish krone -->
+		<synthetic name="DKKCZK="><divide/><leg>DKK=</leg><leg>CZK=</leg></synthetic>
+		<synthetic name="DKKHKD="><divide/><leg>DKK=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="DKKIDR="><divide/><leg>DKK=</leg><leg>IDR=</leg></synthetic>
+		<synthetic name="DKKINR="><divide/><leg>DKK=</leg><leg>INR=</leg></synthetic>
+		<synthetic name="DKKJPY="><divide/><leg>DKK=</leg><leg>JPY=</leg></synthetic>
+		<synthetic name="DKKKRW="><divide/><leg>DKK=</leg><leg>KRW=</leg></synthetic>
+		<synthetic name="DKKNOK="><divide/><leg>DKK=</leg><leg>NOK=</leg></synthetic>
+		<synthetic name="DKKPHP="><divide/><leg>DKK=</leg><leg>PHP=</leg></synthetic>
+		<synthetic name="DKKSEK="><divide/><leg>DKK=</leg><leg>SEK=</leg></synthetic>
+		<synthetic name="DKKTHB="><divide/><leg>DKK=</leg><leg>THB=</leg></synthetic>
+		<synthetic name="DKKTWD="><divide/><leg>DKK=</leg><leg>TWD=</leg></synthetic>
+
+<!-- Euro
+     NB: USD is the counter currency, i.e. EUR= is EUR/USD
+  -->
+		<synthetic name="EURAED="><times/><leg>EUR=</leg><leg>AED=</leg></synthetic>
+		<pair name="EURAUD="/>
+		<synthetic name="EURBRL="><times/><leg>EUR=</leg><leg>BRL=</leg></synthetic>
+		<pair name="EURCAD="/>
+		<pair name="EURCHF="/>
+		<synthetic name="EURCLP="><times/><leg>EUR=</leg><leg>CLP=</leg></synthetic>
+		<synthetic name="EURCNY="><times/><leg>EUR=</leg><leg>CNY=</leg></synthetic>
+		<synthetic name="EURCOP="><times/><leg>EUR=</leg><leg>COP=</leg></synthetic>
+		<pair name="EURCZK="/>
+		<pair name="EURDKK="/>
+		<pair name="EUREGP="/>
+		<pair name="EURGBP="/>
+		<pair name="EURHKD="/>
+		<pair name="EURHUF="/>
+		<pair name="EURIDR="/>
+		<pair name="EURILS="/>
+		<synthetic name="EURINR="><times/><leg>EUR=</leg><leg>INR=</leg></synthetic>
+		<pair name="EURJPY="/>
+		<synthetic name="EURKRW="><times/><leg>EUR=</leg><leg>KRW=</leg></synthetic>
+		<pair name="EURMAD="/>
+		<synthetic name="EURMUR="><times/><leg>EUR=</leg><leg>MUR=</leg></synthetic>
+		<pair name="EURMXN="/>
+		<synthetic name="EURMYR="><times/><leg>EUR=</leg><leg>MYR=</leg></synthetic>
+		<pair name="EURNOK="/>
+		<pair name="EURNZD="/>
+		<synthetic name="EURPEN="><times/><leg>EUR=</leg><leg>PEN=</leg></synthetic>
+		<synthetic name="EURPHP="><times/><leg>EUR=</leg><leg>PHP=</leg></synthetic>
+		<pair name="EURPLN="/>
+		<pair name="EURRON="/>
+		<pair name="EURRSD="/>
+		<pair name="EURRUB="/>
+		<pair name="EURSEK="/>
+		<pair name="EURSGD="/>
+		<pair name="EURTHB="/>
+		<pair name="EURTRY="/>
+		<synthetic name="EURTWD="><times/><leg>EUR=</leg><leg>TWD=</leg></synthetic>
+		<pair name="EURUSD=" src="EUR="/>
+		<pair name="EURXOF="/>
+		<pair name="EURZAR="/>
+
+<!-- Great British pound
+     NB: USD is the counter currency, i.e. GBP= is GBP/USD
+  -->
+		<synthetic name="GBPAED="><times/><leg>GBP=</leg><leg>AED=</leg></synthetic>
+		<pair name="GBPAUD="/>
+		<synthetic name="GBPBRL="><times/><leg>GBP=</leg><leg>BRL=</leg></synthetic>
+		<pair name="GBPCAD="/>
+		<pair name="GBPCHF="/>
+		<synthetic name="GBPCLP="><times/><leg>GBP=</leg><leg>CLP=</leg></synthetic>
+		<synthetic name="GBPCOP="><times/><leg>GBP=</leg><leg>COP=</leg></synthetic>
+		<pair name="GBPCZK="/>
+		<pair name="GBPDKK="/>
+		<pair name="GBPEGP="/>
+		<synthetic name="GBPHKD="><times/><leg>GBP=</leg><leg>HKD=</leg></synthetic>
+		<pair name="GBPHUF="/>
+		<synthetic name="GBPIDR="><times/><leg>GBP=</leg><leg>IDR=</leg></synthetic>
+		<synthetic name="GBPILS="><times/><leg>GBP=</leg><leg>ILS=</leg></synthetic>
+		<synthetic name="GBPINR="><times/><leg>GBP=</leg><leg>INR=</leg></synthetic>
+		<pair name="GBPJPY="/>
+		<synthetic name="GBPKES="><times/><leg>GBP=</leg><leg>KES=</leg></synthetic>
+		<synthetic name="GBPKRW="><times/><leg>GBP=</leg><leg>KRW=</leg></synthetic>
+		<synthetic name="GBPLKR="><times/><leg>GBP=</leg><leg>LKR=</leg></synthetic>
+		<synthetic name="GBPMXN="><times/><leg>GBP=</leg><leg>MXN=</leg></synthetic>
+		<synthetic name="GBPMYR="><times/><leg>GBP=</leg><leg>MYR=</leg></synthetic>
+		<pair name="GBPNGN="/>
+		<pair name="GBPNOK="/>
+		<pair name="GBPNZD="/>
+		<synthetic name="GBPPEN="><times/><leg>GBP=</leg><leg>PEN=</leg></synthetic>
+		<synthetic name="GBPPHP="><times/><leg>GBP=</leg><leg>PHP=</leg></synthetic>
+		<pair name="GBPPLN="/>
+		<synthetic name="GBPQAR="><times/><leg>GBP=</leg><leg>QAR=</leg></synthetic>
+		<pair name="GBPSEK="/>
+		<synthetic name="GBPSGD="><times/><leg>GBP=</leg><leg>SGD=</leg></synthetic>
+		<pair name="GBPTHB="/>
+		<synthetic name="GBPTRY="><times/><leg>GBP=</leg><leg>TRY=</leg></synthetic>
+		<synthetic name="GBPTWD="><times/><leg>GBP=</leg><leg>TWD=</leg></synthetic>
+		<pair name="GBPUSD=" src="GBP="/>
+		<pair name="GBPZAR="/>
+
+<!-- HK dollar -->
+		<synthetic name="HKDIDR="><divide/><leg>HKD=</leg><leg>IDR=</leg></synthetic>
+		<synthetic name="HKDINR="><divide/><leg>HKD=</leg><leg>INR=</leg></synthetic>
+		<synthetic name="HKDJPY="><divide/><leg>HKD=</leg><leg>JPY=</leg></synthetic>
+		<synthetic name="HKDKRW="><divide/><leg>HKD=</leg><leg>KRW=</leg></synthetic>
+		<pair name="HKDTHB="/>
+		<synthetic name="HKDTWD="><divide/><leg>HKD=</leg><leg>TWD=</leg></synthetic>
+		<pair name="HKDVND="/>
+
+<!-- Japanese yen -->
+		<synthetic name="JPYIDR="><divide/><leg>JPY=</leg><leg>IDR=</leg></synthetic>
+		<synthetic name="JPYKRW="><divide/><leg>JPY=</leg><leg>KRW=</leg></synthetic>
+
+<!-- Malay ringgit -->
+		<synthetic name="MYRDKK="><divide/><leg>MYR=</leg><leg>DKK=</leg></synthetic>
+		<synthetic name="MYRHKD="><divide/><leg>MYR=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="MYRJPY="><divide/><leg>MYR=</leg><leg>JPY=</leg></synthetic>
+
+<!-- Kiwi dollar -->
+		<synthetic name="NZDCAD="><divide/><leg>NZD=</leg><leg>CAD=</leg></synthetic>
+		<pair name="NZDUSD=" src="NZD="/>
+
+<!-- Pinoy peso -->
+		<synthetic name="PHPJPY="><divide/><leg>PHP=</leg><leg>JPY=</leg></synthetic>
+
+<!-- Singapore dollar -->
+		<synthetic name="SGDHKD="><divide/><leg>SGD=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="SGDJPY="><divide/><leg>SGD=</leg><leg>JPY=</leg></synthetic>
+
+<!-- Thai jyu-jyu -->
+		<synthetic name="THBJPY="><divide/><leg>THB=</leg><leg>JPY=</leg></synthetic>
+
+<!-- Turkish lira -->
+		<synthetic name="TRYDKK="><divide/><leg>TRY=</leg><leg>DKK=</leg></synthetic>
+
+<!-- Taiwan dollar -->
+		<synthetic name="TWDJPY="><divide/><leg>TWD=</leg><leg>JPY=</leg></synthetic>
+
+<!-- US dollar -->
+		<pair name="USDAED=" src="AED="/>
+		<pair name="USDARS=" src="ARS="/>
+		<pair name="USDBDT=" src="BDT="/>
+		<pair name="USDBHD=" src="BHD="/>
+		<pair name="USDBRL=" src="BRL=BR"/>
+		<pair name="USDBWP=" src="BWP="/>
+		<pair name="USDCAD=" src="CAD="/>
+		<pair name="USDCHF=" src="CHF="/>
+		<pair name="USDCLP=" src="CLP="/>
+		<pair name="USDCNY=" src="CNY="/>
+		<pair name="USDCOP=" src="COP="/>
+		<pair name="USDCZK=" src="CZK="/>
+		<pair name="USDDKK=" src="DKK="/>
+		<pair name="USDEGP=" src="EGP="/>
+		<pair name="USDGHS=" src="GHS="/>
+		<pair name="USDHKD=" src="HKD="/>
+		<pair name="USDHRK=" src="HRK="/>
+		<pair name="USDHUF=" src="HUF="/>
+		<pair name="USDIDR=" src="IDR=ID"/>
+		<pair name="USDILS=" src="ILS="/>
+		<pair name="USDINR=" src="INR=IN"/>
+		<pair name="USDJOD=" src="JOD="/>
+		<pair name="USDJPY=" src="JPY="/>
+		<pair name="USDKES=" src="KES="/>
+		<pair name="USDKRW=" src="KRW=KFTC"/>
+		<pair name="USDKWD=" src="KWD="/>
+		<pair name="USDLKR=" src="LKR="/>
+		<pair name="USDMAD=" src="MAD="/>
+		<pair name="USDMUR=" src="MUR="/>
+		<pair name="USDMXN=" src="MXN="/>
+		<pair name="USDMYR=" src="MYR=MY"/>
+		<pair name="USDNGN=" src="MGN="/>
+		<pair name="USDNOK=" src="NOK="/>
+		<pair name="USDOMR=" src="OMR="/>
+		<pair name="USDPEN=" src="PEN="/>
+		<pair name="USDPHP=" src="PHP=PH"/>
+		<pair name="USDPKR=" src="PKR="/>
+		<pair name="USDPLN=" src="PLN="/>
+		<pair name="USDQAR=" src="QAR="/>
+		<pair name="USDRON=" src="RON="/>
+		<pair name="USDRSD=" src="RSD="/>
+		<pair name="USDRUB=" src="RUB="/>
+		<pair name="USDSAR=" src="SAR="/>
+		<pair name="USDSEK=" src="SEK="/>
+		<pair name="USDSGD=" src="SGD="/>
+		<pair name="USDTHB=" src="THB=TH"/>
+		<pair name="USDTND=" src="TND="/>
+		<pair name="USDTRY=" src="TRY="/>
+		<pair name="USDTWD=" src="TWD=TP"/>
+		<pair name="USDVND=" src="VND=VN"/>
+		<pair name="USDXOF=" src="XOF="/>
+		<pair name="USDZAR=" src="ZAR="/>
+		<pair name="USDZMK=" src="ZMK="/>
+		
+	</crosses>
+
+</config>
+
+		</EventConsumer>
+	</EventProcessor>
+
+</PluginFrameworkModule>

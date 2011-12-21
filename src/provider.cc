@@ -27,9 +27,9 @@ static const RFA_String kContextName ("RFA");
 static const RFA_String kRdmFieldDictionaryName ("RWFFld");
 static const RFA_String kEnumTypeDictionaryName ("RWFEnum");
 
-temp::provider_t::provider_t (
-	const temp::config_t& config,
-	temp::rfa_t& rfa,
+hilo::provider_t::provider_t (
+	const hilo::config_t& config,
+	hilo::rfa_t& rfa,
 	rfa::common::EventQueue& event_queue
 	) :
 	config_ (config),
@@ -43,14 +43,14 @@ temp::provider_t::provider_t (
 {
 }
 
-temp::provider_t::~provider_t()
+hilo::provider_t::~provider_t()
 {
 	if (nullptr != provider_)
 		provider_->destroy();
 }
 
 bool
-temp::provider_t::init()
+hilo::provider_t::init()
 {
 /* 7.2.1 Configuring the Session Layer Package.
  */
@@ -84,7 +84,7 @@ temp::provider_t::init()
  * interactive provider applications.
  */
 bool
-temp::provider_t::sendLoginRequest()
+hilo::provider_t::sendLoginRequest()
 {
 	rfa::message::ReqMsg request;
 	request.setMsgModelType (rfa::rdm::MMT_LOGIN);
@@ -177,7 +177,7 @@ temp::provider_t::sendLoginRequest()
  * the provider state on behalf of the application.
  */
 bool
-temp::provider_t::createItemStream (
+hilo::provider_t::createItemStream (
 	const char* name,
 	item_stream_t& item_stream
 	)
@@ -203,7 +203,7 @@ temp::provider_t::createItemStream (
  */
 
 bool
-temp::provider_t::send (
+hilo::provider_t::send (
 	item_stream_t& item_stream,
 	rfa::common::Msg& msg
 )
@@ -220,7 +220,7 @@ temp::provider_t::send (
  * The Cmd may be created on the heap or the stack.
  */
 uint32_t
-temp::provider_t::submit (
+hilo::provider_t::submit (
 	rfa::common::Msg& msg,
 	rfa::sessionLayer::ItemToken& token,
 	void* closure
@@ -238,7 +238,7 @@ temp::provider_t::submit (
 }
 
 void
-temp::provider_t::processEvent (
+hilo::provider_t::processEvent (
 	const rfa::common::Event& event_
 	)
 {
@@ -260,7 +260,7 @@ temp::provider_t::processEvent (
 /* 7.5.8.1 Handling Item Events (Login Events).
  */
 void
-temp::provider_t::processOMMItemEvent (
+hilo::provider_t::processOMMItemEvent (
 	const rfa::sessionLayer::OMMItemEvent&	item_event
 	)
 {
@@ -276,7 +276,7 @@ temp::provider_t::processOMMItemEvent (
 }
 
 void
-temp::provider_t::processRespMsg (
+hilo::provider_t::processRespMsg (
 	const rfa::message::RespMsg&	reply_msg
 	)
 {
@@ -322,7 +322,7 @@ temp::provider_t::processRespMsg (
  * response messages of different message model types.
  */
 void
-temp::provider_t::processLoginSuccess (
+hilo::provider_t::processLoginSuccess (
 	const rfa::message::RespMsg&			login_msg
 	)
 {
@@ -349,7 +349,7 @@ temp::provider_t::processLoginSuccess (
  * and any item group information associated with the service.
  */
 bool
-temp::provider_t::sendDirectoryResponse()
+hilo::provider_t::sendDirectoryResponse()
 {
 /* 7.5.9.1 Create a response message (4.2.2) */
 	rfa::message::RespMsg response;
@@ -421,7 +421,7 @@ temp::provider_t::sendDirectoryResponse()
 }
 
 void
-temp::provider_t::getServiceDirectory (
+hilo::provider_t::getServiceDirectory (
 	rfa::data::Map& map
 	)
 {
@@ -451,7 +451,7 @@ temp::provider_t::getServiceDirectory (
 }
 
 void
-temp::provider_t::getServiceFilterList (
+hilo::provider_t::getServiceFilterList (
 	rfa::data::FilterList& filterList
 	)
 {
@@ -486,7 +486,7 @@ temp::provider_t::getServiceFilterList (
  * Information about a service that does not update very often.
  */
 void
-temp::provider_t::getServiceInformation (
+hilo::provider_t::getServiceInformation (
 	rfa::data::ElementList& elementList
 	)
 {
@@ -537,7 +537,7 @@ temp::provider_t::getServiceInformation (
  * rfa::data::Array does not require version tagging according to examples.
  */
 void
-temp::provider_t::getServiceCapabilities (
+hilo::provider_t::getServiceCapabilities (
 	rfa::data::Array& capabilities
 	)
 {
@@ -556,7 +556,7 @@ temp::provider_t::getServiceCapabilities (
 }
 
 void
-temp::provider_t::getServiceDictionaries (
+hilo::provider_t::getServiceDictionaries (
 	rfa::data::Array& dictionaries
 	)
 {
@@ -583,7 +583,7 @@ temp::provider_t::getServiceDictionaries (
  * State of a service.
  */
 void
-temp::provider_t::getServiceState (
+hilo::provider_t::getServiceState (
 	rfa::data::ElementList& elementList
 	)
 {
@@ -624,7 +624,7 @@ temp::provider_t::getServiceState (
 /* Iterate through entire item dictionary and re-generate tokens.
  */
 bool
-temp::provider_t::resetTokens()
+hilo::provider_t::resetTokens()
 {
 	LOG(INFO) << "Resetting " << directory_.size() << " provider tokens";
 	unsigned i = 0;
@@ -646,7 +646,7 @@ temp::provider_t::resetTokens()
  * resume once the data state becomes OkEnum.
  */
 void
-temp::provider_t::processLoginSuspect (
+hilo::provider_t::processLoginSuspect (
 	const rfa::message::RespMsg&			suspect_msg
 	)
 {
@@ -659,7 +659,7 @@ temp::provider_t::processLoginSuspect (
  * cannot start to publish data.
  */
 void
-temp::provider_t::processLoginClosed (
+hilo::provider_t::processLoginClosed (
 	const rfa::message::RespMsg&			logout_msg
 	)
 {
@@ -673,7 +673,7 @@ temp::provider_t::processLoginClosed (
  * failed.
  */
 void
-temp::provider_t::processOMMCmdErrorEvent (
+hilo::provider_t::processOMMCmdErrorEvent (
 	const rfa::sessionLayer::OMMCmdErrorEvent& error
 	)
 {

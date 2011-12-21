@@ -22,7 +22,7 @@ namespace logging
 		boost::noncopyable
 	{
 	public:
-		LogEventProvider (const temp::config_t& config, rfa::common::EventQueue& event_queue);
+		LogEventProvider (const hilo::config_t& config, rfa::common::EventQueue& event_queue);
 		~LogEventProvider ();
 
 		bool Register () throw (rfa::common::InvalidUsageException, rfa::common::InvalidConfigurationException);
@@ -35,7 +35,7 @@ namespace logging
 
 		void processLoggerNotifyEvent (const rfa::logger::LoggerNotifyEvent& event_);
 
-		const temp::config_t& config_;
+		const hilo::config_t& config_;
 
 /* RFA event queue. */
 		rfa::common::EventQueue& event_queue_;
