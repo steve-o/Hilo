@@ -1,10 +1,10 @@
 /* RFA error diagnosis helpers..
  */
 
+#include "error.hh"
+
 /* RFA 7.2 headers */
 #include <rfa.hh>
-
-#include "error.hh"
 
 const char*
 hilo::severity_string (

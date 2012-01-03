@@ -1,3 +1,9 @@
+/* logging.cc
+ *
+ * C++ stream based logging, forwarding onto Velocity Analytics Engine own logging API.
+ *
+ * Copyright (c) 2011 The Chromium Authors. All rights reserved.
+ */
 
 #include "logging.hh"
 
@@ -12,7 +18,7 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
-#include "lock_impl.hh"
+#include "synchronization/lock_impl.hh"
 
 namespace logging {
 
@@ -62,7 +68,7 @@ class LoggingLock {
   static void Init() {
     if (is_initialized)
       return;
-    log_lock = new temp::LockImpl();
+    log_lock = new chromium::internal::LockImpl();
     is_initialized = true;
   }
 
@@ -79,7 +85,7 @@ class LoggingLock {
   // The lock is used if log file locking is false. It helps us avoid problems
   // with multiple threads writing to the log file at the same time.  Use
   // LockImpl directly instead of using Lock, because Lock makes logging calls.
-  static temp::LockImpl* log_lock;
+  static chromium::internal::LockImpl* log_lock;
 
   static bool is_initialized;
 };
@@ -87,7 +93,7 @@ class LoggingLock {
 // static
 bool LoggingLock::is_initialized = false;
 // static
-temp::LockImpl* LoggingLock::log_lock = NULL;
+chromium::internal::LockImpl* LoggingLock::log_lock = NULL;
 
 }  /* anonymous namespace */
 
@@ -160,7 +166,8 @@ LogMessage::LogMessage(const char* file, int line, LogSeverity severity, std::st
 }
 
 LogMessage::~LogMessage() {
-	stream_ << std::endl;
+/* AE's MsgLog API appends an endl */
+//	stream_ << std::endl;
 	std::string str_newline(stream_.str());
 
 	int priority;

@@ -1,4 +1,6 @@
 /* User-configurable settings.
+ *
+ * NB: all strings are locale bound, RFA provides no Unicode support.
  */
 
 #ifndef __CONFIG_HH__
@@ -9,12 +11,34 @@
 #include <string>
 #include <vector>
 
+/* Velocity Analytics Plugin Framework */
+#include <vpf/vpf.h>
+
 namespace hilo
 {
 
 	struct config_t
 	{
 		config_t();
+
+		bool parseDomElement (const xercesc::DOMElement* elem);
+		bool parseConfigNode (const xercesc::DOMNode* node);
+		bool parseRfaNode (const xercesc::DOMNode* node);
+		bool parseServiceNode (const xercesc::DOMNode* node);
+		bool parseConnectionNode (const xercesc::DOMNode* node);
+		bool parseServerNode (const xercesc::DOMNode* node, const char* port);
+		bool parseLoginNode (const xercesc::DOMNode* node);
+		bool parseSessionNode (const xercesc::DOMNode* node);
+		bool parseMonitorNode (const xercesc::DOMNode* node);
+		bool parseEventQueueNode (const xercesc::DOMNode* node);
+		bool parsePublisherNode (const xercesc::DOMNode* node);
+		bool parseVendorNode (const xercesc::DOMNode* node);
+		bool parseCrossesNode (const xercesc::DOMNode* node);
+		bool parseSyntheticNode (const xercesc::DOMNode* node);
+		bool parsePairNode (const xercesc::DOMNode* node);
+
+//  Windows registry key path.
+		std::string key;
 
 //  TREP-RT service name, e.g. IDN_RDF.
 		std::string service_name;
@@ -71,22 +95,31 @@ namespace hilo
 //  FX High-Low calculation and publish interval in seconds.
 		std::string interval;
 
+//  Windows timer coalescing tolerable delay.
+//  At least 32ms, corresponding to two 15.6ms platform timer interrupts.
+//  Appropriate values are 10% to timer period.
+//  Specify tolerable delay values and timer periods in multiples of 50 ms.
+//  http://www.microsoft.com/whdc/system/pnppwr/powermgmt/TimerCoal.mspx
+		std::string tolerable_delay;
+
 //  FX High-Low reset time in UTC.
 		std::string reset_time;
 
 //  FX symbol name suffix for every publish.
-		std::string symbol_suffix;
+		std::string suffix;
 
 //  FX feed log file name for storing derived values.
 		std::string feedlog_path;
 
 //  FX currency cross rules.
-		std::vector<std::pair<std::string, std::pair<std::string, std::string>>> rules;
+		std::vector<std::string> rules;
 	};
 
 	inline
 	std::ostream& operator<< (std::ostream& o, const config_t& config) {
-		o << "config_t: { service_name: \"" << config.service_name << "\""
+		o << "config_t: { "
+			  "key: \"" << config.key << "\""
+			", service_name: \"" << config.service_name << "\""
 			", adh_address: \"" << config.adh_address << "\""
 			", adh_port: \"" << config.adh_port << "\""
 			", application_id: \"" << config.application_id << "\""
@@ -100,8 +133,9 @@ namespace hilo
 			", publisher_name: \"" << config.publisher_name << "\""
 			", vendor_name: \"" << config.vendor_name << "\""
 			", interval: \"" << config.interval << "\""
+			", tolerable_delay: \"" << config.tolerable_delay << "\""
 			", reset_time: \"" << config.reset_time << "\""
-			", symbol_suffix: \"" << config.symbol_suffix << "\""
+			", suffix: \"" << config.suffix << "\""
 			", feedlog_path: \"" << config.feedlog_path << "\""
 			", rules: [ ";
 		for (auto it = config.rules.begin();
@@ -110,9 +144,7 @@ namespace hilo
 		{
 			if (it != config.rules.begin())
 				o << ", ";
-			o << '"' << it->first << "\": { "
-				"LOW: \"" << it->second.first << "\", "
-				"HIGH: \"" << it->second.second << "\" }";
+			o << '"' << *it << '"';
 		}
 		o << " ] }";
 		return o;

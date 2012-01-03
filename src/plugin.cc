@@ -1,25 +1,34 @@
+/* Boilerplate for exporting a data type to the Analytics Engine.
+ */
 
-#include "plugin.hh"
-#include "hilo.hh"
+/* Velocity Analytics Plugin Framework */
+#include <vpf/vpf.h>
+
+#include "stitch.hh"
 
 static const char* kPluginType = "HiloPlugin";
 
-static hilo::PluginFactory g_factory_instance;
-
-hilo::PluginFactory::PluginFactory()
+namespace
 {
-	registerType (kPluginType);
-}
+	class factory_t : public vpf::ObjectFactory
+	{
+	public:
+		factory_t()
+		{
+			registerType (kPluginType);
+		}
 
 /* no API to unregister type. */
 
-void*
-hilo::PluginFactory::newInstance (
-	const char*	type
-	)
-{
-	assert (0 == strcmp (kPluginType, type));
-	return new hilo::hilo_t();
-}
+		virtual void* newInstance (const char* type)
+		{
+			assert (0 == strcmp (kPluginType, type));
+			return new hilo::stitch_t();
+		}
+	};
+
+	static factory_t g_factory_instance;
+
+} /* anonymous namespace */
 
 /* eof */

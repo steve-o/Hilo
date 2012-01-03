@@ -21,15 +21,16 @@
 namespace hilo
 {
 
-	struct item_stream_t
+	class item_stream_t : boost::noncopyable
 	{
+	public:
 		item_stream_t () :
 			token (nullptr)
 		{
 		}
 
 /* Fixed name for this stream. */
-		rfa::common::RFA_String name;
+		rfa::common::RFA_String rfa_name;
 /* Session token which is valid from login success to login close. */
 		rfa::sessionLayer::ItemToken* token;
 	};

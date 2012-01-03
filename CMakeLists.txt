@@ -45,21 +45,25 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 # platform specifics
 
 add_definitions(
+	-DWIN32
+# Windows Server 2008 (not-R2)
+	-D_WIN32_WINNT=0x0600
 )
 
 #-----------------------------------------------------------------------------
 # source files
 
 set(cxx-sources
+	src/get_hilo.cc
 	src/config.cc
 	src/error.cc
-	src/lock_impl_win.cc
-	src/logging.cc
 	src/plugin.cc
 	src/provider.cc
 	src/rfa.cc
 	src/rfa_logging.cc
-	src/hilo.cc
+	src/stitch.cc
+	src/chromium/logging.cc
+	src/chromium/synchronization/lock_impl_win.cc
 )
 
 include_directories(
@@ -88,6 +92,7 @@ target_link_libraries(Hilo
 	PluginFramework.lib
 	Utility.lib
 	SEDll.lib
+	xerces-c_3.lib
 	RFA7_Common100_x64.lib
 	RFA7_Config100_x64.lib
 	RFA7_Logger100_x64.lib

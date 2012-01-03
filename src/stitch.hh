@@ -1,6 +1,9 @@
+/* A basic Velocity Analytics User-Plugin to exporting a new Tcl command and
+ * periodically publishing out to ADH via RFA using RDM/MarketPrice.
+ */
 
-#ifndef __HILO_HH__
-#define __HILO_HH__
+#ifndef __STITCH_HH__
+#define __STITCH_HH__
 
 #pragma once
 
@@ -18,23 +21,30 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
+/* Microsoft wrappers */
+#include "microsoft/timer.hh"
+
 #include "config.hh"
-#include "logging.hh"
 #include "rfa.hh"
 #include "rfa_logging.hh"
 #include "provider.hh"
 
 namespace hilo
 {
+	class hilo_t;
+
 /* Basic state for each item stream. */
-	struct broadcast_stream_t : item_stream_t
+	class broadcast_stream_t : public item_stream_t
 	{
-		broadcast_stream_t () :
+	public:
+		broadcast_stream_t (std::shared_ptr<hilo_t> hilo_) :
+			hilo (hilo_),
 			count (0)
 		{
 		}
 
-		uint64_t	count;
+		std::shared_ptr<hilo_t>	hilo;
+		uint64_t count;
 	};
 
 	struct flex_filter_t
@@ -62,13 +72,14 @@ namespace hilo
 		rfa::common::EventQueue& event_queue_;
 	};
 
-	class hilo_t :
-		public vpf::AbstractEventConsumer,
+	class stitch_t :
+		public vpf::AbstractUserPlugin,
+		public vpf::Command,
 		boost::noncopyable
 	{
 	public:
-		hilo_t();
-		virtual ~hilo_t();
+		stitch_t();
+		virtual ~stitch_t();
 
 /* Plugin entry point. */
 		virtual void init (const vpf::UserPluginConfig& config_);
@@ -79,29 +90,29 @@ namespace hilo
 /* Plugin termination point. */
 		virtual void destroy();
 
-/* Plugin broadcast callback. */
-		virtual void processEvent (vpf::Event* event_);
+/* Tcl entry point. */
+		virtual int execute (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+
+/* Configured period timer entry point. */
+		void processTimer (void* closure);
 
 	private:
 
 /* Run core event loop. */
 		void mainLoop();
 
-/* Event handler for incoming FlexRecords. */
-		void processFlexRecord (std::unique_ptr<vpf::FlexRecordEvent> event_);
+		void get_last_reset_time (__time32_t& t);
+		void get_next_interval (FILETIME& ft);
+		void get_end_of_last_interval (__time32_t& t);
+
+/* Broadcast out message. */
+		bool sendRefresh() throw (rfa::common::InvalidUsageException);
 
 /* Application configuration. */
-		const config_t config_;
+		config_t config_;
 
 /* Significant failure has occurred, so ignore all runtime events flag */
 		bool is_shutdown_;
-
-/* Quote FlexRecord definition. */
-		vpf::FlexRecData* quote_flexrecord_;
-
-/* FlexRecord FID filter. */
-		flex_filter_t filter_;
-		FlexRecBinding* binding_;
 
 /* RFA context */
 		rfa_t* rfa_;
@@ -115,8 +126,9 @@ namespace hilo
 /* RFA provider */
 		provider_t* provider_;
 
-/* Item stream. */
-		broadcast_stream_t msft_stream_;
+/* Publish instruments. */
+		std::vector<std::shared_ptr<hilo_t>> query_vector_;
+		std::vector<std::unique_ptr<broadcast_stream_t>> stream_vector_;
 
 /* Event pump and thread. */
 		event_pump_t* event_pump_;
@@ -125,23 +137,14 @@ namespace hilo
 /* Publish fields. */
 		rfa::data::FieldList fields_;
 
+/* Threadpool timer. */
+		ms::timer* timer_;
+
 /** Performance Counters **/
-/* Count of incoming FlexRecord events. */
-		uint64_t flexrecord_event_count_;
-
-/* Count of FlexRecord events without Quote record identifier. */
-		uint64_t ignored_flexrecord_count_;
-
-/* Count of FlexRecords that could not be unpacked. */
-		uint64_t corrupt_flexrecord_count_;
-
-/* Count of all discarded events. */
-		uint64_t discarded_event_count_;
-
 	};
 
 } /* namespace hilo */
 
-#endif /* __HILO_HH__ */
+#endif /* __STITCH_HH__ */
 
 /* eof */

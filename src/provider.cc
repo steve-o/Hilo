@@ -10,11 +10,8 @@
 #include <algorithm>
 #include <utility>
 
-/* RFA 7.2 headers */
-#include <rfa.hh>
-
+#include "chromium/logging.hh"
 #include "error.hh"
-#include "logging.hh"
 
 using rfa::common::RFA_String;
 
@@ -182,20 +179,20 @@ hilo::provider_t::createItemStream (
 	item_stream_t& item_stream
 	)
 {
-	item_stream.name.set (name, 0, true);
+	item_stream.rfa_name.set (name, 0, true);
 	if (!is_muted_) {
-		LOG(INFO) << "Generating token for " << name;
+		DLOG(INFO) << "Generating token for " << name;
 		item_stream.token = &( provider_->generateItemToken() );
 		assert (nullptr != item_stream.token);
 	} else {
-		LOG(INFO) << "Not generating token for " << name << " as provider is muted.";
+		DLOG(INFO) << "Not generating token for " << name << " as provider is muted.";
 		assert (nullptr == item_stream.token);
 	}
 	const std::string key (name);
 	auto status = directory_.insert (std::make_pair (key, &item_stream));
 	assert (true == status.second);
 	assert (directory_.end() != directory_.find (key));
-	LOG(INFO) << "Directory size: " << directory_.size();
+	DLOG(INFO) << "Directory size: " << directory_.size();
 	return true;
 }
 

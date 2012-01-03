@@ -1,4 +1,8 @@
-/* Macros for logging.
+/* logging.hh
+ *
+ * C++ stream based logging.
+ *
+ * Copyright (c) 2011 The Chromium Authors. All rights reserved.
  */
 
 #ifndef __LOGGING_HH__

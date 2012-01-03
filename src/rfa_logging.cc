@@ -8,11 +8,8 @@
 
 #include <cassert>
 
-/* RFA 7.2 headers */
-#include <rfa.hh>
-
+#include "chromium/logging.hh"
 #include "rfa.hh"
-#include "logging.hh"
 
 using rfa::common::RFA_String;
 
