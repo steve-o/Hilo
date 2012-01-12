@@ -14,6 +14,12 @@
 
 <config>
 
+<!-- SNMP implant settings, remove node to disable. -->
+	<Snmp>
+		<agentX subagent="true"
+			socket="tcp:nylabdev1:705"/>
+	</Snmp>
+
 <!-- RFA settings, override with the Windows registry as preferred. -->
 	<Rfa key="HKLM/SOFTWARE/Reuters/RFA/HiloAndStitch">
 
