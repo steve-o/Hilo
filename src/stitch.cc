@@ -14,6 +14,7 @@
 
 #include "chromium/logging.hh"
 #include "get_hilo.hh"
+#include "snmp_agent.hh"
 #include "error.hh"
 
 /* RDM Usage Guide: Section 6.5: Enterprise Platform
@@ -40,6 +41,11 @@ static const char* kFunctionName = "hilo_query";
 /* Default FlexRecord fields. */
 static const char* kDefaultBidField = "BidPrice";
 static const char* kDefaultAskField = "AskPrice";
+
+LONG volatile hilo::stitch_t::instance_count_ = 0;
+
+std::list<hilo::stitch_t*> hilo::stitch_t::global_list_;
+boost::shared_mutex hilo::stitch_t::global_list_lock_;
 
 using rfa::common::RFA_String;
 
@@ -137,12 +143,32 @@ hilo::stitch_t::stitch_t() :
 	log_ (nullptr),
 	provider_ (nullptr),
 	event_pump_ (nullptr),
-	thread_ (nullptr)
+	thread_ (nullptr),
+	timer_ (nullptr),
+	last_activity_ (boost::posix_time::microsec_clock::universal_time()),
+	min_tcl_time_ (boost::posix_time::pos_infin),
+	max_tcl_time_ (boost::posix_time::neg_infin),
+	total_tcl_time_ (boost::posix_time::seconds(0)),
+	min_refresh_time_ (boost::posix_time::pos_infin),
+	max_refresh_time_ (boost::posix_time::neg_infin),
+	total_refresh_time_ (boost::posix_time::seconds(0))
 {
+	ZeroMemory (cumulative_stats_, sizeof (cumulative_stats_));
+	ZeroMemory (snap_stats_, sizeof (snap_stats_));
+
+/* Unique instance number, never decremented. */
+	instance_ = InterlockedExchangeAdd (&instance_count_, 1L);
+
+	boost::unique_lock<boost::shared_mutex> (global_list_lock_);
+	global_list_.push_back (this);
 }
 
 hilo::stitch_t::~stitch_t()
 {
+/* Remove from list before clearing. */
+	boost::unique_lock<boost::shared_mutex> (global_list_lock_);
+	global_list_.remove (this);
+
 	clear();
 }
 
@@ -156,6 +182,13 @@ hilo::stitch_t::init (
 {
 /* Thunk to VA user-plugin base class. */
 	vpf::AbstractUserPlugin::init (vpf_config);
+
+/* Save copies of provided identifiers. */
+	plugin_id_.assign (vpf_config.getPluginId());
+	plugin_type_.assign (vpf_config.getPluginType());
+	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
+		", pluginId: \"" << plugin_id_ << "\""
+		", instance: " << instance_ << " }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
 		goto cleanup;
@@ -232,6 +265,11 @@ hilo::stitch_t::init (
 	if (nullptr == thread_)
 		goto cleanup;
 
+/* Spawn SNMP implant. */
+	snmp_agent_ = new snmp_agent_t (*this);
+	if (nullptr == snmp_agent_)
+		goto cleanup;
+
 /* Register Tcl API. */
 	registerCommand (getId(), kFunctionName);
 	LOG(INFO) << "Registered Tcl API \"" << kFunctionName << "\"";
@@ -246,6 +284,7 @@ hilo::stitch_t::init (
 
 	return;
 cleanup:
+	LOG(INFO) << "Init failed, cleaning up";
 	clear();
 	is_shutdown_ = true;
 	throw vpf::UserPluginException ("Init failed.");
@@ -254,12 +293,17 @@ cleanup:
 void
 hilo::stitch_t::clear()
 {
+	LOG(INFO) << "clear()";
 /* Stop generating new events. */
 #if _WIN32_WINNT >= _WIN32_WINNT_WS08
 	if (timer_)
 		SetThreadpoolTimer (timer_->get(), nullptr, 0, 0);
 #endif
 	delete timer_; timer_ = nullptr;
+
+/* Close SNMP agent. */
+	delete snmp_agent_; snmp_agent_ = nullptr;
+
 /* Signal message pump thread to exit. */
 	if (nullptr != event_queue_)
 		event_queue_->deactivate();
@@ -283,6 +327,7 @@ hilo::stitch_t::clear()
 void
 hilo::stitch_t::destroy()
 {
+	LOG(INFO) << "destroy()";
 /* Unregister Tcl API. */
 	deregisterCommand (getId(), kFunctionName);
 	LOG(INFO) << "Unregistered Tcl API \"" << kFunctionName << "\"";
@@ -330,7 +375,11 @@ hilo::stitch_t::execute (
 	int objc = cmdData.mObjc;			/* Number of arguments. */
 	Tcl_Obj** CONST objv = cmdData.mObjv;		/* Argument strings. */
 
+	const boost::posix_time::ptime t0 (boost::posix_time::microsec_clock::universal_time());
+	last_activity_ = t0;
+
 	DLOG(INFO) << "Tcl execute objc=" << objc;
+	cumulative_stats_[STITCH_PC_TCL_QUERY_RECEIVED]++;
 
 	try {
 		if (objc < 2 || objc > 5) {
@@ -411,7 +460,14 @@ hilo::stitch_t::execute (
 			Tcl_ListObjAppendElement (interp, resultListPtr, Tcl_NewListObj (_countof (elemObjPtr), elemObjPtr));
 		});
 		Tcl_SetObjResult (interp, resultListPtr);
-		DLOG(INFO) << "execute complete";
+/* Timing */
+		const boost::posix_time::ptime t1 (boost::posix_time::microsec_clock::universal_time());
+		const boost::posix_time::time_duration td = t1 - t0;
+		DLOG(INFO) << "execute complete" << td.total_milliseconds() << "ms";
+		if (td < min_tcl_time_) min_tcl_time_ = td;
+		if (td > max_tcl_time_) max_tcl_time_ = td;
+		total_tcl_time_ += td;
+
 		return TCL_OK;
 	}
 /* FlexRecord exceptions */
@@ -430,6 +486,7 @@ hilo::stitch_t::processTimer (
 	void*	pClosure
 	)
 {
+	cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED]++;
 	try {
 		sendRefresh();
 	} catch (rfa::common::InvalidUsageException& e) {
@@ -540,6 +597,9 @@ hilo::stitch_t::get_end_of_last_interval (
 bool
 hilo::stitch_t::sendRefresh()
 {
+	const boost::posix_time::ptime t0 (boost::posix_time::microsec_clock::universal_time());
+	last_activity_ = t0;
+
 /* Calculate time boundary for query */
 	__time32_t startTime, endTime;
 	get_last_reset_time (startTime);
@@ -550,8 +610,6 @@ hilo::stitch_t::sendRefresh()
 	_ctime32_s (end_str, _countof (end_str), &endTime);
 	start_str[CTIME_LENGTH - 2] = end_str[CTIME_LENGTH - 2] = '\0';
 	LOG(INFO) << "refresh " << start_str << "-" << end_str;
-
-	const boost::posix_time::ptime t0 (boost::posix_time::microsec_clock::universal_time());
 
 	get_hilo (query_vector_, startTime, endTime);
 
@@ -681,10 +739,13 @@ hilo::stitch_t::sendRefresh()
 		DLOG(INFO) << stream.rfa_name << " high=" << high_price << " low=" << low_price;
 	});
 
+/* Timing */
 	const boost::posix_time::ptime t1 (boost::posix_time::microsec_clock::universal_time());
 	const boost::posix_time::time_duration td = t1 - t0;
-
 	LOG(INFO) << "refresh complete " << td.total_milliseconds() << "ms";
+	if (td < min_refresh_time_) min_refresh_time_ = td;
+	if (td > max_refresh_time_) max_refresh_time_ = td;
+	total_refresh_time_ += td;
 	return true;
 }
 

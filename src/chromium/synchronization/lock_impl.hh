@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <windows.h>
+#include <winsock2.h>
 
 /* Boost noncopyable base class */
 #include <boost/utility.hpp>

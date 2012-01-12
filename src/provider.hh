@@ -20,6 +20,31 @@
 
 namespace hilo
 {
+/* Performance Counters */
+	enum {
+		PROVIDER_PC_RFA_MSGS_SENT,
+		PROVIDER_PC_RFA_EVENTS_RECEIVED,
+		PROVIDER_PC_RFA_EVENTS_DISCARDED,
+		PROVIDER_PC_OMM_ITEM_EVENTS_RECEIVED,
+		PROVIDER_PC_OMM_ITEM_EVENTS_DISCARDED,
+		PROVIDER_PC_RESPONSE_MSGS_RECEIVED,
+		PROVIDER_PC_RESPONSE_MSGS_DISCARDED,
+		PROVIDER_PC_MMT_LOGIN_RESPONSE_RECEIVED,
+		PROVIDER_PC_MMT_LOGIN_RESPONSE_DISCARDED,
+		PROVIDER_PC_MMT_LOGIN_SUCCESS_RECEIVED,
+		PROVIDER_PC_MMT_LOGIN_SUSPECT_RECEIVED,
+		PROVIDER_PC_MMT_LOGIN_CLOSED_RECEIVED,
+		PROVIDER_PC_OMM_CMD_ERRORS,
+		PROVIDER_PC_MMT_LOGIN_VALIDATED,
+		PROVIDER_PC_MMT_LOGIN_MALFORMED,
+		PROVIDER_PC_MMT_LOGIN_SENT,
+		PROVIDER_PC_MMT_DIRECTORY_VALIDATED,
+		PROVIDER_PC_MMT_DIRECTORY_MALFORMED,
+		PROVIDER_PC_MMT_DIRECTORY_SENT,
+		PROVIDER_PC_TOKENS_GENERATED,
+/* marker */
+		PROVIDER_PC_MAX
+	};
 
 	class item_stream_t : boost::noncopyable
 	{
@@ -105,6 +130,14 @@ namespace hilo
 
 /* Container of all item streams keyed by symbol name. */
 		std::unordered_map<std::string, item_stream_t*> directory_;
+
+/** Performance Counters **/
+		uint32_t cumulative_stats_[PROVIDER_PC_MAX];
+		uint32_t snap_stats_[PROVIDER_PC_MAX];
+
+#ifdef STITCHMIB_H
+		friend Netsnmp_Node_Handler stitchPluginPerformanceTable_handler;
+#endif /* STITCHMIB_H */
 	};
 
 } /* namespace hilo */

@@ -1,0 +1,633 @@
+----------------------------------------------------------------
+--
+-- BNYM FX High and Low Calculator (Hilo and Stitch) MIB
+--
+----------------------------------------------------------------
+
+STITCH-MIB DEFINITIONS ::= BEGIN
+
+-- IMPORTS: Include definitions from other mibs here, which is always
+-- the first item in a MIB file.
+IMPORTS
+        enterprises, OBJECT-TYPE, Counter32, MODULE-IDENTITY
+                FROM SNMPv2-SMI;
+
+--
+-- A brief description and update information about this mib.
+--
+stitchMIB MODULE-IDENTITY
+	LAST-UPDATED "201201090000Z"
+	ORGANIZATION
+		"Thomson Reuters"
+	CONTACT-INFO
+		"Steven McCoy
+		steven.mccoy@thomsonreuters.com
+		+1 646-223-8624
+		Thomson Reuters
+		3 Times Square
+		New York, NY 10036
+		USA"
+	DESCRIPTION
+		"The MIB module for managing Bank of New York Mellon's FX High and Low Calculator."
+	REVISION "201201090000Z"
+	DESCRIPTION
+		"Version 2.0: Table based MIB."
+	REVISION "201201060000Z"
+	DESCRIPTION
+		"Version 1.0: Initial MIB."
+	::= { enterprises 67 }
+	
+
+-- Define typical mib nodes, like where the objects are going to lie.
+-- we'll prefix everything in this mib with stitch
+stitch OBJECT IDENTIFIER ::= { stitchMIB 1 }
+stitchPlugin OBJECT IDENTIFIER ::= { stitch 1 }
+
+stitchPluginNumberOfEntries OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of Hilo & Stitch plugin instances."
+	::= { stitchPlugin 1 }
+
+-- Plugin Management Table
+
+stitchPluginTable OBJECT-TYPE
+	SYNTAX SEQUENCE OF stitchPluginEntry
+	MAX-ACCESS not-accessible
+        STATUS     current
+	DESCRIPTION
+		"The table holding per plugin instance information."
+	::= { stitchPlugin 2 }
+
+stitchPluginEntry OBJECT-TYPE
+	SYNTAX     stitchPluginEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Per plugin instance information."
+	INDEX    { stitchPluginId,
+	           stitchPluginUniqueInstance }
+	::= { stitchPluginTable 1 }
+
+stitchPluginEntry ::= SEQUENCE {
+	stitchPluginId
+		OCTET STRING,
+	stitchPluginUniqueInstance
+		Unsigned32,
+	stitchPluginWindowsRegistryKey
+		OCTET STRING,
+	stitchPluginServiceName
+		OCTET STRING,
+	stitchPluginAdhAddress
+		OCTET STRING,
+	stitchPluginAdhPort
+		OCTET STRING,
+	stitchPluginApplicationId
+		OCTET STRING,
+	stitchPluginInstanceId 
+		OCTET STRING,
+	stitchPluginUserName 
+		OCTET STRING,
+	stitchPluginPosition 
+		OCTET STRING,
+	stitchPluginSessionName 
+		OCTET STRING,
+	stitchPluginMonitorName 
+		OCTET STRING,
+	stitchPluginEventQueueName 
+		OCTET STRING,
+	stitchPluginConnectionName 
+		OCTET STRING,
+	stitchPluginPublisherName 
+		OCTET STRING,
+	stitchPluginVendorName 
+		OCTET STRING,
+	stitchPluginPublishIvl 
+		OCTET STRING,
+	stitchPluginTolerableDelay 
+		OCTET STRING,
+	stitchPluginResetTime 
+		OCTET STRING,
+	stitchPluginRicSuffix 
+		OCTET STRING,
+	stitchPluginFeedLogPath 
+		OCTET STRING,
+	}
+
+stitchPluginId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique plugin instance identifier."
+	::= { stitchPluginEntry 1 }
+
+stitchPluginUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this plugin."
+	::= { stitchPluginEntry 2 }
+
+stitchPluginWindowsRegistryKey OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Windows registry override key."
+	::= { stitchPluginEntry 3 }
+
+stitchPluginServiceName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT service name."
+	::= { stitchPluginEntry 4 }
+
+stitchPluginAdhAddress OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Name or address of TREP-RT ADH to open a provider connection to."
+	::= { stitchPluginEntry 5 }
+
+stitchPluginAdhPort OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"IP port of TREP-RT ADH to open a provider connection to."
+	::= { stitchPluginEntry 6 }
+
+stitchPluginApplicationId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT application identifier for DACS permissioning."
+	::= { stitchPluginEntry 7 }
+
+stitchPluginInstanceId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT instance identifier."
+	::= { stitchPluginEntry 8 }
+
+stitchPluginUserName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT user name for DACS permissioning."
+	::= { stitchPluginEntry 9 }
+
+stitchPluginPosition OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT position declaration for DACS permissioning."
+	::= { stitchPluginEntry 10 }
+
+stitchPluginSessionName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA session name."
+	::= { stitchPluginEntry 11 }
+
+stitchPluginMonitorName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA application logger monitor name."
+	::= { stitchPluginEntry 12 }
+
+stitchPluginEventQueueName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA event queue name."
+	::= { stitchPluginEntry 13 }
+
+stitchPluginConnectionName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA connection name."
+	::= { stitchPluginEntry 14 }
+
+stitchPluginPublisherName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA publisher name."
+	::= { stitchPluginEntry 15 }
+
+stitchPluginVendorName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA vendor name."
+	::= { stitchPluginEntry 16 }
+
+stitchPluginPublishIvl OBJECT-TYPE
+	SYNTAX     Unsigned32
+	UNITS      "seconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Publish interval in seconds."
+	::= { stitchPluginEntry 17 }
+
+stitchPluginTolerableDelay OBJECT-TYPE
+	SYNTAX     Unsigned32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The tolerable delay for expiration time, in milliseconds."
+	::= { stitchPluginEntry 18 }
+
+stitchPluginResetTime OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Analytic reset time, reference UTC."
+	::= { stitchPluginEntry 19 }
+
+stitchPluginRicSuffix OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Fixed suffix for published RICs."
+	::= { stitchPluginEntry 20 }
+
+stitchPluginFeedLogPath OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Feed log path for archiving analytic output."
+	::= { stitchPluginEntry 21 }
+
+-- Plugin Performance Management Table
+
+stitchPluginPerformanceTable OBJECT-TYPE
+	SYNTAX SEQUENCE OF stitchPluginPerformanceEntry
+	MAX-ACCESS not-accessible
+        STATUS     current
+	DESCRIPTION
+		"The table holding per plugin instance performance information."
+	::= { stitchPlugin 4 }
+
+stitchPluginPerformanceEntry OBJECT-TYPE
+	SYNTAX     stitchPluginPerformanceEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Per plugin instance performance information."
+	INDEX    { stitchPluginPerformanceId,
+	           stitchPluginPerformanceUniqueInstance }
+	::= { stitchPluginPerformanceTable 1 }
+
+stitchPluginPerformanceEntry ::= SEQUENCE {
+	stitchPluginPerformanceId
+		OCTET STRING,
+	stitchPluginPerformanceUniqueId
+		Unsigned32,
+	stitchTclQueryReceived
+		Counter32,
+	stitchTimerQueryReceived
+		Counter32,
+	stitchLastActivity
+		Counter32,
+	stitchTclSvcTimeMin
+		Counter32,
+	stitchTclSvcTimeMean
+		Counter32,
+	stitchTclSvcTimeMax
+		Counter32,
+	stitchTimerSvcTimeMin
+		Counter32,
+	stitchTimerSvcTimeMean
+		Counter32,
+	stitchTimerSvcTimeMax,
+		Counter32,
+	stitchRfaMsgsSent
+		Counter32,
+	stitchRfaEventsReceived
+		Counter32,
+	stitchRfaEventsDiscarded
+		Counter32,
+	stitchOmmItemEventsReceived
+		Counter32,
+	stitchOmmItemEventsDiscarded
+		Counter32,
+	stitchResponseMsgsReceived
+		Counter32,
+	stitchResponseMsgsDiscarded
+		Counter32,
+	stitchMmtLoginResponseReceived
+		Counter32,
+	stitchMmtLoginResponseDiscarded
+		Counter32,
+	stitchMmtLoginSuccessReceived
+		Counter32,
+	stitchMmtLoginSuspectReceived
+		Counter32,
+	stitchMmtLoginClosedReceived
+		Counter32,
+	stitchOmmCmdErrors
+		Counter32,
+	stitchMmtLoginsValidated
+		Counter32,
+	stitchMmtLoginsMalformed
+		Counter32,
+	stitchMmtLoginsSent
+		Counter32,
+	stitchMmtDirectorysValidated
+		Counter32,
+	stitchMmtDirectorysMalformed
+		Counter32,
+	stitchMmtDirectorysSent
+		Counter32,
+	stitchTokensGenerated
+		Counter32
+	}
+
+stitchPluginPerformanceId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique plugin instance identifier."
+	::= { stitchPluginPerformanceEntry 1 }
+
+stitchPluginPerformanceUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this plugin."
+	::= { stitchPluginPerformanceEntry 2 }
+
+stitchTclQueryReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of Tcl queries received."
+	::= { stitchPluginPerformanceEntry 3 }
+
+stitchTimerQueryReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of timer based queries received."
+	::= { stitchPluginPerformanceEntry 4 }
+
+stitchLastActivity OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "seconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Last time activity was observed.  In seconds since the epoch, January 1, 1970."
+	::= { stitchPluginPerformanceEntry 5 }
+
+stitchTclSvcTimeMin OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The minimum time it took to resolve a Tcl query."
+	::= { stitchPluginPerformanceEntry 6 }
+
+stitchTclSvcTimeMean OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The mean time it took to resolve a Tcl query."
+	::= { stitchPluginPerformanceEntry 7 }
+
+stitchTclSvcTimeMax OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The maximum time it took to resolve a Tcl query."
+	::= { stitchPluginPerformanceEntry 8 }
+
+stitchTimerSvcTimeMin OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The minimum time it took to resolve a timer query."
+	::= { stitchPluginPerformanceEntry 9 }
+
+stitchTimerSvcTimeMean OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The mean time it took to resolve a timer query."
+	::= { stitchPluginPerformanceEntry 10 }
+
+stitchTimerSvcTimeMax OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The maximum time it took to resolve a timer query."
+	::= { stitchPluginPerformanceEntry 11 }
+
+stitchRfaMsgsSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of RFA messages sent by this provider."
+	::= { stitchPluginPerformanceEntry 12 }
+
+stitchRfaEventsReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of RFA events received by this provider."
+	::= { stitchPluginPerformanceEntry 13 }
+
+stitchRfaEventsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of RFA events discarded by this provider."
+	::= { stitchPluginPerformanceEntry 14 }
+
+stitchOmmItemEventsReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of OMM Item events received by this provider."
+	::= { stitchPluginPerformanceEntry 15 }
+
+stitchOmmItemEventsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of OMM Item events discarded by this provider."
+	::= { stitchPluginPerformanceEntry 16 }
+
+stitchResponseMsgsReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of Response messages received by this provider."
+	::= { stitchPluginPerformanceEntry 17 }
+
+stitchResponseMsgsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of Response messages discarded by this provider."
+	::= { stitchPluginPerformanceEntry 18 }
+
+stitchMmtLoginResponseReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN responses received by this provider."
+	::= { stitchPluginPerformanceEntry 19 }
+
+stitchMmtLoginResponseDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN responses discarded by this provider."
+	::= { stitchPluginPerformanceEntry 20 }
+
+stitchMmtLoginSuccessReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN success responses received by this provider."
+	::= { stitchPluginPerformanceEntry 21 }
+
+stitchMmtLoginSuspectReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN suspect responses received by this provider."
+	::= { stitchPluginPerformanceEntry 22 }
+
+stitchMmtLoginClosedReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN closed responses received by this provider."
+	::= { stitchPluginPerformanceEntry 23 }
+
+stitchOmmCmdErrorsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of OMM command errors by this provider."
+	::= { stitchPluginPerformanceEntry 24 }
+
+stitchMmtLoginsValidated OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN requests validated by this provider."
+	::= { stitchPluginPerformanceEntry 25 }
+
+stitchMmtLoginsMalformed OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN requests malformed by this provider."
+	::= { stitchPluginPerformanceEntry 26 }
+
+stitchMmtLoginsSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN requests sent by this provider."
+	::= { stitchPluginPerformanceEntry 27 }
+
+stitchMmtDirectorysValidated OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_DIRECTORY responses validated by this provider."
+	::= { stitchPluginPerformanceEntry 28 }
+
+stitchMmtDirectorysMalformed OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_DIRECTORY responses malformed by this provider."
+	::= { stitchPluginPerformanceEntry 29 }
+
+stitchMmtDirectorysSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_DIRECTORY responses sent by this provider."
+	::= { stitchPluginPerformanceEntry 30 }
+
+stitchTokensGenerated OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of item tokens generated by this provider."
+	::= { stitchPluginPerformanceEntry 31 }
+
+
+
+
+
+END

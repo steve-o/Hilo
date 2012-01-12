@@ -9,6 +9,8 @@ static const char* kDefaultAdhPort = "14003";
 
 hilo::config_t::config_t() :
 /* default values */
+	is_snmp_enabled (false),
+	is_agentx_subagent (true),
 	service_name ("NI_VTA"),
 	adh_address ("localhost"),
 	adh_port (kDefaultAdhPort),
@@ -76,7 +78,12 @@ hilo::config_t::parseConfigNode (
 	vpf::XMLStringPool xml;
 	const DOMNodeList* nodeList;
 
-/* <rfa> */
+/* <Snmp> */
+	nodeList = config->getElementsByTagName (L"Snmp");
+	for (int i = 0; i < nodeList->getLength(); i++)
+		if (!parseSnmpNode (nodeList->item (i)))
+			return false;
+/* <Rfa> */
 	nodeList = config->getElementsByTagName (L"Rfa");
 	for (int i = 0; i < nodeList->getLength(); i++)
 		if (!parseRfaNode (nodeList->item (i)))
@@ -89,7 +96,48 @@ hilo::config_t::parseConfigNode (
 	return true;
 }
 
-/* <rfa> */
+/* <Snmp> */
+bool
+hilo::config_t::parseSnmpNode (
+	const DOMNode*		node
+	)
+{
+	const DOMElement* snmp = static_cast<const DOMElement*>(node);
+	const DOMNodeList* nodeList;
+
+/* <agentX> */
+	nodeList = snmp->getElementsByTagName (L"agentX");
+	for (int i = 0; i < nodeList->getLength(); i++)
+		if (!parseAgentXNode (nodeList->item (i)))
+			return false;
+	this->is_snmp_enabled = true;
+	return true;
+}
+
+bool
+hilo::config_t::parseAgentXNode (
+	const DOMNode*		node
+	)
+{
+	const DOMElement* agentX = static_cast<const DOMElement*>(node);
+	vpf::XMLStringPool xml;
+	std::string attr;
+
+/* subagent="bool" */
+	attr = xml.transcode (agentX->getAttribute (L"subagent"));
+	if (!attr.empty())
+		is_agentx_subagent = (0 == attr.compare ("true"));
+
+/* socket="..." */
+	attr = xml.transcode (agentX->getAttribute (L"socket"));
+	if (!attr.empty())
+		agentx_socket = attr;
+	return true;
+}
+
+/* </Snmp> */
+
+/* <Rfa> */
 bool
 hilo::config_t::parseRfaNode (
 	const DOMNode*		node
@@ -340,7 +388,7 @@ hilo::config_t::parseVendorNode (
 	return true;
 }
 
-/* </rfa> */
+/* </Rfa> */
 
 /* <crosses> */
 bool

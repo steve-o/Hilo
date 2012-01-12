@@ -38,6 +38,8 @@ hilo::provider_t::provider_t (
 	rwf_minor_version_ (0),
 	is_muted_ (true)
 {
+	ZeroMemory (cumulative_stats_, sizeof (cumulative_stats_));
+	ZeroMemory (snap_stats_, sizeof (snap_stats_));
 }
 
 hilo::provider_t::~provider_t()
@@ -143,8 +145,10 @@ hilo::provider_t::sendLoginRequest()
 	uint8_t validation_status = request.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
 		LOG(WARNING) << "MMT_LOGIN::validateMsg: { warningText: \"" << warningText << "\" }";
+		cumulative_stats_[PROVIDER_PC_MMT_LOGIN_MALFORMED]++;
 	} else {
 		assert (rfa::message::MsgValidationOk == validation_status);
+		cumulative_stats_[PROVIDER_PC_MMT_LOGIN_VALIDATED]++;
 	}
 
 /* Not saving the returned handle as we will destroy the provider to logout,
@@ -157,6 +161,7 @@ hilo::provider_t::sendLoginRequest()
 	rfa::sessionLayer::OMMItemIntSpec ommItemIntSpec;
 	ommItemIntSpec.setMsg (&request);
 	rfa::common::Handle* handle = provider_->registerClient (&event_queue_, &ommItemIntSpec, *this, nullptr /* closure */);
+	cumulative_stats_[PROVIDER_PC_MMT_LOGIN_SENT]++;
 	if (nullptr == handle)
 		return false;
 
@@ -184,6 +189,7 @@ hilo::provider_t::createItemStream (
 		DLOG(INFO) << "Generating token for " << name;
 		item_stream.token = &( provider_->generateItemToken() );
 		assert (nullptr != item_stream.token);
+		cumulative_stats_[PROVIDER_PC_TOKENS_GENERATED]++;
 	} else {
 		DLOG(INFO) << "Not generating token for " << name << " as provider is muted.";
 		assert (nullptr == item_stream.token);
@@ -209,6 +215,7 @@ hilo::provider_t::send (
 		return false;
 	assert (nullptr != item_stream.token);
 	submit (msg, *item_stream.token);
+	cumulative_stats_[PROVIDER_PC_RFA_MSGS_SENT]++;
 	return true;
 }
 
@@ -239,6 +246,7 @@ hilo::provider_t::processEvent (
 	const rfa::common::Event& event_
 	)
 {
+	cumulative_stats_[PROVIDER_PC_RFA_EVENTS_RECEIVED]++;
 	switch (event_.getType()) {
 	case rfa::sessionLayer::OMMItemEventEnum:
 		processOMMItemEvent (static_cast<const rfa::sessionLayer::OMMItemEvent&>(event_));
@@ -249,6 +257,7 @@ hilo::provider_t::processEvent (
                 break;
 
         default:
+		cumulative_stats_[PROVIDER_PC_RFA_EVENTS_DISCARDED]++;
 		LOG(INFO) << "Uncaught: " << event_;
                 break;
         }
@@ -261,10 +270,12 @@ hilo::provider_t::processOMMItemEvent (
 	const rfa::sessionLayer::OMMItemEvent&	item_event
 	)
 {
+	cumulative_stats_[PROVIDER_PC_OMM_ITEM_EVENTS_RECEIVED]++;
 	const rfa::common::Msg& msg = item_event.getMsg();
 
 /* Verify event is a response event */
 	if (rfa::message::RespMsgEnum != msg.getMsgType()) {
+		cumulative_stats_[PROVIDER_PC_OMM_ITEM_EVENTS_DISCARDED]++;
 		LOG(INFO) << "Uncaught: " << msg;
 		return;
 	}
@@ -277,12 +288,15 @@ hilo::provider_t::processRespMsg (
 	const rfa::message::RespMsg&	reply_msg
 	)
 {
+	cumulative_stats_[PROVIDER_PC_RESPONSE_MSGS_RECEIVED]++;
 /* Verify event is a login response event */
 	if (rfa::rdm::MMT_LOGIN != reply_msg.getMsgModelType()) {
+		cumulative_stats_[PROVIDER_PC_RESPONSE_MSGS_DISCARDED]++;
 		LOG(INFO) << "Uncaught: " << reply_msg;
 		return;
 	}
 
+	cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_RECEIVED]++;
 	const rfa::common::RespStatus& respStatus = reply_msg.getRespStatus();
 
 	switch (respStatus.getStreamState()) {
@@ -297,6 +311,7 @@ hilo::provider_t::processRespMsg (
 			break;
 
 		default:
+			cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_DISCARDED]++;
 			LOG(INFO) << "Uncaught: " << reply_msg;
 			break;
 		}
@@ -307,6 +322,7 @@ hilo::provider_t::processRespMsg (
 		break;
 
 	default:
+		cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_DISCARDED]++;
 		LOG(INFO) << "Uncaught: " << reply_msg;
 		break;
 	}
@@ -323,6 +339,7 @@ hilo::provider_t::processLoginSuccess (
 	const rfa::message::RespMsg&			login_msg
 	)
 {
+	cumulative_stats_[PROVIDER_PC_MMT_LOGIN_SUCCESS_RECEIVED]++;
 	try {
 		sendDirectoryResponse();
 		resetTokens();
@@ -331,7 +348,7 @@ hilo::provider_t::processLoginSuccess (
 
 /* ignore any error */
 	} catch (rfa::common::InvalidUsageException& e) {
-		LOG(ERROR) << "MMT_DIRECTORY::validateMsg: { StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+		LOG(ERROR) << "MMT_DIRECTORY::InvalidUsageException: { StatusText: \"" << e.getStatus().getStatusText() << "\" }";
 /* cannot publish until directory is sent. */
 		return;
 	}
@@ -407,13 +424,16 @@ hilo::provider_t::sendDirectoryResponse()
 	RFA_String warningText;
 	uint8_t validation_status = response.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
+		cumulative_stats_[PROVIDER_PC_MMT_DIRECTORY_VALIDATED]++;
 		LOG(WARNING) << "MMT_DIRECTORY::validateMsg: { warningText: \"" << warningText << "\" }";
 	} else {
+		cumulative_stats_[PROVIDER_PC_MMT_DIRECTORY_MALFORMED]++;
 		assert (rfa::message::MsgValidationOk == validation_status);
 	}
 
 /* Create and throw away first token for MMT_DIRECTORY. */
 	submit (static_cast<rfa::common::Msg&> (response), provider_->generateItemToken());
+	cumulative_stats_[PROVIDER_PC_MMT_DIRECTORY_SENT]++;
 	return true;
 }
 
@@ -634,6 +654,7 @@ hilo::provider_t::resetTokens()
 		assert (nullptr != it.second);
 		it.second->token = &( provider_->generateItemToken() );
 		assert (nullptr != it.second->token);
+		cumulative_stats_[PROVIDER_PC_TOKENS_GENERATED]++;
 	});
 	return true;
 }
@@ -647,6 +668,7 @@ hilo::provider_t::processLoginSuspect (
 	const rfa::message::RespMsg&			suspect_msg
 	)
 {
+	cumulative_stats_[PROVIDER_PC_MMT_LOGIN_SUSPECT_RECEIVED]++;
 	is_muted_ = true;
 }
 
@@ -660,6 +682,7 @@ hilo::provider_t::processLoginClosed (
 	const rfa::message::RespMsg&			logout_msg
 	)
 {
+	cumulative_stats_[PROVIDER_PC_MMT_LOGIN_CLOSED_RECEIVED]++;
 	is_muted_ = true;
 }
 
@@ -674,6 +697,7 @@ hilo::provider_t::processOMMCmdErrorEvent (
 	const rfa::sessionLayer::OMMCmdErrorEvent& error
 	)
 {
+	cumulative_stats_[PROVIDER_PC_OMM_CMD_ERRORS]++;
 	LOG(ERROR) << "OMMCmdErrorEvent: { "
 		"CmdId: " << error.getCmdID() <<
 		", State: " << error.getStatus().getState() <<

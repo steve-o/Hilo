@@ -4,8 +4,7 @@
 #ifndef __MS_UNIQUE_HANDLE_HH__
 #define __MS_UNIQUE_HANDLE_HH__
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <winsock2.h>
 
 namespace ms
 {

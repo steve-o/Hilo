@@ -31,7 +31,24 @@
 
 namespace hilo
 {
+/* Performance Counters */
+	enum {
+		STITCH_PC_TCL_QUERY_RECEIVED,
+		STITCH_PC_TIMER_QUERY_RECEIVED,
+/*		STITCH_PC_LAST_ACTIVITY,*/
+/*		STITCH_PC_TCL_SVC_TIME_MIN,*/
+/*		STITCH_PC_TCL_SVC_TIME_MEAN,*/
+/*		STITCH_PC_TCL_SVC_TIME_MAX,*/
+/*		STITCH_PC_TIMER_SVC_TIME_MIN,*/
+/*		STITCH_PC_TIMER_SVC_TIME_MEAN,*/
+/*		STITCH_PC_TIMER_SVC_TIME_MAX,*/
+
+/* marker */
+		STITCH_PC_MAX
+	};
+
 	class hilo_t;
+	class snmp_agent_t;
 
 /* Basic state for each item stream. */
 	class broadcast_stream_t : public item_stream_t
@@ -96,6 +113,10 @@ namespace hilo
 /* Configured period timer entry point. */
 		void processTimer (void* closure);
 
+/* Global list of all plugin instances.  AE owns pointer. */
+		static std::list<stitch_t*> global_list_;
+		static boost::shared_mutex global_list_lock_;
+
 	private:
 
 /* Run core event loop. */
@@ -108,13 +129,31 @@ namespace hilo
 /* Broadcast out message. */
 		bool sendRefresh() throw (rfa::common::InvalidUsageException);
 
+/* Unique instance number per process. */
+		LONG instance_;
+		static LONG volatile instance_count_;
+
+/* Plugin Xml identifiers. */
+		std::string plugin_id_, plugin_type_;
+
 /* Application configuration. */
 		config_t config_;
 
-/* Significant failure has occurred, so ignore all runtime events flag */
+/* Significant failure has occurred, so ignore all runtime events flag. */
 		bool is_shutdown_;
 
-/* RFA context */
+/* SNMP implant. */
+		snmp_agent_t* snmp_agent_;
+		friend class snmp_agent_t;
+
+#ifdef STITCHMIB_H
+		friend Netsnmp_Next_Data_Point stitchPluginTable_get_next_data_point;
+		friend Netsnmp_Node_Handler stitchPluginTable_handler;
+		friend Netsnmp_Next_Data_Point stitchPluginPerformanceTable_get_next_data_point;
+		friend Netsnmp_Node_Handler stitchPluginPerformanceTable_handler;
+#endif /* STITCHMIB_H */
+
+/* RFA context. */
 		rfa_t* rfa_;
 
 /* RFA asynchronous event queue. */
@@ -140,7 +179,14 @@ namespace hilo
 /* Threadpool timer. */
 		ms::timer* timer_;
 
-/** Performance Counters **/
+/** Performance Counters. **/
+		boost::posix_time::ptime last_activity_;
+		boost::posix_time::time_duration min_tcl_time_, max_tcl_time_, total_tcl_time_;
+		boost::posix_time::time_duration min_refresh_time_, max_refresh_time_, total_refresh_time_;
+
+		uint32_t cumulative_stats_[STITCH_PC_MAX];
+		uint32_t snap_stats_[STITCH_PC_MAX];
+		boost::posix_time::ptime snap_time_;
 	};
 
 } /* namespace hilo */

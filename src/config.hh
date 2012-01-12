@@ -23,6 +23,8 @@ namespace hilo
 
 		bool parseDomElement (const xercesc::DOMElement* elem);
 		bool parseConfigNode (const xercesc::DOMNode* node);
+		bool parseSnmpNode (const xercesc::DOMNode* node);
+		bool parseAgentXNode (const xercesc::DOMNode* node);
 		bool parseRfaNode (const xercesc::DOMNode* node);
 		bool parseServiceNode (const xercesc::DOMNode* node);
 		bool parseConnectionNode (const xercesc::DOMNode* node);
@@ -36,6 +38,15 @@ namespace hilo
 		bool parseCrossesNode (const xercesc::DOMNode* node);
 		bool parseSyntheticNode (const xercesc::DOMNode* node);
 		bool parsePairNode (const xercesc::DOMNode* node);
+
+//  SNMP implant.
+		bool is_snmp_enabled;
+
+//  Net-SNMP agent or sub-agent.
+		bool is_agentx_subagent;
+
+//  AgentX port number to connect to master agent.
+		std::string agentx_socket;
 
 //  Windows registry key path.
 		std::string key;
@@ -118,7 +129,10 @@ namespace hilo
 	inline
 	std::ostream& operator<< (std::ostream& o, const config_t& config) {
 		o << "config_t: { "
-			  "key: \"" << config.key << "\""
+			  "is_snmp_enabled: \"" << config.is_snmp_enabled << "\""
+			", is_agentx_subagent: \"" << config.is_agentx_subagent << "\""
+			", agentx_socket: \"" << config.agentx_socket << "\""
+			", key: \"" << config.key << "\""
 			", service_name: \"" << config.service_name << "\""
 			", adh_address: \"" << config.adh_address << "\""
 			", adh_port: \"" << config.adh_port << "\""

@@ -8,7 +8,7 @@
 #include "logging.hh"
 
 #define NOMINMAX
-#include <windows.h>
+#include <winsock2.h>
 
 #include <algorithm>
 #include <cstdint>

@@ -6,6 +6,7 @@ cmake_minimum_required (VERSION 2.8)
 
 project (Hilo)
 
+set(NETSNMP_ROOT C:/usr)
 set(VHAYU_ROOT C:/Vhayu)
 set(RFA_ROOT C:/rfa7.2.0.L1.win-shared.rrg)
 set(BOOST_ROOT C:/boost_1_48_0)
@@ -46,8 +47,11 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 
 add_definitions(
 	-DWIN32
+	-DWIN32_LEAN_AND_MEAN
 # Windows Server 2008 (not-R2)
 	-D_WIN32_WINNT=0x0600
+# Net-SNMP Autoconf overrides
+	-DHAVE_STDINT_H
 )
 
 #-----------------------------------------------------------------------------
@@ -61,13 +65,16 @@ set(cxx-sources
 	src/provider.cc
 	src/rfa.cc
 	src/rfa_logging.cc
+	src/snmp_agent.cc
 	src/stitch.cc
+	src/stitchMIB.cc
 	src/chromium/logging.cc
 	src/chromium/synchronization/lock_impl_win.cc
 )
 
 include_directories(
 	include
+	${NETSNMP_ROOT}/include
 	${VHAYU_ROOT}/Engine/TBSDK/Include
 	${VHAYU_ROOT}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/include
 	${RFA_ROOT}/Include
@@ -76,6 +83,7 @@ include_directories(
 )
 
 link_directories(
+	${NETSNMP_ROOT}/lib
 	${VHAYU_ROOT}/Engine/TBSDK/Lib64/Release
 	${VHAYU_ROOT}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/lib
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD
@@ -88,6 +96,9 @@ link_directories(
 add_library(Hilo SHARED ${cxx-sources})
 
 target_link_libraries(Hilo
+	netsnmp.lib
+	netsnmpagent.lib
+	netsnmpmibs.lib
 	FlexRecord.lib
 	PluginFramework.lib
 	Utility.lib
