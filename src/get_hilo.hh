@@ -34,7 +34,8 @@ namespace hilo
 		hilo_t () :
 			math_op (MATH_OP_NOOP),
 			high (0.0),
-			low (0.0)
+			low (0.0),
+			is_null (true)
 		{
 		}
 
@@ -43,6 +44,7 @@ namespace hilo
 		int math_op;
 		double high;
 		double low;
+		bool is_null;
 	};
 
 	void get_hilo (std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);

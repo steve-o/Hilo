@@ -68,6 +68,9 @@ set(cxx-sources
 	src/snmp_agent.cc
 	src/stitch.cc
 	src/stitchMIB.cc
+	src/chromium/debug/stack_trace.cc
+	src/chromium/debug/stack_trace_win.cc
+	src/chromium/memory/singleton.cc
 	src/chromium/logging.cc
 	src/chromium/synchronization/lock_impl_win.cc
 )
@@ -113,6 +116,43 @@ target_link_libraries(Hilo
 	RFA7_SessionLayer100_x64.lib
 	${Boost_LIBRARIES}
 	ws2_32.lib
+	dbghelp.lib
 )
+
+set(rfa_runtime_libraries
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Common100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Config100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Logger100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Data100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections_OMM100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
+)
+
+file(GLOB config "${CMAKE_CURRENT_SOURCE_DIR}/config/*.xml")
+file(GLOB mibs "${CMAKE_CURRENT_SOURCE_DIR}/mibs/*.txt")
+
+install (TARGETS Hilo DESTINATION bin)
+install (FILES ${rfa_runtime_libraries} DESTINATION bin)
+install (FILES ${config} DESTINATION config)
+install (FILES ${mibs} DESTINATION mibs)
+
+set (CPACK_SOURCE_IGNORE_FILES "*.lib")
+
+include (InstallRequiredSystemLibraries)
+set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Velocity Analytics FX High-Low plugin")
+set (CPACK_PACKAGE_VENDOR "Thomson Reuters")
+set (CPACK_NSIS_CONTACT "Steven McCoy <Steven.McCoy@thomsonreuters.com>")
+# There is a bug in NSI that does not handle full unix paths properly. Make
+# sure there is at least one set of four (4) backlasshes.
+set (CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
+set (CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
+set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
+set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
+set (CPACK_PACKAGE_VERSION_MAJOR "1")
+set (CPACK_PACKAGE_VERSION_MINOR "2")
+set (CPACK_PACKAGE_VERSION_PATCH "0")
+include (CPack)
 
 # end of file

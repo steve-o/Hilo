@@ -1,13 +1,9 @@
-/* logging.hh
- *
- * C++ stream based logging.
- *
- * Copyright (c) 2011 The Chromium Authors. All rights reserved.
- */
+// Copyright (c) 2011 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#ifndef __LOGGING_HH__
-#define __LOGGING_HH__
-
+#ifndef CHROMIUM_LOGGING_HH__
+#define CHROMIUM_LOGGING_HH__
 #pragma once
 
 #include <sstream>
@@ -527,6 +523,6 @@ namespace logging {
 		} while(0)
 #endif
 
-#endif /* __LOGGING_HH__ */
+#endif /* CHROMIUM_LOGGING_HH__ */
 
 /* eof */

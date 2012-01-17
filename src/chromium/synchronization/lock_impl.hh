@@ -1,13 +1,9 @@
-/* lock_impl.hh
- *
- * A basic platform specific spin-lock.
- *
- * Copyright (c) 2011 The Chromium Authors. All rights reserved.
- */
+// Copyright (c) 2011 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#ifndef __LOCK_IMPL_HH_
-#define __LOCK_IMPL_HH_
-
+#ifndef CHROMIUM_LOCK_IMPL_HH__
+#define CHROMIUM_LOCK_IMPL_HH__
 #pragma once
 
 #include <winsock2.h>
@@ -48,6 +44,6 @@ private:
 } /* namespace internal */
 } /* namespace chromium */
 
-#endif /* __LOCK_IMPL_HH_ */
+#endif /* CHROMIUM_LOCK_IMPL_HH__ */
 
 /* eof */

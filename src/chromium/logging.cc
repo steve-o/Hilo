@@ -18,6 +18,7 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
+#include "debug/stack_trace.hh"
 #include "synchronization/lock_impl.hh"
 
 namespace logging {
@@ -166,6 +167,14 @@ LogMessage::LogMessage(const char* file, int line, LogSeverity severity, std::st
 }
 
 LogMessage::~LogMessage() {
+#ifndef NDEBUG
+	if (severity_ == LOG_FATAL) {
+		// Include a stack trace on a fatal.
+		chromium::debug::StackTrace trace;
+		stream_ << std::endl;  // Newline to separate from log message
+		trace.OutputToStream(&stream_);
+	}
+#endif
 /* AE's MsgLog API appends an endl */
 //	stream_ << std::endl;
 	std::string str_newline(stream_.str());
