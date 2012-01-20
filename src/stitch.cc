@@ -90,6 +90,7 @@ parseRule (
 	switch (v.size()) {
 /* seven fields -> name, operator, RIC, bid, ask, RIC, bid, ask */
 	case 8:
+		rule.is_synthetic		= true;
 		rule.math_op			= v[1] == "MUL" ? hilo::MATH_OP_TIMES : hilo::MATH_OP_DIVIDE;
 		rule.legs.first.symbol_name	= v[2];
 		rule.legs.first.bid_field	= v[3];
@@ -100,6 +101,7 @@ parseRule (
 		break;
 /* five fields -> name, EQ, RIC, bid, ask */
 	case 5:
+		rule.is_synthetic		= false;
 		rule.legs.first.symbol_name	= v[2];
 		rule.legs.first.bid_field	= v[3];
 		rule.legs.first.ask_field	= v[4];
@@ -110,6 +112,7 @@ parseRule (
 
 /* four fields -> name, operator, RIC, RIC */
 	case 4:
+		rule.is_synthetic		= true;
 		rule.math_op			= v[1] == "MUL" ? hilo::MATH_OP_TIMES : hilo::MATH_OP_DIVIDE;
 		rule.legs.first.symbol_name	= v[2];
 		rule.legs.second.symbol_name	= v[3];
@@ -117,11 +120,13 @@ parseRule (
 
 /* two fields -> name, RIC */
 	case 2:
-		rule.legs.first.symbol_name = rule.legs.second.symbol_name = v[1];
+		rule.is_synthetic		= false;
+		rule.legs.first.symbol_name	= rule.legs.second.symbol_name = v[1];
 		break;
 
 /* one field -> name = RIC */
 	case 1:
+		rule.is_synthetic		= false;
 		break;
 
 	default:
@@ -238,7 +243,7 @@ hilo::stitch_t::init (
 			query_vector_.push_back (rule);
 
 /* analytic publish stream */
-			std::string symbol_name = rule.get()->name + config_.suffix;
+			std::string symbol_name = rule->name + config_.suffix;
 			std::unique_ptr<broadcast_stream_t> stream (new broadcast_stream_t (rule));
 			assert ((bool)stream);
 			if (!provider_->createItemStream (symbol_name.c_str(), *stream.get()))
@@ -316,9 +321,39 @@ hilo::stitch_t::init (
  */
 	FILETIME due_time;
 	get_next_interval (due_time);
-	const DWORD timer_period = std::stoi (config_.interval) * 1000;
+	const DWORD timer_period = std::stoul (config_.interval) * 1000;
+#if 1
 	SetThreadpoolTimer (timer_->get(), &due_time, timer_period, 0);
 	LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
+#else
+	typedef BOOL (WINAPI *SetWaitableTimerExProc)(
+		__in  HANDLE hTimer,
+		__in  const LARGE_INTEGER *lpDueTime,
+		__in  LONG lPeriod,
+		__in  PTIMERAPCROUTINE pfnCompletionRoutine,
+		__in  LPVOID lpArgToCompletionRoutine,
+		__in  PREASON_CONTEXT WakeContext,
+		__in  ULONG TolerableDelay
+	);
+	SetWaitableTimerExProc pFnSetWaitableTimerEx = nullptr;
+	ULONG tolerance = std::stoul (config_.tolerable_delay);
+	REASON_CONTEXT reasonContext = {0};
+	reasonContext.Version = 0;
+	reasonContext.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
+	reasonContext.Reason.SimpleReasonString = L"HiloTimer";
+	HMODULE hKernel32Module = GetModuleHandle (_T("kernel32.dll"));
+	BOOL timer_status = false;
+	if (nullptr != hKernel32Module)
+		pFnSetWaitableTimerEx = (SetWaitableTimerExProc) ::GetProcAddress (hKernel32Module, "SetWaitableTimerEx");
+	if (nullptr != pFnSetWaitableTimerEx)
+		timer_status = pFnSetWaitableTimerEx (timer_->get(), &due_time, timer_period, nullptr, nullptr, &reasonContext, tolerance);
+	if (timer_status) {
+		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms, tolerance " << tolerance << "ms";
+	} else {
+		SetThreadpoolTimer (timer_->get(), &due_time, timer_period, 0);
+		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
+	}
+#endif	
 
 	return;
 cleanup:
@@ -512,7 +547,7 @@ hilo::stitch_t::tclHiloQuery (
 		assert ((bool)rule);
 		if (len > 0 && parseRule (rule_text, *rule.get())) {
 			query.push_back (rule);
-			DLOG(INFO) << "#" << (1 + i) << " " << rule.get()->name;
+			DLOG(INFO) << "#" << (1 + i) << " " << rule->name;
 		} else {
 			Tcl_SetResult (interp, "bad symbol list", TCL_STATIC);
 			return TCL_ERROR;
@@ -528,13 +563,13 @@ hilo::stitch_t::tclHiloQuery (
 	{
 		DLOG(INFO) << "Into result list name=" << it->name << " high=" << it->high << " low=" << it->low;
 
-		const double high_price = it->high * 1000000.0;
-		const int64_t high_mantissa = (int64_t)high_price;
-		const double high_rounded = (double)high_mantissa / 1000000.0;
+		const double high_price		= it->high * 1000000.0;
+		const int64_t high_mantissa	= (int64_t)high_price;
+		const double high_rounded	= (double)high_mantissa / 1000000.0;
 
-		const double low_price = it->high * 1000000.0;
-		const int64_t low_mantissa = (int64_t)low_price;
-		const double low_rounded = (double)low_mantissa / 1000000.0;
+		const double low_price		= it->low * 1000000.0;
+		const int64_t low_mantissa	= (int64_t)low_price;
+		const double low_rounded	= (double)low_mantissa / 1000000.0;
 
 		Tcl_Obj* elemObjPtr[] = {
 			Tcl_NewStringObj (it->name.c_str(), -1),
@@ -705,10 +740,12 @@ hilo::stitch_t::tclFeedLogQuery (
 	const ptime start (kUnixEpoch, seconds (start_time32));
 	const ptime end (kUnixEpoch, seconds (end_time32));
 	time_iterator time_it (start, seconds (interval));
+	__time32_t interval_start_time32 (start_time32);
 	while (++time_it <= end) {
 		__time32_t interval_end_time32 = (*time_it - ptime (kUnixEpoch)).total_seconds();
 
-		get_hilo (query, start_time32, interval_end_time32);
+		get_hilo (query, interval_start_time32, interval_end_time32);
+		interval_start_time32 = interval_end_time32;
 		
 /* create flexrecord for each pair */
 		std::for_each (query.begin(), query.end(),
@@ -717,13 +754,13 @@ hilo::stitch_t::tclFeedLogQuery (
 			std::ostringstream symbol_name;
 			symbol_name << it->name << config_.suffix;
 
-			const double high_price = it->high * 1000000.0;
-			const int64_t high_mantissa = (int64_t)high_price;
-			const double high_rounded = (double)high_mantissa / 1000000.0;
+			const double high_price		= it->high * 1000000.0;
+			const int64_t high_mantissa	= (int64_t)high_price;
+			const double high_rounded	= (double)high_mantissa / 1000000.0;
 
-			const double low_price = it->high * 1000000.0;
-			const int64_t low_mantissa = (int64_t)low_price;
-			const double low_rounded = (double)low_mantissa / 1000000.0;
+			const double low_price		= it->low * 1000000.0;
+			const int64_t low_mantissa	= (int64_t)low_price;
+			const double low_rounded	= (double)low_mantissa / 1000000.0;
 
 			flexrecord_t fr (interval_end_time32, symbol_name.str().c_str(), kHiloFlexRecordName);
 			fr.stream() << high_rounded
@@ -738,9 +775,7 @@ hilo::stitch_t::tclFeedLogQuery (
 				LOG(WARNING) << "Writing file " << feedlog_file << " failed, error code=" << GetLastError();
 			}
 
-/* reset */
-			it->high = it->low = 0.0;
-			it->is_null = true;
+/* do not reset analytic result set so next query extends previous result set */
 		});
 	}
 
@@ -969,14 +1004,14 @@ hilo::stitch_t::sendRefresh()
  */
 /* HIGH_1 */
 		price_field.setFieldID (kRdmTodaysHighId);
-		const double high_price = stream->hilo.get()->high * 1000000.0;
-		const int64_t high_mantissa = (int64_t)high_price;
+		const double high_price		= stream->hilo->high * 1000000.0;
+		const int64_t high_mantissa	= (int64_t)high_price;
 		real64.setValue (high_mantissa);		
 		it.bind (price_field);
 /* LOW_1 */
 		price_field.setFieldID (kRdmTodaysLowId);
-		const double low_price = stream->hilo.get()->low * 1000000.0;
-		const int64_t low_mantissa = (int64_t)low_price;
+		const double low_price		= stream->hilo->low * 1000000.0;
+		const int64_t low_mantissa	= (int64_t)low_price;
 		real64.setValue (low_mantissa);
 		it.bind (price_field);
 /* ACTIV_DATE */
@@ -998,11 +1033,10 @@ hilo::stitch_t::sendRefresh()
 		}
 #endif
 		provider_->send (*stream.get(), static_cast<rfa::common::Msg&> (response));
-		DLOG(INFO) << stream->rfa_name << " high=" << stream->hilo.get()->high << " low=" << stream->hilo.get()->low;
+		DLOG(INFO) << stream->rfa_name << " high=" << stream->hilo->high << " low=" << stream->hilo->low;
 
-/* reset */
-		stream->hilo.get()->high = stream->hilo.get()->low = 0.0;
-		stream->hilo.get()->is_null = true;
+/* reset analytic result set so next query starts from a blank state */
+		stream->hilo->clear();
 	});
 
 /* create timer iterator and walk through specified period dumping flexrecords to the feedlog */
@@ -1010,10 +1044,12 @@ hilo::stitch_t::sendRefresh()
 	const ptime end (kUnixEpoch, seconds (end_time32));
 	const int interval_seconds = std::stoi (config_.interval);
 	time_iterator time_it (start, seconds (interval_seconds));
+	__time32_t interval_start_time32 (start_time32);
 	while (++time_it <= end) {
 		__time32_t interval_end_time32 = (*time_it - ptime (kUnixEpoch)).total_seconds();
 
-		get_hilo (query_vector_, start_time32, interval_end_time32);
+		get_hilo (query_vector_, interval_start_time32, interval_end_time32);
+		interval_start_time32 = interval_end_time32;
 		
 /* create flexrecord for each pair */
 		const time_duration interval_end_tod = time_it->time_of_day();
@@ -1051,14 +1087,14 @@ hilo::stitch_t::sendRefresh()
  */
 /* HIGH_1 */
 			price_field.setFieldID (kRdmTodaysHighId);
-			const double high_price = stream->hilo.get()->high * 1000000.0;
-			const int64_t high_mantissa = (int64_t)high_price;
+			const double high_price		= stream->hilo->high * 1000000.0;
+			const int64_t high_mantissa	= (int64_t)high_price;
 			real64.setValue (high_mantissa);		
 			it.bind (price_field);
 /* LOW_1 */
 			price_field.setFieldID (kRdmTodaysLowId);
-			const double low_price = stream->hilo.get()->low * 1000000.0;
-			const int64_t low_mantissa = (int64_t)low_price;
+			const double low_price		= stream->hilo->low * 1000000.0;
+			const int64_t low_mantissa	= (int64_t)low_price;
 			real64.setValue (low_mantissa);
 			it.bind (price_field);
 /* ACTIV_DATE */
@@ -1081,13 +1117,18 @@ hilo::stitch_t::sendRefresh()
 #endif
 			const std::string key (rfa_name.c_str());
 			provider_->send (*stream->historical[key].get(), static_cast<rfa::common::Msg&> (response));
-			DLOG(INFO) << rfa_name << " high=" << stream->hilo.get()->high << " low=" << stream->hilo.get()->low;
+			DLOG(INFO) << rfa_name << " high=" << stream->hilo->high << " low=" << stream->hilo->low;
 
-/* reset */
-			stream->hilo.get()->high = stream->hilo.get()->low = 0.0;
-			stream->hilo.get()->is_null = true;
+/* do not reset analytic result set so next query extends previous result set */
 		});
 	}
+
+/* now reset result set */
+	std::for_each (stream_vector_.begin(), stream_vector_.end(),
+		[&](std::unique_ptr<broadcast_stream_t>& stream)
+	{
+		stream->hilo->clear();
+	});
 
 /* Timing */
 	const ptime t1 (microsec_clock::universal_time());

@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <unordered_map>
 #include <string>
 #include <vector>
 
@@ -23,9 +24,22 @@ namespace hilo
 	class leg_t : boost::noncopyable
 	{
 	public:
+		leg_t ()
+		{
+			clear();
+		}
+
+		void clear() {
+			last_bid = last_ask = 0.0;
+			is_null = true;
+		}
+
 		std::string symbol_name;
 		std::string bid_field;
 		std::string ask_field;
+		double last_bid;
+		double last_ask;
+		bool is_null;
 	};
 
 	class hilo_t : boost::noncopyable
@@ -33,10 +47,15 @@ namespace hilo
 	public:
 		hilo_t () :
 			math_op (MATH_OP_NOOP),
-			high (0.0),
-			low (0.0),
-			is_null (true)
+			is_synthetic (false)
 		{
+			clear();
+		}
+
+		void clear() {
+			high = low = 0.0;
+			is_null = true;
+			legs.first.clear(); legs.second.clear();
 		}
 
 		std::string name;
@@ -45,6 +64,7 @@ namespace hilo
 		double high;
 		double low;
 		bool is_null;
+		bool is_synthetic;
 	};
 
 	void get_hilo (std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);

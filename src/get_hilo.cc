@@ -19,6 +19,9 @@ static const uint32_t kQuoteId = 40002;
 
 /*  IN: hilo populated with symbol names.
  * OUT: hilo populated with high-low values from start to end.
+ *
+ * caller must reset high, low, is_null values if clean query is required,
+ * existing values can be used to extended a previous query.
  */
 #if 0
 void
@@ -34,33 +37,30 @@ hilo::get_hilo (
 	DLOG(INFO) << "get_hilo(from=" << from << " till=" << till << ")";
 
 	std::for_each (query.begin(), query.end(),
-		[&](std::shared_ptr<hilo_t>& shared_it)
+		[&](std::shared_ptr<hilo_t>& it)
 	{
-		hilo_t& it = *shared_it.get();
 		std::set<FlexRecBinding> binding_set;
 		FlexRecBinding first_binding (kQuoteId), second_binding (kQuoteId);
-		bool is_synthetic = false;
 
 /* source instruments */
 		std::set<std::string> symbol_set;
-		symbol_set.insert (it.legs.first.symbol_name);
-		first_binding.Bind (it.legs.first.bid_field.c_str(), &bid_price);
-		first_binding.Bind (it.legs.first.ask_field.c_str(), &ask_price);
+		symbol_set.insert (it->legs.first.symbol_name);
+		first_binding.Bind (it->legs.first.bid_field.c_str(), &bid_price);
+		first_binding.Bind (it->legs.first.ask_field.c_str(), &ask_price);
 		binding_set.insert (first_binding);
 
-		if (MATH_OP_NOOP != it.math_op) {
-			symbol_set.insert (it.legs.second.symbol_name);
-			second_binding.Bind (it.legs.second.bid_field.c_str(), &bid_price);
-			second_binding.Bind (it.legs.second.ask_field.c_str(), &ask_price);
+		if (it->is_synthetic) {
+			symbol_set.insert (it->legs.second.symbol_name);
+			second_binding.Bind (it->legs.second.bid_field.c_str(), &bid_price);
+			second_binding.Bind (it->legs.second.ask_field.c_str(), &ask_price);
 			binding_set.insert (second_binding);
-			is_synthetic = true;
 		}
 
-		DLOG(INFO) << "iterating with name=" << it.name;
+		DLOG(INFO) << "iterating with name=" << it->name;
 
 /* lambda to function pointer is incomplete in MSVC2010, punt to the compiler to clean up. */
 		auto math_func = [&it](double a, double b) -> double {
-			if (MATH_OP_TIMES == it.math_op)
+			if (MATH_OP_TIMES == it->math_op)
 				return (double)(a * b);
 			else if (b == 0.0)
 				return b;
@@ -68,50 +68,50 @@ hilo::get_hilo (
 				return (double)(a / b);
 		};
 
-		fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */);
-		if (is_synthetic)
-		{
-			double first_leg_bid_price, first_leg_ask_price,
-				second_leg_bid_price, second_leg_ask_price;
+/* does this analytic update the query state */
+		bool is_updated = false;
 
-			if (!fr.Next())
-			{
-/* nul stream */
-				it.low = it.high = 0.0;
-			}
-			else
+		fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */);
+		if (it->is_synthetic)
+		{
+			double first_leg_bid_price  = it->legs.first.last_bid,
+			       first_leg_ask_price  = it->legs.first.last_ask,
+			       second_leg_bid_price = it->legs.second.last_bid,
+			       second_leg_ask_price = it->legs.second.last_ask;
+
+			if (it->legs.first.is_null &&
+			    it->legs.second.is_null &&
+			    fr.Next())
 			{
 /* find first value for both legs */
-				if (fr.GetCurrentSymbolName() == it.legs.first.symbol_name)
+				if (fr.GetCurrentSymbolName() == it->legs.first.symbol_name)
 				{
+					it->legs.first.is_null = false;
 					do {
 						first_leg_bid_price = bid_price;
 						first_leg_ask_price = ask_price;
-					} while (fr.Next() && fr.GetCurrentSymbolName() == it.legs.first.symbol_name);
+					} while (fr.Next() && fr.GetCurrentSymbolName() == it->legs.first.symbol_name);
 /* follow */
-					if (fr.GetCurrentSymbolName() == it.legs.second.symbol_name) {
-						it.low  = math_func (first_leg_bid_price, second_leg_bid_price = bid_price);
-						it.high = math_func (first_leg_ask_price, second_leg_ask_price = ask_price);
-						DLOG(INFO) << "Start low=" << it.low << " high=" << it.high;
-					} else {
-/* single leg stream */
-						it.low = it.high = 0.0;
+					if (fr.GetCurrentSymbolName() == it->legs.second.symbol_name) {
+						is_updated = true;
+						it->low  = math_func (first_leg_bid_price, second_leg_bid_price = bid_price);
+						it->high = math_func (first_leg_ask_price, second_leg_ask_price = ask_price);
+						DLOG(INFO) << "Start low=" << it->low << " high=" << it->high;
 					}
 				}
 				else
 				{
+					it->legs.second.is_null = false;
 					do {
 						second_leg_bid_price = bid_price;
 						second_leg_ask_price = ask_price;
-					} while (fr.Next() && fr.GetCurrentSymbolName() == it.legs.second.symbol_name);
+					} while (fr.Next() && fr.GetCurrentSymbolName() == it->legs.second.symbol_name);
 /* follow */
-					if (fr.GetCurrentSymbolName() == it.legs.first.symbol_name) {
-						it.low  = math_func (first_leg_bid_price = bid_price, second_leg_bid_price);
-						it.high = math_func (first_leg_ask_price = ask_price, second_leg_ask_price);
-						DLOG(INFO) << "Start low=" << it.low << " high=" << it.high;
-					} else {
-/* single leg stream */
-						it.low = it.high = 0.0;
+					if (fr.GetCurrentSymbolName() == it->legs.first.symbol_name) {
+						is_updated = true;
+						it->low  = math_func (first_leg_bid_price = bid_price, second_leg_bid_price);
+						it->high = math_func (first_leg_ask_price = ask_price, second_leg_ask_price);
+						DLOG(INFO) << "Start low=" << it->low << " high=" << it->high;
 					}
 				}
 			}
@@ -119,7 +119,9 @@ hilo::get_hilo (
 /* till end */
 			while (fr.Next())
 			{
-				if (fr.GetCurrentSymbolName() == it.legs.first.symbol_name) {
+				is_updated = true;
+
+				if (fr.GetCurrentSymbolName() == it->legs.first.symbol_name) {
 					first_leg_bid_price = bid_price;
 					first_leg_ask_price = ask_price;
 				} else {
@@ -129,42 +131,57 @@ hilo::get_hilo (
 			
 				const double synthetic_bid_price = math_func (first_leg_bid_price, second_leg_bid_price),
 					synthetic_ask_price = math_func (first_leg_ask_price, second_leg_ask_price);
-				if (synthetic_bid_price < it.low) {
-					it.low  = synthetic_bid_price;
-					DLOG(INFO) << "New low=" << it.low;
+				if (synthetic_bid_price < it->low) {
+					it->low  = synthetic_bid_price;
+					DLOG(INFO) << "New low=" << it->low;
 				}
-				if (synthetic_ask_price > it.high) {
-					it.high = synthetic_ask_price;
-					DLOG(INFO) << "New high=" << it.high;
+				if (synthetic_ask_price > it->high) {
+					it->high = synthetic_ask_price;
+					DLOG(INFO) << "New high=" << it->high;
 				}
+			}
+
+			if (is_updated) {
+				it->legs.first.is_null = it->legs.second.is_null = false;
+				it->legs.first.last_bid = first_leg_bid_price;
+				it->legs.first.last_ask = first_leg_ask_price;
+				it->legs.second.last_bid = second_leg_bid_price;
+				it->legs.second.last_ask = second_leg_ask_price;
 			}
 		}
 		else
 /* non-synthetic */
 		{
-			if (fr.Next()) {
-				it.low  = bid_price;
-				it.high = ask_price;
-			} else {
-/* nul stream */
-				it.low = it.high = 0.0;
+			if (it->legs.first.is_null &&
+			    fr.Next())
+			{
+				is_updated = true;
+				it->low  = bid_price;
+				it->high = ask_price;
 			}
 				
 			while (fr.Next())
 			{
-				if (bid_price < it.low) {
-					it.low  = bid_price;
+				is_updated = true;
+				if (bid_price < it->low) {
+					it->low  = bid_price;
 					DLOG(INFO) << "New low=" << bid_price;
 				}
-				if (ask_price > it.high) {
-					it.high = ask_price;
+				if (ask_price > it->high) {
+					it->high = ask_price;
 					DLOG(INFO) << "New high=" << ask_price;
 				}
+			}
+
+			if (is_updated) {
+				it->legs.first.is_null = false;
+				it->legs.first.last_bid = bid_price;
+				it->legs.first.last_ask = ask_price;
 			}
 		}
 		fr.Close();
 
-		DLOG(INFO) << "iteration complete, low=" << it.low << " high=" << it.high;
+		DLOG(INFO) << "iteration complete, low=" << it->low << " high=" << it->high;
 	});
 
 	DLOG(INFO) << "get_hilo() finished.";
@@ -172,6 +189,7 @@ hilo::get_hilo (
 #else
 
 namespace hilo {
+
 	class symbol_t : boost::noncopyable
 	{
 	public:
@@ -182,32 +200,19 @@ namespace hilo {
 		{
 		}
 
+		symbol_t (double bid_price_, double ask_price_, bool is_null_) :
+			last_bid_price (bid_price_),
+			last_ask_price (ask_price_),
+			is_null (is_null_)
+		{
+		}
+
 		std::shared_ptr<hilo_t> non_synthetic;
 /* synthetic members */
 		double last_bid_price, last_ask_price;
 		bool is_null;
 		std::list<std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>>> as_first_leg_list, as_second_leg_list;
 	};
-
-#if 0
-	class cache_t : boost::noncopyable
-	{
-	public:
-		cache_t (symbol_t& symbol) :
-			non_synthetic (symbol.non_synthetic),
-			last_bid_price (symbol.last_bid_price),
-			last_ask_price (symbol.last_ask_price),
-			is_null (symbol.is_null)
-		{
-		}
-
-		std::weak_ptr<hilo_t> non_synthetic;
-/* synthetic members */
-		double last_bid_price, last_ask_price;
-		bool is_null;
-		std::list<std::pair<std::shared_ptr<cache_t>, std::weak_ptr<hilo_t>>> as_first_leg_list, as_second_leg_list;
-	};
-#endif
 
 } /* namespace hilo */
 
@@ -226,23 +231,20 @@ hilo::get_hilo (
 
 /* convert multiple queries into a single query expression */
 	std::for_each (query.begin(), query.end(),
-		[&](std::shared_ptr<hilo_t> query_it)
+		[&](std::shared_ptr<hilo_t>& query_it)
 	{
 		auto symbol_it = symbol_map.find (query_it->legs.first.symbol_name);
 		if (symbol_map.end() == symbol_it) {
-			std::shared_ptr<symbol_t> new_symbol (new symbol_t);
+			std::shared_ptr<symbol_t> new_symbol (new symbol_t (query_it->legs.first.last_bid, query_it->legs.first.last_ask, query_it->legs.first.is_null));
 			auto status = symbol_map.emplace (std::make_pair (query_it->legs.first.symbol_name, std::move (new_symbol)));
 			symbol_it = status.first;
 			symbol_set.emplace (symbol_it->first);
 		} 
 
-		if (MATH_OP_NOOP == query_it->math_op) {
+		if (!query_it->is_synthetic) {
 			symbol_it->second->non_synthetic = query_it;
 			return;
 		}
-
-/* reset now */
-		query_it->low = query_it->high = 0.0;
 
 /* this ric is a synthetic pair, XxxYyy, add to list of Xxx a link to -Yyy and add to Yyy a link to Xxx- */
 		assert (query_it->legs.first.symbol_name != query_it->legs.second.symbol_name);
@@ -252,7 +254,7 @@ hilo::get_hilo (
 /* Yyy */
 		auto second_it = symbol_map.find (query_it->legs.second.symbol_name);
 		if (symbol_map.end() == second_it) {
-			std::shared_ptr<symbol_t> new_symbol (new symbol_t);
+			std::shared_ptr<symbol_t> new_symbol (new symbol_t (query_it->legs.second.last_bid, query_it->legs.second.last_ask, query_it->legs.second.is_null));
 			auto status = symbol_map.emplace (std::make_pair (query_it->legs.second.symbol_name, std::move (new_symbol)));
 			second_it = status.first;
 			symbol_set.emplace (second_it->first);
@@ -350,6 +352,24 @@ hilo::get_hilo (
 		});
 	}	
 	fr.Close();
+
+/* cache symbol last values back into query vector, 1:M operation */
+	std::for_each (query.begin(), query.end(),
+		[&](std::shared_ptr<hilo_t>& query_it)
+	{
+		auto first_leg = symbol_map[query_it->legs.first.symbol_name];
+		query_it->legs.first.is_null  = first_leg->is_null;
+		query_it->legs.first.last_bid = first_leg->last_bid_price;
+		query_it->legs.first.last_ask = first_leg->last_ask_price;
+
+		if (!query_it->is_synthetic) return;
+
+		auto second_leg = symbol_map[query_it->legs.second.symbol_name];
+		query_it->legs.second.is_null  = second_leg->is_null;
+		query_it->legs.second.last_bid = second_leg->last_bid_price;
+		query_it->legs.second.last_ask = second_leg->last_ask_price;
+	});
+
 	DLOG(INFO) << "get_hilo() finished.";
 }
 #endif
