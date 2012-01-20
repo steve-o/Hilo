@@ -188,6 +188,27 @@ namespace hilo {
 		bool is_null;
 		std::list<std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>>> as_first_leg_list, as_second_leg_list;
 	};
+
+#if 0
+	class cache_t : boost::noncopyable
+	{
+	public:
+		cache_t (symbol_t& symbol) :
+			non_synthetic (symbol.non_synthetic),
+			last_bid_price (symbol.last_bid_price),
+			last_ask_price (symbol.last_ask_price),
+			is_null (symbol.is_null)
+		{
+		}
+
+		std::weak_ptr<hilo_t> non_synthetic;
+/* synthetic members */
+		double last_bid_price, last_ask_price;
+		bool is_null;
+		std::list<std::pair<std::shared_ptr<cache_t>, std::weak_ptr<hilo_t>>> as_first_leg_list, as_second_leg_list;
+	};
+#endif
+
 } /* namespace hilo */
 
 void
@@ -265,7 +286,7 @@ hilo::get_hilo (
 		}
 		if (ask_price > query_item.high) {
 			query_item.high = ask_price;
-			LOG(INFO) << "New high=" << ask_price;
+			DLOG(INFO) << "New high=" << ask_price;
 		}
 	};
 

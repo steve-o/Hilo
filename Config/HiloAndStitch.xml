@@ -71,7 +71,7 @@
      http://www.babypips.com/school/creating-synthetic-pairs.html
 
   -->
-	<crosses interval="90"
+	<crosses interval="900"
 		reset="22:00:00.000"
 		suffix="VTA"
 		path="C:/Vhayu/Feeds/Derived">
@@ -324,7 +324,7 @@
 		<pair name="USDMUR=" src="MUR="/>
 		<pair name="USDMXN=" src="MXN="/>
 		<pair name="USDMYR=" src="MYR=MY"/>
-		<pair name="USDNGN=" src="MGN="/>
+		<pair name="USDNGN=" src="NGN="/>
 		<pair name="USDNOK=" src="NOK="/>
 		<pair name="USDOMR=" src="OMR="/>
 		<pair name="USDPEN=" src="PEN="/>

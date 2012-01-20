@@ -35,12 +35,19 @@ static const int kRdmActiveDateId	= 17;
 /* FlexRecord Quote identifier. */
 static const uint32_t kQuoteId = 40002;
 
+/* Feed log file FlexRecord name */
+static const char* kHiloFlexRecordName = "Hilo";
+
 /* Tcl exported API. */
-static const char* kFunctionName = "hilo_query";
+static const char* kBasicFunctionName = "hilo_query";
+static const char* kFeedLogFunctionName = "hilo_feedlog";
 
 /* Default FlexRecord fields. */
 static const char* kDefaultBidField = "BidPrice";
 static const char* kDefaultAskField = "AskPrice";
+
+/* http://en.wikipedia.org/wiki/Unix_epoch */
+static const boost::gregorian::date kUnixEpoch (1970, 1, 1);
 
 LONG volatile hilo::stitch_t::instance_count_ = 0;
 
@@ -223,16 +230,45 @@ hilo::stitch_t::init (
 			it != config_.rules.end();
 			++it)
 		{
+/* rule */
 			std::shared_ptr<hilo_t> rule (new hilo_t);
 			assert ((bool)rule);
 			if (!parseRule (*it, *rule.get()))
 				goto cleanup;
 			query_vector_.push_back (rule);
+
+/* analytic publish stream */
 			std::string symbol_name = rule.get()->name + config_.suffix;
 			std::unique_ptr<broadcast_stream_t> stream (new broadcast_stream_t (rule));
 			assert ((bool)stream);
 			if (!provider_->createItemStream (symbol_name.c_str(), *stream.get()))
 				goto cleanup;
+
+/* streams for historical analytics */
+			using namespace boost::posix_time;
+			const time_duration reset_tod = duration_from_string (config_.reset_time);
+			const ptime start (kUnixEpoch, reset_tod);
+			ptime end (kUnixEpoch, reset_tod);
+			end += boost::gregorian::days (1);
+
+			const int interval_seconds = std::stoi (config_.interval);
+			time_iterator time_it (start, seconds (interval_seconds));
+			while (++time_it <= end) {
+				const time_duration interval_end_tod = time_it->time_of_day();
+				std::ostringstream ss;
+				ss << std::setfill ('0')
+				   << symbol_name
+//				   << "."
+				   << std::setw (2) << interval_end_tod.hours()
+				   << std::setw (2) << interval_end_tod.minutes();
+				std::unique_ptr<item_stream_t> historical_stream (new item_stream_t);
+				assert ((bool)historical_stream);
+				if (!provider_->createItemStream (ss.str().c_str(), *historical_stream.get()))
+					goto cleanup;
+				auto status = stream->historical.insert (std::make_pair (ss.str(), std::move (historical_stream)));
+				assert (true == status.second);
+			}
+
 			stream_vector_.push_back (std::move (stream));
 		}
 
@@ -271,8 +307,10 @@ hilo::stitch_t::init (
 		goto cleanup;
 
 /* Register Tcl API. */
-	registerCommand (getId(), kFunctionName);
-	LOG(INFO) << "Registered Tcl API \"" << kFunctionName << "\"";
+	registerCommand (getId(), kBasicFunctionName);
+	LOG(INFO) << "Registered Tcl API \"" << kBasicFunctionName << "\"";
+	registerCommand (getId(), kFeedLogFunctionName);
+	LOG(INFO) << "Registered Tcl API \"" << kFeedLogFunctionName << "\"";
 
 /* Timer for periodic publishing.
  */
@@ -329,16 +367,16 @@ hilo::stitch_t::destroy()
 {
 	LOG(INFO) << "destroy()";
 /* Unregister Tcl API. */
-	deregisterCommand (getId(), kFunctionName);
-	LOG(INFO) << "Unregistered Tcl API \"" << kFunctionName << "\"";
+	deregisterCommand (getId(), kFeedLogFunctionName);
+	LOG(INFO) << "Unregistered Tcl API \"" << kFeedLogFunctionName << "\"";
+	deregisterCommand (getId(), kBasicFunctionName);
+	LOG(INFO) << "Unregistered Tcl API \"" << kBasicFunctionName << "\"";
 	clear();
 	LOG(INFO) << "Runtime summary: {}";
 	vpf::AbstractUserPlugin::destroy();
 }
 
 /* Tcl boilerplate.
- *
- * stitch_query [startTime] [endTime]
  */
 
 #define Tcl_GetLongFromObj \
@@ -370,105 +408,22 @@ hilo::stitch_t::execute (
 	vpf::TCLCommandData& cmdData
 	)
 {
+	int retval = TCL_ERROR;
 	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
 	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
-	int objc = cmdData.mObjc;			/* Number of arguments. */
-	Tcl_Obj** CONST objv = cmdData.mObjv;		/* Argument strings. */
-
 	const boost::posix_time::ptime t0 (boost::posix_time::microsec_clock::universal_time());
 	last_activity_ = t0;
 
-	DLOG(INFO) << "Tcl execute objc=" << objc;
 	cumulative_stats_[STITCH_PC_TCL_QUERY_RECEIVED]++;
 
 	try {
-		if (objc < 2 || objc > 5) {
-			Tcl_WrongNumArgs (interp, 1, objv, "symbolList ?startTime? ?endTime?");
-			return TCL_ERROR;
-		}
-
-/* startTime if not provided is market open. */
-		__time32_t startTime;
-		if (objc >= 3)
-			Tcl_GetLongFromObj (interp, objv[2], &startTime);
+		const char* command = cmdInfo.getCommandName();
+		if (0 == strcmp (command, kBasicFunctionName))
+			retval = tclHiloQuery (cmdInfo, cmdData);
+		else if (0 == strcmp (command, kFeedLogFunctionName))
+			retval = tclFeedLogQuery (cmdInfo, cmdData);
 		else
-			startTime = TBPrimitives::GetOpeningTime();
-
-/* endTime if not provided is now. */
-		__time32_t endTime;
-		if (objc >= 4)
-			Tcl_GetLongFromObj (interp, objv[3], &endTime);
-		else
-			endTime = TBPrimitives::GetCurrentTime();
-
-/* Time must be ascending. */
-		if (endTime <= startTime) {
-			Tcl_SetResult (interp, "endTime must be after startTime", TCL_STATIC);
-			return TCL_ERROR;
-		}
-
-		DLOG(INFO) << "startTime=" << startTime << ", endTime=" << endTime;
-
-/* symbolList must be a list object.
- * NB: VA 7.0 does not export Tcl_ListObjGetElements()
- */
-		int listLen, result = Tcl_ListObjLength (interp, objv[1], &listLen);
-		if (TCL_OK != result)
-			return result;
-		if (0 == listLen) {
-			Tcl_SetResult (interp, "bad symbol list", TCL_STATIC);
-			return TCL_ERROR;
-		}
-
-		DLOG(INFO) << "symbol list with #" << listLen << " entries";
-
-/* Convert TCl list parameter into STL container. */
-		std::vector<std::shared_ptr<hilo_t>> query;
-		for (int i = 0; i < listLen; i++)
-		{
-			Tcl_Obj* objPtr = nullptr;
-
-			Tcl_ListObjIndex (interp, objv[1], i, &objPtr);
-
-			int len = 0;
-			char* rule_text = Tcl_GetStringFromObj (objPtr, &len);
-			std::shared_ptr<hilo_t> rule (new hilo_t);
-			assert ((bool)rule);
-			if (len > 0 && parseRule (rule_text, *rule.get())) {
-				query.push_back (rule);
-				DLOG(INFO) << "#" << (1 + i) << " " << rule.get()->name;
-			} else {
-				Tcl_SetResult (interp, "bad symbol list", TCL_STATIC);
-				return TCL_ERROR;
-			}
-		}
-
-		get_hilo (query, startTime, endTime);
-
-/* Convert STL container result set into a new Tcl list. */
-		Tcl_Obj* resultListPtr = Tcl_NewListObj (0, NULL);
-		std::for_each (query.begin(), query.end(),
-			[&](std::shared_ptr<hilo_t> shared_it)
-		{
-			hilo_t& it = *shared_it.get();
-			DLOG(INFO) << "Into result list name=" << it.name << " high=" << it.high << " low=" << it.low;
-			Tcl_Obj* elemObjPtr[] = {
-				Tcl_NewStringObj (it.name.c_str(), -1),
-				Tcl_NewDoubleObj (it.high),
-				Tcl_NewDoubleObj (it.low),
-			};
-			Tcl_ListObjAppendElement (interp, resultListPtr, Tcl_NewListObj (_countof (elemObjPtr), elemObjPtr));
-		});
-		Tcl_SetObjResult (interp, resultListPtr);
-/* Timing */
-		const boost::posix_time::ptime t1 (boost::posix_time::microsec_clock::universal_time());
-		const boost::posix_time::time_duration td = t1 - t0;
-		DLOG(INFO) << "execute complete" << td.total_milliseconds() << "ms";
-		if (td < min_tcl_time_) min_tcl_time_ = td;
-		if (td > max_tcl_time_) max_tcl_time_ = td;
-		total_tcl_time_ += td;
-
-		return TCL_OK;
+			Tcl_SetResult (interp, "unknown function", TCL_STATIC);
 	}
 /* FlexRecord exceptions */
 	catch (const vpf::PluginFrameworkException& e) {
@@ -478,7 +433,318 @@ hilo::stitch_t::execute (
 	catch (...) {
 		Tcl_SetResult (interp, "Unhandled exception", TCL_STATIC);
 	}
-	return TCL_ERROR;
+
+/* Timing */
+	const boost::posix_time::ptime t1 (boost::posix_time::microsec_clock::universal_time());
+	const boost::posix_time::time_duration td = t1 - t0;
+	DLOG(INFO) << "execute complete" << td.total_milliseconds() << "ms";
+	if (td < min_tcl_time_) min_tcl_time_ = td;
+	if (td > max_tcl_time_) max_tcl_time_ = td;
+	total_tcl_time_ += td;
+
+	return retval;
+}
+
+/* hilo_query <symbol-list> [startTime] [endTime]
+ */
+int
+hilo::stitch_t::tclHiloQuery (
+	const vpf::CommandInfo& cmdInfo,
+	vpf::TCLCommandData& cmdData
+	)
+{
+	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
+	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
+	int objc = cmdData.mObjc;			/* Number of arguments. */
+	Tcl_Obj** CONST objv = cmdData.mObjv;		/* Argument strings. */
+
+	if (objc < 2 || objc > 5) {
+		Tcl_WrongNumArgs (interp, 1, objv, "symbolList ?startTime? ?endTime?");
+		return TCL_ERROR;
+	}
+
+/* startTime if not provided is market open. */
+	__time32_t startTime;
+	if (objc >= 3)
+		Tcl_GetLongFromObj (interp, objv[2], &startTime);
+	else
+		startTime = TBPrimitives::GetOpeningTime();
+
+/* endTime if not provided is now. */
+	__time32_t endTime;
+	if (objc >= 4)
+		Tcl_GetLongFromObj (interp, objv[3], &endTime);
+	else
+		endTime = TBPrimitives::GetCurrentTime();
+
+/* Time must be ascending. */
+	if (endTime <= startTime) {
+		Tcl_SetResult (interp, "endTime must be after startTime", TCL_STATIC);
+		return TCL_ERROR;
+	}
+
+	DLOG(INFO) << "startTime=" << startTime << ", endTime=" << endTime;
+
+/* symbolList must be a list object.
+ * NB: VA 7.0 does not export Tcl_ListObjGetElements()
+ */
+	int listLen, result = Tcl_ListObjLength (interp, objv[1], &listLen);
+	if (TCL_OK != result)
+		return result;
+	if (0 == listLen) {
+		Tcl_SetResult (interp, "bad symbol list", TCL_STATIC);
+		return TCL_ERROR;
+	}
+
+	DLOG(INFO) << "symbol list with #" << listLen << " entries";
+
+/* Convert TCl list parameter into STL container. */
+	std::vector<std::shared_ptr<hilo_t>> query;
+	for (int i = 0; i < listLen; i++)
+	{
+		Tcl_Obj* objPtr = nullptr;
+
+		Tcl_ListObjIndex (interp, objv[1], i, &objPtr);
+
+		int len = 0;
+		char* rule_text = Tcl_GetStringFromObj (objPtr, &len);
+		std::shared_ptr<hilo_t> rule (new hilo_t);
+		assert ((bool)rule);
+		if (len > 0 && parseRule (rule_text, *rule.get())) {
+			query.push_back (rule);
+			DLOG(INFO) << "#" << (1 + i) << " " << rule.get()->name;
+		} else {
+			Tcl_SetResult (interp, "bad symbol list", TCL_STATIC);
+			return TCL_ERROR;
+		}
+	}
+
+	get_hilo (query, startTime, endTime);
+
+/* Convert STL container result set into a new Tcl list. */
+	Tcl_Obj* resultListPtr = Tcl_NewListObj (0, NULL);
+	std::for_each (query.begin(), query.end(),
+		[&](std::shared_ptr<hilo_t> it)
+	{
+		DLOG(INFO) << "Into result list name=" << it->name << " high=" << it->high << " low=" << it->low;
+
+		const double high_price = it->high * 1000000.0;
+		const int64_t high_mantissa = (int64_t)high_price;
+		const double high_rounded = (double)high_mantissa / 1000000.0;
+
+		const double low_price = it->high * 1000000.0;
+		const int64_t low_mantissa = (int64_t)low_price;
+		const double low_rounded = (double)low_mantissa / 1000000.0;
+
+		Tcl_Obj* elemObjPtr[] = {
+			Tcl_NewStringObj (it->name.c_str(), -1),
+			Tcl_NewDoubleObj (high_rounded),
+			Tcl_NewDoubleObj (low_rounded),
+		};
+		Tcl_ListObjAppendElement (interp, resultListPtr, Tcl_NewListObj (_countof (elemObjPtr), elemObjPtr));
+	});
+	Tcl_SetObjResult (interp, resultListPtr);
+
+	return TCL_OK;
+}
+
+class flexrecord_t {
+public:
+	flexrecord_t (const __time32_t& timestamp, const char* symbol, const char* record)
+	{
+		VHTime vhtime;
+		struct tm tm_time = { 0 };
+		
+		VHTimeProcessor::TTTimeToVH ((__time32_t*)&timestamp, &vhtime);
+		_gmtime32_s (&tm_time, &timestamp);
+
+		stream_ << std::setfill ('0')
+/* 1: timeStamp : t_string : server receipt time, fixed format: YYYYMMDDhhmmss.ttt, e.g. 20120114060928.227 */
+			<< std::setw (4) << 1900 + tm_time.tm_year
+			<< std::setw (2) << tm_time.tm_mon
+			<< std::setw (2) << tm_time.tm_mday
+			<< std::setw (2) << tm_time.tm_hour
+			<< std::setw (2) << tm_time.tm_min
+			<< std::setw (2) << tm_time.tm_sec
+			<< '.'
+			<< std::setw (3) << 0
+/* 2: eyeCatcher : t_string : @@a */
+			<< ",@@a"
+/* 3: recordType : t_string : FR */
+			   ",FR"
+/* 4: symbol : t_string : e.g. MSFT */
+			   ","
+			<< symbol
+/* 5: defName : t_string : FlexRecord name, e.g. Quote */
+			<< ',' << record
+/* 6: sourceName : t_string : FlexRecord name of base derived record. */
+			<< ","
+/* 7: sequenceID : t_u64 : Sequence number. */
+			   "," << sequence_++
+/* 8: exchTimeStamp : t_VHTime : exchange timestamp */
+			<< ",V" << vhtime
+/* 9: subType : t_s32 : record subtype */
+			<< ","
+/* 10..497: user-defined data fields */
+			   ",";
+	}
+
+	std::string str() { return stream_.str(); }
+	std::ostream& stream() { return stream_; }
+private:
+	std::ostringstream stream_;
+	static uint64_t sequence_;
+};
+
+uint64_t flexrecord_t::sequence_ = 0;
+
+/* hilo_feedlog <feedlog-file> <symbol-list> <interval> [startTime] [endTime]
+ */
+int
+hilo::stitch_t::tclFeedLogQuery (
+	const vpf::CommandInfo& cmdInfo,
+	vpf::TCLCommandData& cmdData
+	)
+{
+	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
+	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
+	int objc = cmdData.mObjc;			/* Number of arguments. */
+	Tcl_Obj** CONST objv = cmdData.mObjv;		/* Argument strings. */
+
+	if (objc < 2 || objc > 7) {
+		Tcl_WrongNumArgs (interp, 1, objv, "feedLogFile symbolList interval ?startTime? ?endTime?");
+		return TCL_ERROR;
+	}
+
+/* feedLogFile */
+	int len = 0;
+	char* feedlog_file = Tcl_GetStringFromObj (objv[1], &len);
+	if (0 == len) {
+		Tcl_SetResult (interp, "bad feedlog file", TCL_STATIC);
+		return TCL_ERROR;
+	}
+
+	ms::handle file (CreateFile (feedlog_file,
+				     GENERIC_WRITE,
+				     0,
+				     NULL,
+				     CREATE_ALWAYS,
+				     0,
+				     NULL));
+	if (!file) {
+		LOG(WARNING) << "Failed to create file " << feedlog_file << " error code=" << GetLastError();
+		return TCL_ERROR;
+	}
+
+	DLOG(INFO) << "feedLogFile=" << feedlog_file;
+
+/* interval period */
+	long interval;
+	Tcl_GetLongFromObj (interp, objv[3], &interval);
+
+	DLOG(INFO) << "interval=" << interval;
+
+/* startTime if not provided is market open. */
+	__time32_t start_time32;
+	if (objc >= 4)
+		Tcl_GetLongFromObj (interp, objv[4], &start_time32);
+	else
+		start_time32 = TBPrimitives::GetOpeningTime();
+
+/* endTime if not provided is now. */
+	__time32_t end_time32;
+	if (objc >= 5)
+		Tcl_GetLongFromObj (interp, objv[5], &end_time32);
+	else
+		end_time32 = TBPrimitives::GetCurrentTime();
+
+/* Time must be ascending. */
+	if (end_time32 <= start_time32) {
+		Tcl_SetResult (interp, "endTime must be after startTime", TCL_STATIC);
+		return TCL_ERROR;
+	}
+
+	DLOG(INFO) << "startTime=" << start_time32 << ", endTime=" << end_time32;
+
+/* symbolList must be a list object.
+ * NB: VA 7.0 does not export Tcl_ListObjGetElements()
+ */
+	int listLen, result = Tcl_ListObjLength (interp, objv[2], &listLen);
+	if (TCL_OK != result)
+		return result;
+	if (0 == listLen) {
+		Tcl_SetResult (interp, "bad symbol list", TCL_STATIC);
+		return TCL_ERROR;
+	}
+
+	DLOG(INFO) << "symbol list with #" << listLen << " entries";
+
+/* Convert TCl list parameter into STL container. */
+	std::vector<std::shared_ptr<hilo_t>> query;
+	for (int i = 0; i < listLen; i++)
+	{
+		Tcl_Obj* objPtr = nullptr;
+
+		Tcl_ListObjIndex (interp, objv[2], i, &objPtr);
+
+		int len = 0;
+		char* rule_text = Tcl_GetStringFromObj (objPtr, &len);
+		std::shared_ptr<hilo_t> rule (new hilo_t);
+		assert ((bool)rule);
+		if (len > 0 && parseRule (rule_text, *rule.get())) {
+			query.push_back (rule);
+			DLOG(INFO) << "#" << (1 + i) << " " << rule.get()->name;
+		} else {
+			Tcl_SetResult (interp, "bad symbol list", TCL_STATIC);
+			return TCL_ERROR;
+		}
+	}
+
+/* create timer iterator and walk through specified period dumping flexrecords to the feedlog */
+	using namespace boost::posix_time;
+	const ptime start (kUnixEpoch, seconds (start_time32));
+	const ptime end (kUnixEpoch, seconds (end_time32));
+	time_iterator time_it (start, seconds (interval));
+	while (++time_it <= end) {
+		__time32_t interval_end_time32 = (*time_it - ptime (kUnixEpoch)).total_seconds();
+
+		get_hilo (query, start_time32, interval_end_time32);
+		
+/* create flexrecord for each pair */
+		std::for_each (query.begin(), query.end(),
+			[&](std::shared_ptr<hilo_t> it)
+		{
+			std::ostringstream symbol_name;
+			symbol_name << it->name << config_.suffix;
+
+			const double high_price = it->high * 1000000.0;
+			const int64_t high_mantissa = (int64_t)high_price;
+			const double high_rounded = (double)high_mantissa / 1000000.0;
+
+			const double low_price = it->high * 1000000.0;
+			const int64_t low_mantissa = (int64_t)low_price;
+			const double low_rounded = (double)low_mantissa / 1000000.0;
+
+			flexrecord_t fr (interval_end_time32, symbol_name.str().c_str(), kHiloFlexRecordName);
+			fr.stream() << high_rounded
+				    << ','
+				    << low_rounded;
+
+			DWORD written;
+			std::string line (fr.str());
+			line.append ("\r\n");
+			const BOOL result = WriteFile (file.get(), line.c_str(), (DWORD)line.length(), &written, nullptr);
+			if (!result || written != line.length()) {
+				LOG(WARNING) << "Writing file " << feedlog_file << " failed, error code=" << GetLastError();
+			}
+
+/* reset */
+			it->high = it->low = 0.0;
+			it->is_null = true;
+		});
+	}
+
+	return TCL_OK;
 }
 
 void
@@ -496,9 +762,6 @@ hilo::stitch_t::processTimer (
 			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
 	}
 }
-
-/* http://en.wikipedia.org/wiki/Unix_epoch */
-static const boost::posix_time::ptime kUnixEpoch (boost::gregorian::date (1970, 1, 1));
 
 /* calculate the last reset time.
  */
@@ -519,7 +782,7 @@ hilo::stitch_t::get_last_reset_time (
 	if ((reset_tod + seconds (interval_seconds)) > now_tod)
 		reset_ptime -= boost::gregorian::days (1);
 
-	t = (reset_ptime - kUnixEpoch).total_seconds();
+	t = (reset_ptime - ptime (kUnixEpoch)).total_seconds();
 }
 
 /* Calculate start of next interval.
@@ -557,7 +820,7 @@ hilo::stitch_t::get_next_interval (
 		FILETIME as_file_time;
 		uint64_t as_integer; // 100-nanos since 1601-Jan-01
 	} caster;
-	caster.as_integer = (next_ptime - kUnixEpoch).total_microseconds() * 10; // upconvert to 100-nanos
+	caster.as_integer = (next_ptime - ptime (kUnixEpoch)).total_microseconds() * 10; // upconvert to 100-nanos
 	caster.as_integer += shift; // now 100-nanos since 1601-Jan-01
 
 	ft = caster.as_file_time;
@@ -588,7 +851,7 @@ hilo::stitch_t::get_end_of_last_interval (
 /* round down to multiple of interval */
 	const ptime end_ptime = reset_ptime + seconds ((offset.total_seconds() / interval_seconds) * interval_seconds);
 
-	t = (end_ptime - kUnixEpoch).total_seconds();
+	t = (end_ptime - ptime (kUnixEpoch)).total_seconds();
 }
 
 /* http://msdn.microsoft.com/en-us/library/4ey61ayt.aspx */
@@ -597,21 +860,22 @@ hilo::stitch_t::get_end_of_last_interval (
 bool
 hilo::stitch_t::sendRefresh()
 {
-	const boost::posix_time::ptime t0 (boost::posix_time::microsec_clock::universal_time());
+	using namespace boost::posix_time;
+	const ptime t0 (microsec_clock::universal_time());
 	last_activity_ = t0;
 
 /* Calculate time boundary for query */
-	__time32_t startTime, endTime;
-	get_last_reset_time (startTime);
-	get_end_of_last_interval (endTime);
+	__time32_t start_time32, end_time32;
+	get_last_reset_time (start_time32);
+	get_end_of_last_interval (end_time32);
 
 	char start_str[CTIME_LENGTH], end_str[CTIME_LENGTH];
-	_ctime32_s (start_str, _countof (start_str), &startTime);
-	_ctime32_s (end_str, _countof (end_str), &endTime);
+	_ctime32_s (start_str, _countof (start_str), &start_time32);
+	_ctime32_s (end_str, _countof (end_str), &end_time32);
 	start_str[CTIME_LENGTH - 2] = end_str[CTIME_LENGTH - 2] = '\0';
 	LOG(INFO) << "refresh " << start_str << "-" << end_str;
 
-	get_hilo (query_vector_, startTime, endTime);
+	get_hilo (query_vector_, start_time32, end_time32);
 
 /* 7.5.9.1 Create a response message (4.2.2) */
 	rfa::message::RespMsg response (false);	/* reference */
@@ -661,7 +925,7 @@ hilo::stitch_t::sendRefresh()
 
 /* TIMEACT */
 	timeact_field.setFieldID (kRdmTimeOfUpdateId);
-	_gmtime32_s (&_tm, &endTime);
+	_gmtime32_s (&_tm, &end_time32);
 	rfaTime.setHour   (_tm.tm_hour);
 	rfaTime.setMinute (_tm.tm_min);
 	rfaTime.setSecond (_tm.tm_sec);
@@ -692,11 +956,9 @@ hilo::stitch_t::sendRefresh()
 	response.setRespStatus (status);
 
 	std::for_each (stream_vector_.begin(), stream_vector_.end(),
-		[&](std::unique_ptr<broadcast_stream_t>& shared_stream)
+		[&](std::unique_ptr<broadcast_stream_t>& stream)
 	{
-		broadcast_stream_t& stream = *shared_stream.get();
-
-		attribInfo.setName (stream.rfa_name);
+		attribInfo.setName (stream->rfa_name);
 		it.start (fields_);
 /* TIMACT */
 		it.bind (timeact_field);
@@ -707,13 +969,13 @@ hilo::stitch_t::sendRefresh()
  */
 /* HIGH_1 */
 		price_field.setFieldID (kRdmTodaysHighId);
-		const double high_price = stream.hilo.get()->high * 1000000.0;
+		const double high_price = stream->hilo.get()->high * 1000000.0;
 		const int64_t high_mantissa = (int64_t)high_price;
 		real64.setValue (high_mantissa);		
 		it.bind (price_field);
 /* LOW_1 */
 		price_field.setFieldID (kRdmTodaysLowId);
-		const double low_price = stream.hilo.get()->low * 1000000.0;
+		const double low_price = stream->hilo.get()->low * 1000000.0;
 		const int64_t low_mantissa = (int64_t)low_price;
 		real64.setValue (low_mantissa);
 		it.bind (price_field);
@@ -735,17 +997,106 @@ hilo::stitch_t::sendRefresh()
 			assert (rfa::message::MsgValidationOk == validation_status);
 		}
 #endif
-		provider_->send (stream, static_cast<rfa::common::Msg&> (response));
-		DLOG(INFO) << stream.rfa_name << " high=" << high_price << " low=" << low_price;
+		provider_->send (*stream.get(), static_cast<rfa::common::Msg&> (response));
+		DLOG(INFO) << stream->rfa_name << " high=" << stream->hilo.get()->high << " low=" << stream->hilo.get()->low;
+
+/* reset */
+		stream->hilo.get()->high = stream->hilo.get()->low = 0.0;
+		stream->hilo.get()->is_null = true;
 	});
 
+/* create timer iterator and walk through specified period dumping flexrecords to the feedlog */
+	const ptime start (kUnixEpoch, seconds (start_time32));
+	const ptime end (kUnixEpoch, seconds (end_time32));
+	const int interval_seconds = std::stoi (config_.interval);
+	time_iterator time_it (start, seconds (interval_seconds));
+	while (++time_it <= end) {
+		__time32_t interval_end_time32 = (*time_it - ptime (kUnixEpoch)).total_seconds();
+
+		get_hilo (query_vector_, start_time32, interval_end_time32);
+		
+/* create flexrecord for each pair */
+		const time_duration interval_end_tod = time_it->time_of_day();
+		std::ostringstream ss;
+		ss << std::setfill ('0')
+//		   << "."
+		   << std::setw (2) << interval_end_tod.hours()
+		   << std::setw (2) << interval_end_tod.minutes();
+
+/* TIMEACT */
+		_gmtime32_s (&_tm, &interval_end_time32);
+		rfaTime.setHour   (_tm.tm_hour);
+		rfaTime.setMinute (_tm.tm_min);
+		rfaTime.setSecond (_tm.tm_sec);
+		rfaTime.setMillisecond (0);
+
+/* ACTIV_DATE */
+		rfaDate.setDay   (/* rfa(1-31) */ _tm.tm_mday        /* tm(1-31) */);
+		rfaDate.setMonth (/* rfa(1-12) */ 1 + _tm.tm_mon     /* tm(0-11) */);
+		rfaDate.setYear  (/* rfa(yyyy) */ 1900 + _tm.tm_year /* tm(yyyy-1900 */);
+
+		std::for_each (stream_vector_.begin(), stream_vector_.end(),
+			[&](std::unique_ptr<broadcast_stream_t>& stream)
+		{
+			rfa::common::RFA_String rfa_name (stream->rfa_name);
+			rfa_name.append (ss.str().c_str());
+			attribInfo.setName (rfa_name);
+			it.start (fields_);
+/* TIMACT */
+			it.bind (timeact_field);
+
+/* PRICE field is a rfa::Real64 value specified as <mantissa> × 10⁶.
+ * Rfa deprecates setting via <double> data types so we create a mantissa from
+ * source value and consider that we publish to 6 decimal places.
+ */
+/* HIGH_1 */
+			price_field.setFieldID (kRdmTodaysHighId);
+			const double high_price = stream->hilo.get()->high * 1000000.0;
+			const int64_t high_mantissa = (int64_t)high_price;
+			real64.setValue (high_mantissa);		
+			it.bind (price_field);
+/* LOW_1 */
+			price_field.setFieldID (kRdmTodaysLowId);
+			const double low_price = stream->hilo.get()->low * 1000000.0;
+			const int64_t low_mantissa = (int64_t)low_price;
+			real64.setValue (low_mantissa);
+			it.bind (price_field);
+/* ACTIV_DATE */
+			it.bind (activ_date_field);
+			it.complete();
+			response.setPayload (fields_);
+
+#ifdef DEBUG
+/* 4.2.8 Message Validation.  RFA provides an interface to verify that
+ * constructed messages of these types conform to the Reuters Domain
+ * Models as specified in RFA API 7 RDM Usage Guide.
+ */
+			RFA_String warningText;
+			const uint8_t validation_status = response.validateMsg (&warningText);
+			if (rfa::message::MsgValidationWarning == validation_status) {
+				LOG(WARNING) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+			} else {
+				assert (rfa::message::MsgValidationOk == validation_status);
+			}
+#endif
+			const std::string key (rfa_name.c_str());
+			provider_->send (*stream->historical[key].get(), static_cast<rfa::common::Msg&> (response));
+			DLOG(INFO) << rfa_name << " high=" << stream->hilo.get()->high << " low=" << stream->hilo.get()->low;
+
+/* reset */
+			stream->hilo.get()->high = stream->hilo.get()->low = 0.0;
+			stream->hilo.get()->is_null = true;
+		});
+	}
+
 /* Timing */
-	const boost::posix_time::ptime t1 (boost::posix_time::microsec_clock::universal_time());
-	const boost::posix_time::time_duration td = t1 - t0;
+	const ptime t1 (microsec_clock::universal_time());
+	const time_duration td = t1 - t0;
 	LOG(INFO) << "refresh complete " << td.total_milliseconds() << "ms";
 	if (td < min_refresh_time_) min_refresh_time_ = td;
 	if (td > max_refresh_time_) max_refresh_time_ = td;
 	total_refresh_time_ += td;
+
 	return true;
 }
 

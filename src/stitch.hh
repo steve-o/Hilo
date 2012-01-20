@@ -55,13 +55,12 @@ namespace hilo
 	{
 	public:
 		broadcast_stream_t (std::shared_ptr<hilo_t> hilo_) :
-			hilo (hilo_),
-			count (0)
+			hilo (hilo_)
 		{
 		}
 
 		std::shared_ptr<hilo_t>	hilo;
-		uint64_t count;
+		std::unordered_map<std::string, std::unique_ptr<item_stream_t>> historical;
 	};
 
 	struct flex_filter_t
@@ -121,6 +120,9 @@ namespace hilo
 
 /* Run core event loop. */
 		void mainLoop();
+
+		int tclHiloQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int tclFeedLogQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 
 		void get_last_reset_time (__time32_t& t);
 		void get_next_interval (FILETIME& ft);
