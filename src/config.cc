@@ -12,8 +12,7 @@ hilo::config_t::config_t() :
 	is_snmp_enabled (false),
 	is_agentx_subagent (true),
 	service_name ("NI_VTA"),
-	adh_address ("localhost"),
-	adh_port (kDefaultAdhPort),
+	rssl_default_port (kDefaultAdhPort),
 	application_id ("256"),
 	instance_id ("Instance1"),
 	user_name ("user1"),
@@ -30,10 +29,11 @@ hilo::config_t::config_t() :
 	tolerable_delay ("100"),
 /* 5pm EST = 10pm GMT = 22:00 UTC */
 	reset_time ("22:00:00.000"),
-	suffix ("VTA"),
-	feedlog_path ("C:/Vhayu/Feeds/Derived")
+	suffix ("VTA")
 {
 /* C++11 initializer lists not supported in MSVC2010 */
+	rssl_servers.push_back ("localhost");
+
 	rules.push_back ("JPYKRW=,DIV,KRW=,BidPrice,AskPrice,JPY=EBS,BidPrice,AskPrice");
 	rules.push_back ("GBPHKD=,MUL,GBP=D2,BidPrice,AskPrice,HKD=D2,BidPrice,AskPrice");
 	rules.push_back ("USDCAD=,EQ,CAD=D2,BidPrice,AskPrice");
@@ -233,50 +233,28 @@ hilo::config_t::parseConnectionNode (
 /* defaultPort="port" */
 	attr = xml.transcode (connection->getAttribute (L"defaultPort"));
 	const char* default_port = attr.empty() ? kDefaultAdhPort : attr.c_str();
+
+/* reset all connections */
+	rssl_servers.clear();
+	
 /* <server> */
 	nodeList = connection->getElementsByTagName (L"server");
 	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseServerNode (nodeList->item (i), default_port))
+		if (!parseServerNode (nodeList->item (i)))
 			return false;
 	return true;
 }
 
 bool
 hilo::config_t::parseServerNode (
-	const DOMNode*		node,
-	const char*		default_port
+	const DOMNode*		node
 	)
 {
 	const DOMElement* server = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	const std::string server_text = xml.transcode (server->getTextContent());
-	std::vector<std::string> v;
-
-/* split text on colon. */
-	const string::size_type size = server_text.size(); 
-	std::string::size_type pos1 = 0; 
-	while (pos1 < size) { 
-		std::string::size_type pos2 = server_text.find_first_of (":", pos1); 
-		if (pos2 == std::string::npos) pos2 = size; 
-		v.push_back (server_text.substr (pos1, pos2 - pos1)); 
-		pos1 = pos2 + 1; 
-	}
-
-	switch (v.size()) {
-	case 1:
-		adh_address = v[0];
-		adh_port    = default_port;
-		break;
-
-	case 2:
-		adh_address = v[0];
-		adh_port    = v[1];
-		break;
-
-	default:
-		LOG(ERROR) << "Invalid <server> node content: '" << server_text << "'.";
-		return false;
-	}
+	if (server_text.size() > 0)
+		rssl_servers.push_back (server_text);
 	return true;
 }
 
@@ -417,10 +395,6 @@ hilo::config_t::parseCrossesNode (
 	attr = xml.transcode (crosses->getAttribute (L"suffix"));
 	if (!attr.empty())
 		suffix = attr;
-/* path="path" */
-	attr = xml.transcode (crosses->getAttribute (L"path"));
-	if (!attr.empty())
-		feedlog_path = attr;
 
 /* reset all rules */
 	rules.clear();

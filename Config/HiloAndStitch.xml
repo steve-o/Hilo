@@ -14,21 +14,45 @@
 
 <config>
 
-<!-- SNMP implant settings, remove node to disable. -->
-	<Snmp>
-		<agentX subagent="true"
-			socket="tcp:nylabdev1:705"/>
-	</Snmp>
+<!-- SNMP implant settings, uncomment node to enable.  Subagent in Net-SNMP terminology
+     means that this implant will connect to a separate running agent, i.e. snmpd.exe.
 
-<!-- RFA settings, override with the Windows registry as preferred. -->
+     NB:  TREP-VA by default configures snmpd to listen to tcp:<hostname>:705 instead of
+     tcp:localhost:705 for subagent connectivity.
+
+  -->
+<!--	<Snmp>
+		<agentX subagent="true"
+			socket="tcp:localhost:705"/>
+	</Snmp> -->
+
+<!-- RFA settings
+
+     Override settings in this file with the Windows registry by setting the key name
+     as a parameter, e.g.
+
 	<Rfa key="HKLM/SOFTWARE/Reuters/RFA/HiloAndStitch">
 
+     NB:  RFA will raise an exception and the plugin will terminate if at least one value
+     is not defined underneath the key.
+
+  -->
+	<Rfa>
+
+<!-- TREP-RT service name this plugin provides, compare to IDN_RDF or IDN_SELECTFEED. -->
 		<service name="NI_VTA"/>
 
-<!-- One or more servers may be listed -->
-		<connection name="ConnectionName">
-			<server>nylabadh2:14003</server>
+<!-- One or more servers may be listed.  This plugin is a non-interactive provider and uses
+     port 14003 by default compared with interactive providers that usually use port 14002.
+     As a non-interactive provider the TCP connection will be initiated by the plugin and not
+     the ADH, configure firewalls appropriately.
+
+  -->
+		<connection name="ConnectionName" defaultPort="14003">
+			<server>adh.local:14003</server>
 		</connection>
+
+<!-- DACS required parameters. -->
 		<login applicationId="256"
 			instanceId="Instance1"
 			userName="user1"/>
@@ -73,96 +97,95 @@
   -->
 	<crosses interval="900"
 		reset="22:00:00.000"
-		suffix="VTA"
-		path="C:/Vhayu/Feeds/Derived">
+		suffix="VTA">
 
 <!-- Oz dollar
      NB: USD is the counter currency, i.e. AUD= is AUD/USD
      AUD= ~1.03 BRL= ~1.82 AUDBRL=R ~1.89 => AUDBRL=VTA = AUD= * BRL=
   -->
-		<synthetic name="AUDBRL="><times/><leg>AUD=</leg><leg>BRL=</leg></synthetic>
+		<synthetic name="AUDBRL="><times/><leg>AUD=X</leg><leg>BRL=X</leg></synthetic>
 		<pair name="AUDCAD="/>
-		<synthetic name="AUDCLP="><times/><leg>AUD=</leg><leg>CLP=</leg></synthetic>
-		<synthetic name="AUDDKK="><times/><leg>AUD=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="AUDEGP="><times/><leg>AUD=</leg><leg>EGP=</leg></synthetic>
-		<synthetic name="AUDHKD="><times/><leg>AUD=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="AUDCLP="><times/><leg>AUD=X</leg><leg>CLP=X</leg></synthetic>
+		<synthetic name="AUDDKK="><times/><leg>AUD=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="AUDEGP="><times/><leg>AUD=X</leg><leg>EGP=X</leg></synthetic>
+		<synthetic name="AUDHKD="><times/><leg>AUD=X</leg><leg>HKD=X</leg></synthetic>
 		<pair name="AUDJPY="/>
-		<synthetic name="AUDPHP="><times/><leg>AUD=</leg><leg>PHP=</leg></synthetic>
-		<synthetic name="AUDSGD="><times/><leg>AUD=</leg><leg>SGD=</leg></synthetic>
-		<synthetic name="AUDTWD="><times/><leg>AUD=</leg><leg>TWD=</leg></synthetic>
+		<synthetic name="AUDPHP="><times/><leg>AUD=X</leg><leg>PHP=X</leg></synthetic>
+		<synthetic name="AUDSGD="><times/><leg>AUD=X</leg><leg>SGD=X</leg></synthetic>
+		<synthetic name="AUDTWD="><times/><leg>AUD=X</leg><leg>TWD=X</leg></synthetic>
 		<pair name="AUDUSD=" src="AUD="/>
 
 <!-- Brazilian real
      BRL= ~1.82 CAD=~ 1.01 BRLCAD=R ~0.55 => BRLCAD=VTA = CAD= / BRL=
   -->
-		<synthetic name="BRLCAD="><divide/><leg>CAD=</leg><leg>BRL=</leg></synthetic>
-		<synthetic name="BRLDKK="><divide/><leg>DKK=</leg><leg>BRL=</leg></synthetic>
+		<synthetic name="BRLCAD="><divide/><leg>CAD=X</leg><leg>BRL=X</leg></synthetic>
+		<synthetic name="BRLDKK="><divide/><leg>DKK=X</leg><leg>BRL=X</leg></synthetic>
 		
 <!-- Canadian dollar
      CAD= ~1.01 CLP= ~512.55 CADCLP=R ~506.97 => CADCLP=VTA = CLP= / CAD=
   -->
 		<pair name="CADCHF="/>
-		<synthetic name="CADCLP="><divide/><leg>CLP=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADDKK="><divide/><leg>DKK=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADEGP="><divide/><leg>EGP=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADHKD="><divide/><leg>HKD=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADIDR="><divide/><leg>IDR=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADILS="><divide/><leg>ILS=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADINR="><divide/><leg>INR=</leg><leg>CAD=</leg></synthetic>
+		<synthetic name="CADCLP="><divide/><leg>CLP=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADDKK="><divide/><leg>DKK=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADEGP="><divide/><leg>EGP=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADHKD="><divide/><leg>HKD=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADIDR="><divide/><leg>IDR=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADILS="><divide/><leg>ILS=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADINR="><divide/><leg>INR=X</leg><leg>CAD=X</leg></synthetic>
 		<pair name="CADJPY="/>
-		<synthetic name="CADKRW="><divide/><leg>KRW=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADMXN="><divide/><leg>MXN=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADMYR="><divide/><leg>MYR=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADNOK="><divide/><leg>NOK=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADPHP="><divide/><leg>PHP=</leg><leg>CAD=</leg></synthetic>
+		<synthetic name="CADKRW="><divide/><leg>KRW=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADMXN="><divide/><leg>MXN=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADMYR="><divide/><leg>MYR=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADNOK="><divide/><leg>NOK=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADPHP="><divide/><leg>PHP=X</leg><leg>CAD=X</leg></synthetic>
 		<pair name="CADPLN="/>
-		<synthetic name="CADSEK="><divide/><leg>SEK=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADSGD="><divide/><leg>SGD=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADTHB="><divide/><leg>THB=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADTRY="><divide/><leg>TRY=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADTWD="><divide/><leg>TWD=</leg><leg>CAD=</leg></synthetic>
-		<synthetic name="CADZAR="><divide/><leg>ZAR=</leg><leg>CAD=</leg></synthetic>
+		<synthetic name="CADSEK="><divide/><leg>SEK=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADSGD="><divide/><leg>SGD=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADTHB="><divide/><leg>THB=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADTRY="><divide/><leg>TRY=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADTWD="><divide/><leg>TWD=X</leg><leg>CAD=X</leg></synthetic>
+		<synthetic name="CADZAR="><divide/><leg>ZAR=X</leg><leg>CAD=X</leg></synthetic>
 
 <!-- Swiss franc
      CHF= ~0.93 DKK= ~5.69 CHFDKK=R ~6.11 => CHFDKK=R = DKK= / CHF=
   -->
-		<synthetic name="CHFDKK="><divide/><leg>DKK=</leg><leg>CHF=</leg></synthetic>
-		<synthetic name="CHFHKD="><divide/><leg>HKD=</leg><leg>CHF=</leg></synthetic>
-		<synthetic name="CHFNOK="><divide/><leg>NOK=</leg><leg>CHF=</leg></synthetic>
-		<synthetic name="CHFSEK="><divide/><leg>SEK=</leg><leg>CHF=</leg></synthetic>
+		<synthetic name="CHFDKK="><divide/><leg>DKK=X</leg><leg>CHF=X</leg></synthetic>
+		<synthetic name="CHFHKD="><divide/><leg>HKD=X</leg><leg>CHF=X</leg></synthetic>
+		<synthetic name="CHFNOK="><divide/><leg>NOK=X</leg><leg>CHF=X</leg></synthetic>
+		<synthetic name="CHFSEK="><divide/><leg>SEK=X</leg><leg>CHF=X</leg></synthetic>
 
 <!-- Chinese yuan
      CNY= ~6.29 JPY= ~76.64 CNYJPY=R ~12.17 => CNYJPY=VTA = JPY= / CNY=
   -->
-		<synthetic name="CNYJPY="><divide/><leg>JPY=</leg><leg>CNY=</leg></synthetic>
+		<synthetic name="CNYJPY="><divide/><leg>JPY=X</leg><leg>CNY=X</leg></synthetic>
 
 <!-- Danish krone
      DKK= ~5.69 INR= ~53.11 DKKINR=R ~9.32 => DKKINR=VTA = INR= / DKK=
   -->
-		<synthetic name="DKKCZK="><divide/><leg>CZK=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKHKD="><divide/><leg>HKD=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKIDR="><divide/><leg>IDR=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKINR="><divide/><leg>INR=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKJPY="><divide/><leg>JPY=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKKRW="><divide/><leg>KRW=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKNOK="><divide/><leg>NOK=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKPHP="><divide/><leg>PHP=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKSEK="><divide/><leg>SEK=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKTHB="><divide/><leg>THB=</leg><leg>DKK=</leg></synthetic>
-		<synthetic name="DKKTWD="><divide/><leg>TWD=</leg><leg>DKK=</leg></synthetic>
+		<synthetic name="DKKCZK="><divide/><leg>CZK=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKHKD="><divide/><leg>HKD=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKIDR="><divide/><leg>IDR=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKINR="><divide/><leg>INR=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKJPY="><divide/><leg>JPY=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKKRW="><divide/><leg>KRW=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKNOK="><divide/><leg>NOK=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKPHP="><divide/><leg>PHP=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKSEK="><divide/><leg>SEK=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKTHB="><divide/><leg>THB=X</leg><leg>DKK=X</leg></synthetic>
+		<synthetic name="DKKTWD="><divide/><leg>TWD=X</leg><leg>DKK=X</leg></synthetic>
 
 <!-- Euro
      NB: USD is the counter currency, i.e. EUR= is EUR/USD
      EUR= ~1.30 AED=~3.67 EURAED=R ~4.79 => EURAED=VTA = EUR= * AED=
   -->
-		<synthetic name="EURAED="><times/><leg>EUR=</leg><leg>AED=</leg></synthetic>
+		<synthetic name="EURAED="><times/><leg>EUR=X</leg><leg>AED=X</leg></synthetic>
 		<pair name="EURAUD="/>
-		<synthetic name="EURBRL="><times/><leg>EUR=</leg><leg>BRL=</leg></synthetic>
+		<synthetic name="EURBRL="><times/><leg>EUR=X</leg><leg>BRL=X</leg></synthetic>
 		<pair name="EURCAD="/>
 		<pair name="EURCHF="/>
-		<synthetic name="EURCLP="><times/><leg>EUR=</leg><leg>CLP=</leg></synthetic>
-		<synthetic name="EURCNY="><times/><leg>EUR=</leg><leg>CNY=</leg></synthetic>
-		<synthetic name="EURCOP="><times/><leg>EUR=</leg><leg>COP=</leg></synthetic>
+		<synthetic name="EURCLP="><times/><leg>EUR=X</leg><leg>CLP=X</leg></synthetic>
+		<synthetic name="EURCNY="><times/><leg>EUR=X</leg><leg>CNY=X</leg></synthetic>
+		<synthetic name="EURCOP="><times/><leg>EUR=X</leg><leg>COP=X</leg></synthetic>
 		<pair name="EURCZK="/>
 		<pair name="EURDKK="/>
 		<pair name="EUREGP="/>
@@ -171,17 +194,17 @@
 		<pair name="EURHUF="/>
 		<pair name="EURIDR="/>
 		<pair name="EURILS="/>
-		<synthetic name="EURINR="><times/><leg>EUR=</leg><leg>INR=</leg></synthetic>
+		<synthetic name="EURINR="><times/><leg>EUR=X</leg><leg>INR=X</leg></synthetic>
 		<pair name="EURJPY="/>
-		<synthetic name="EURKRW="><times/><leg>EUR=</leg><leg>KRW=</leg></synthetic>
+		<synthetic name="EURKRW="><times/><leg>EUR=X</leg><leg>KRW=X</leg></synthetic>
 		<pair name="EURMAD="/>
-		<synthetic name="EURMUR="><times/><leg>EUR=</leg><leg>MUR=</leg></synthetic>
+		<synthetic name="EURMUR="><times/><leg>EUR=X</leg><leg>MUR=X</leg></synthetic>
 		<pair name="EURMXN="/>
-		<synthetic name="EURMYR="><times/><leg>EUR=</leg><leg>MYR=</leg></synthetic>
+		<synthetic name="EURMYR="><times/><leg>EUR=X</leg><leg>MYR=X</leg></synthetic>
 		<pair name="EURNOK="/>
 		<pair name="EURNZD="/>
-		<synthetic name="EURPEN="><times/><leg>EUR=</leg><leg>PEN=</leg></synthetic>
-		<synthetic name="EURPHP="><times/><leg>EUR=</leg><leg>PHP=</leg></synthetic>
+		<synthetic name="EURPEN="><times/><leg>EUR=X</leg><leg>PEN=X</leg></synthetic>
+		<synthetic name="EURPHP="><times/><leg>EUR=X</leg><leg>PHP=X</leg></synthetic>
 		<pair name="EURPLN="/>
 		<pair name="EURRON="/>
 		<pair name="EURRSD="/>
@@ -190,7 +213,7 @@
 		<pair name="EURSGD="/>
 		<pair name="EURTHB="/>
 		<pair name="EURTRY="/>
-		<synthetic name="EURTWD="><times/><leg>EUR=</leg><leg>TWD=</leg></synthetic>
+		<synthetic name="EURTWD="><times/><leg>EUR=X</leg><leg>TWD=X</leg></synthetic>
 		<pair name="EURUSD=" src="EUR="/>
 		<pair name="EURXOF="/>
 		<pair name="EURZAR="/>
@@ -200,97 +223,97 @@
      NB: USD is the counter currency, i.e. GBP= is GBP/USD
      GBP= ~1.56 AED=~3.67 GBPAED=R ~5.74 => GBPAED=VTA = GBP= * AED=
   -->
-		<synthetic name="GBPAED="><times/><leg>GBP=</leg><leg>AED=</leg></synthetic>
+		<synthetic name="GBPAED="><times/><leg>GBP=X</leg><leg>AED=X</leg></synthetic>
 		<pair name="GBPAUD="/>
-		<synthetic name="GBPBRL="><times/><leg>GBP=</leg><leg>BRL=</leg></synthetic>
+		<synthetic name="GBPBRL="><times/><leg>GBP=X</leg><leg>BRL=X</leg></synthetic>
 		<pair name="GBPCAD="/>
 		<pair name="GBPCHF="/>
-		<synthetic name="GBPCLP="><times/><leg>GBP=</leg><leg>CLP=</leg></synthetic>
-		<synthetic name="GBPCOP="><times/><leg>GBP=</leg><leg>COP=</leg></synthetic>
+		<synthetic name="GBPCLP="><times/><leg>GBP=X</leg><leg>CLP=X</leg></synthetic>
+		<synthetic name="GBPCOP="><times/><leg>GBP=X</leg><leg>COP=X</leg></synthetic>
 		<pair name="GBPCZK="/>
 		<pair name="GBPDKK="/>
 		<pair name="GBPEGP="/>
-		<synthetic name="GBPHKD="><times/><leg>GBP=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="GBPHKD="><times/><leg>GBP=X</leg><leg>HKD=X</leg></synthetic>
 		<pair name="GBPHUF="/>
-		<synthetic name="GBPIDR="><times/><leg>GBP=</leg><leg>IDR=</leg></synthetic>
-		<synthetic name="GBPILS="><times/><leg>GBP=</leg><leg>ILS=</leg></synthetic>
-		<synthetic name="GBPINR="><times/><leg>GBP=</leg><leg>INR=</leg></synthetic>
+		<synthetic name="GBPIDR="><times/><leg>GBP=X</leg><leg>IDR=X</leg></synthetic>
+		<synthetic name="GBPILS="><times/><leg>GBP=X</leg><leg>ILS=X</leg></synthetic>
+		<synthetic name="GBPINR="><times/><leg>GBP=X</leg><leg>INR=X</leg></synthetic>
 		<pair name="GBPJPY="/>
-		<synthetic name="GBPKES="><times/><leg>GBP=</leg><leg>KES=</leg></synthetic>
-		<synthetic name="GBPKRW="><times/><leg>GBP=</leg><leg>KRW=</leg></synthetic>
-		<synthetic name="GBPLKR="><times/><leg>GBP=</leg><leg>LKR=</leg></synthetic>
-		<synthetic name="GBPMXN="><times/><leg>GBP=</leg><leg>MXN=</leg></synthetic>
-		<synthetic name="GBPMYR="><times/><leg>GBP=</leg><leg>MYR=</leg></synthetic>
+		<synthetic name="GBPKES="><times/><leg>GBP=X</leg><leg>KES=X</leg></synthetic>
+		<synthetic name="GBPKRW="><times/><leg>GBP=X</leg><leg>KRW=X</leg></synthetic>
+		<synthetic name="GBPLKR="><times/><leg>GBP=X</leg><leg>LKR=X</leg></synthetic>
+		<synthetic name="GBPMXN="><times/><leg>GBP=X</leg><leg>MXN=X</leg></synthetic>
+		<synthetic name="GBPMYR="><times/><leg>GBP=X</leg><leg>MYR=X</leg></synthetic>
 		<pair name="GBPNGN="/>
 		<pair name="GBPNOK="/>
 		<pair name="GBPNZD="/>
-		<synthetic name="GBPPEN="><times/><leg>GBP=</leg><leg>PEN=</leg></synthetic>
-		<synthetic name="GBPPHP="><times/><leg>GBP=</leg><leg>PHP=</leg></synthetic>
+		<synthetic name="GBPPEN="><times/><leg>GBP=X</leg><leg>PEN=X</leg></synthetic>
+		<synthetic name="GBPPHP="><times/><leg>GBP=X</leg><leg>PHP=X</leg></synthetic>
 		<pair name="GBPPLN="/>
-		<synthetic name="GBPQAR="><times/><leg>GBP=</leg><leg>QAR=</leg></synthetic>
+		<synthetic name="GBPQAR="><times/><leg>GBP=X</leg><leg>QAR=X</leg></synthetic>
 		<pair name="GBPSEK="/>
-		<synthetic name="GBPSGD="><times/><leg>GBP=</leg><leg>SGD=</leg></synthetic>
+		<synthetic name="GBPSGD="><times/><leg>GBP=X</leg><leg>SGD=X</leg></synthetic>
 		<pair name="GBPTHB="/>
-		<synthetic name="GBPTRY="><times/><leg>GBP=</leg><leg>TRY=</leg></synthetic>
-		<synthetic name="GBPTWD="><times/><leg>GBP=</leg><leg>TWD=</leg></synthetic>
+		<synthetic name="GBPTRY="><times/><leg>GBP=X</leg><leg>TRY=X</leg></synthetic>
+		<synthetic name="GBPTWD="><times/><leg>GBP=X</leg><leg>TWD=X</leg></synthetic>
 		<pair name="GBPUSD=" src="GBP="/>
 		<pair name="GBPZAR="/>
 
 <!-- HK dollar
      HKD= ~7.76 IDR= ~9110 HKDIDR=R ~1172.76 => HKDIDR=VTA = IDR= / HKD=
   -->
-		<synthetic name="HKDIDR="><divide/><leg>IDR=</leg><leg>HKD=</leg></synthetic>
-		<synthetic name="HKDINR="><divide/><leg>INR=</leg><leg>HKD=</leg></synthetic>
-		<synthetic name="HKDJPY="><divide/><leg>JPY=</leg><leg>HKD=</leg></synthetic>
-		<synthetic name="HKDKRW="><divide/><leg>KRW=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="HKDIDR="><divide/><leg>IDR=X</leg><leg>HKD=X</leg></synthetic>
+		<synthetic name="HKDINR="><divide/><leg>INR=X</leg><leg>HKD=X</leg></synthetic>
+		<synthetic name="HKDJPY="><divide/><leg>JPY=X</leg><leg>HKD=X</leg></synthetic>
+		<synthetic name="HKDKRW="><divide/><leg>KRW=X</leg><leg>HKD=X</leg></synthetic>
 		<pair name="HKDTHB="/>
-		<synthetic name="HKDTWD="><divide/><leg>TWD=</leg><leg>HKD=</leg></synthetic>
+		<synthetic name="HKDTWD="><divide/><leg>TWD=X</leg><leg>HKD=X</leg></synthetic>
 		<pair name="HKDVND="/>
 
 <!-- Japanese yen
      JPY= ~76.61 IDR= ~9110 JPYIDR=R ~118.79 => JPYIDR=VTA = IDR= / JPY=
   -->
-		<synthetic name="JPYIDR="><divide/><leg>IDR=</leg><leg>JPY=</leg></synthetic>
-		<synthetic name="JPYKRW="><divide/><leg>KRW=</leg><leg>JPY=</leg></synthetic>
+		<synthetic name="JPYIDR="><divide/><leg>IDR=X</leg><leg>JPY=X</leg></synthetic>
+		<synthetic name="JPYKRW="><divide/><leg>KRW=X</leg><leg>JPY=X</leg></synthetic>
 
 <!-- Malay ringgit
      MYR= ~3.14 DKK= ~5.69 MYRDKK=R ~1.80 => MYRDKK=VTA = DKK= / MYR=
   -->
-		<synthetic name="MYRDKK="><divide/><leg>DKK=</leg><leg>MYR=</leg></synthetic>
-		<synthetic name="MYRHKD="><divide/><leg>HKD=</leg><leg>MYR=</leg></synthetic>
-		<synthetic name="MYRJPY="><divide/><leg>JPY=</leg><leg>MYR=</leg></synthetic>
+		<synthetic name="MYRDKK="><divide/><leg>DKK=X</leg><leg>MYR=X</leg></synthetic>
+		<synthetic name="MYRHKD="><divide/><leg>HKD=X</leg><leg>MYR=X</leg></synthetic>
+		<synthetic name="MYRJPY="><divide/><leg>JPY=X</leg><leg>MYR=X</leg></synthetic>
 
 <!-- Kiwi dollar
      NZD= ~0.78 CAD= ~1.01 NZDCAD=R ~0.79 => NZDCAD=VTA = NZD= * CAD=
   -->
-		<synthetic name="NZDCAD="><times/><leg>NZD=</leg><leg>CAD=</leg></synthetic>
+		<synthetic name="NZDCAD="><times/><leg>NZD=X</leg><leg>CAD=X</leg></synthetic>
 		<pair name="NZDUSD=" src="NZD="/>
 
 <!-- Pinoy peso
      PHP= ~43.74 JPY= ~76.61 PHPJPY=R ~1.75 => PHPJPY=VTA = JPY= / PHP=
   -->
-		<synthetic name="PHPJPY="><divide/><leg>JPY=</leg><leg>PHP=</leg></synthetic>
+		<synthetic name="PHPJPY="><divide/><leg>JPY=X</leg><leg>PHP=X</leg></synthetic>
 
 <!-- Singapore dollar
      SGD= ~1.28 HKD= ~7.76 SGDHKD=R ~6.05 => SGDHKD=VTA = HKD= / SGD=
   -->
-		<synthetic name="SGDHKD="><divide/><leg>HKD=</leg><leg>SGD=</leg></synthetic>
-		<synthetic name="SGDJPY="><divide/><leg>JPY=</leg><leg>SGD=</leg></synthetic>
+		<synthetic name="SGDHKD="><divide/><leg>HKD=X</leg><leg>SGD=X</leg></synthetic>
+		<synthetic name="SGDJPY="><divide/><leg>JPY=X</leg><leg>SGD=X</leg></synthetic>
 
 <!-- Thai jyu-jyu
      THB= ~31.29 JPY= ~76.61 THBJPY=R ~2.44 => THBJPY=VTA = JPY= / THB=
   -->
-		<synthetic name="THBJPY="><divide/><leg>JPY=</leg><leg>THB=</leg></synthetic>
+		<synthetic name="THBJPY="><divide/><leg>JPY=X</leg><leg>THB=X</leg></synthetic>
 
 <!-- Turkish lira
      TRY= ~1.87 DKK= ~5.69 TRYDKK=R ~3.03 => TRYDKK=VTA = DKK= / TRY=
   -->
-		<synthetic name="TRYDKK="><divide/><leg>DKK=</leg><leg>TRY=</leg></synthetic>
+		<synthetic name="TRYDKK="><divide/><leg>DKK=X</leg><leg>TRY=X</leg></synthetic>
 
 <!-- Taiwan dollar
      TWD= ~30.26 JPY= ~76.61 TWDJPY=R ~2.53 => TWDJPY=VTA JPY= / TWD=
   -->
-		<synthetic name="TWDJPY="><divide/><leg>JPY=</leg><leg>TWD=</leg></synthetic>
+		<synthetic name="TWDJPY="><divide/><leg>JPY=X</leg><leg>TWD=X</leg></synthetic>
 
 <!-- US dollar -->
 		<pair name="USDAED=" src="AED="/>

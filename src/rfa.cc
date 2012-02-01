@@ -82,13 +82,24 @@ hilo::rfa_t::init()
 	name = "/Connections/" + connectionName + "/connectionType";
 	fix_rfa_string_path (name);
 	staging->setString (name, kConnectionType);
-	name = "/Connections/" + connectionName + "/hostname";
+/* List of RSSL servers */
+	name = "/Connections/" + connectionName + "/serverList";
 	fix_rfa_string_path (name);
-	value.set (config_.adh_address.c_str());
+	std::ostringstream ss;
+	for (auto it = config_.rssl_servers.begin();
+		it != config_.rssl_servers.end();
+		++it)
+	{
+		if (it != config_.rssl_servers.begin())
+			ss << ", ";
+		ss << *it;
+	}		
+	value.set (ss.str().c_str());
 	staging->setString (name, value);
+/* Default RSSL port */
 	name = "/Connections/" + connectionName + "/rsslPort";
 	fix_rfa_string_path (name);
-	value.set (config_.adh_port.c_str());
+	value.set (config_.rssl_default_port.c_str());
 	staging->setString (name, value);
 
 	rfa_config_ = rfa::config::ConfigDatabase::acquire (kContextName);

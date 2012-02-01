@@ -61,6 +61,7 @@ namespace hilo
 
 		std::shared_ptr<hilo_t>	hilo;
 		std::unordered_map<std::string, std::unique_ptr<item_stream_t>> historical;
+		std::unordered_map<std::string, std::unique_ptr<item_stream_t>> chain;
 	};
 
 	struct flex_filter_t

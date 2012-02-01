@@ -54,6 +54,9 @@ add_definitions(
 	-DHAVE_STDINT_H
 )
 
+# SEH Exceptions
+set(CMAKE_CXX_FLAGS "/EHa")
+
 #-----------------------------------------------------------------------------
 # source files
 
@@ -72,6 +75,7 @@ set(cxx-sources
 	src/chromium/debug/stack_trace_win.cc
 	src/chromium/memory/singleton.cc
 	src/chromium/logging.cc
+	src/chromium/synchronization/lock.cc
 	src/chromium/synchronization/lock_impl_win.cc
 )
 
@@ -151,7 +155,7 @@ set (CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
 set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
 set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
 set (CPACK_PACKAGE_VERSION_MAJOR "1")
-set (CPACK_PACKAGE_VERSION_MINOR "2")
+set (CPACK_PACKAGE_VERSION_MINOR "4")
 set (CPACK_PACKAGE_VERSION_PATCH "0")
 include (CPack)
 

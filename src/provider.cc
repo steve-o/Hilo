@@ -299,9 +299,13 @@ hilo::provider_t::processRespMsg (
 	cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_RECEIVED]++;
 	const rfa::common::RespStatus& respStatus = reply_msg.getRespStatus();
 
-	switch (respStatus.getStreamState()) {
+/* save state */
+	stream_state_ = respStatus.getStreamState();
+	data_state_   = respStatus.getDataState();
+
+	switch (stream_state_) {
 	case rfa::common::RespStatus::OpenEnum:
-		switch (respStatus.getDataState()) {
+		switch (data_state_) {
 		case rfa::common::RespStatus::OkEnum:
 			processLoginSuccess (reply_msg);
 			break;

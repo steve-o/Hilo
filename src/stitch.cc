@@ -26,11 +26,19 @@ static const int kDictionaryId = 1;
 /* RDM: Absolutely no idea. */
 static const int kFieldListId = 3;
 
+/* RDF direct limit on symbol list entries */
+static const unsigned kSymbolListLimit = 150;
+
 /* RDM FIDs. */
 static const int kRdmTimeOfUpdateId	= 5;
 static const int kRdmTodaysHighId	= 12;
 static const int kRdmTodaysLowId	= 13;
 static const int kRdmActiveDateId	= 17;
+
+static const int kRdmReferenceCountId	= 239;
+static const int kRdmLinkId[]		= { 800, 801, 802, 803, 804, 805, 806, 807, 808, 809, 810, 811, 812, 813 };
+static const int kRdmNextLinkId		= 815;
+static const int kRdmPreviousLinkId	= 814;
 
 /* FlexRecord Quote identifier. */
 static const uint32_t kQuoteId = 40002;
@@ -55,6 +63,33 @@ std::list<hilo::stitch_t*> hilo::stitch_t::global_list_;
 boost::shared_mutex hilo::stitch_t::global_list_lock_;
 
 using rfa::common::RFA_String;
+
+/* Boney M. defined: round half up the river of Babylon.
+ */
+static inline
+double
+round_half_up (double x)
+{
+	return floor (x + 0.5);
+}
+
+/* mantissa of 10E6
+ */
+static inline
+int64_t
+bnymellon_mantissa (double x)
+{
+	return (int64_t) round_half_up (x * 1000000.0);
+}
+
+/* round a double value to 6 decimal places using round half up
+ */
+static inline
+double
+bnymellon_round (double x)
+{
+	return (double) bnymellon_mantissa (x) / 1000000.0;
+}
 
 static
 bool
@@ -258,12 +293,13 @@ hilo::stitch_t::init (
 
 			const int interval_seconds = std::stoi (config_.interval);
 			time_iterator time_it (start, seconds (interval_seconds));
+			unsigned link_count = 0;
 			while (++time_it <= end) {
 				const time_duration interval_end_tod = time_it->time_of_day();
 				std::ostringstream ss;
 				ss << std::setfill ('0')
 				   << symbol_name
-//				   << "."
+				   << '.'
 				   << std::setw (2) << interval_end_tod.hours()
 				   << std::setw (2) << interval_end_tod.minutes();
 				std::unique_ptr<item_stream_t> historical_stream (new item_stream_t);
@@ -271,6 +307,26 @@ hilo::stitch_t::init (
 				if (!provider_->createItemStream (ss.str().c_str(), *historical_stream.get()))
 					goto cleanup;
 				auto status = stream->historical.insert (std::make_pair (ss.str(), std::move (historical_stream)));
+				assert (true == status.second);
+
+				++link_count;
+			}
+
+			assert (link_count > 0);
+
+/* marketfeed chain, not rdm symbol list */
+			for (int i = link_count - 1; i >= 0; i -= _countof (kRdmLinkId))
+			{
+				const unsigned chain_index = (i > 0) ? (i / _countof (kRdmLinkId)) : 0;
+				std::ostringstream chain_name;
+				chain_name << chain_index
+					   << '#'
+					   << symbol_name;
+				std::unique_ptr<item_stream_t> chain_stream (new item_stream_t);
+				assert ((bool)chain_stream);
+				if (!provider_->createItemStream (chain_name.str().c_str(), *chain_stream.get()))
+					goto cleanup;
+				auto status = stream->chain.insert (std::make_pair (chain_name.str(), std::move (chain_stream)));
 				assert (true == status.second);
 			}
 
@@ -326,6 +382,7 @@ hilo::stitch_t::init (
 	SetThreadpoolTimer (timer_->get(), &due_time, timer_period, 0);
 	LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
 #else
+/* requires Platform SDK 7.1 */
 	typedef BOOL (WINAPI *SetWaitableTimerExProc)(
 		__in  HANDLE hTimer,
 		__in  const LARGE_INTEGER *lpDueTime,
@@ -563,13 +620,8 @@ hilo::stitch_t::tclHiloQuery (
 	{
 		DLOG(INFO) << "Into result list name=" << it->name << " high=" << it->high << " low=" << it->low;
 
-		const double high_price		= it->high * 1000000.0;
-		const int64_t high_mantissa	= (int64_t)high_price;
-		const double high_rounded	= (double)high_mantissa / 1000000.0;
-
-		const double low_price		= it->low * 1000000.0;
-		const int64_t low_mantissa	= (int64_t)low_price;
-		const double low_rounded	= (double)low_mantissa / 1000000.0;
+		const double high_rounded = bnymellon_round (it->high);
+		const double low_rounded  = bnymellon_round (it->low);
 
 		Tcl_Obj* elemObjPtr[] = {
 			Tcl_NewStringObj (it->name.c_str(), -1),
@@ -754,13 +806,8 @@ hilo::stitch_t::tclFeedLogQuery (
 			std::ostringstream symbol_name;
 			symbol_name << it->name << config_.suffix;
 
-			const double high_price		= it->high * 1000000.0;
-			const int64_t high_mantissa	= (int64_t)high_price;
-			const double high_rounded	= (double)high_mantissa / 1000000.0;
-
-			const double low_price		= it->low * 1000000.0;
-			const int64_t low_mantissa	= (int64_t)low_price;
-			const double low_rounded	= (double)low_mantissa / 1000000.0;
+			const double high_rounded = bnymellon_round (it->high);
+			const double low_rounded  = bnymellon_round (it->low);
 
 			flexrecord_t fr (interval_end_time32, symbol_name.str().c_str(), kHiloFlexRecordName);
 			fr.stream() << high_rounded
@@ -919,7 +966,7 @@ hilo::stitch_t::sendRefresh()
 	response.setMsgModelType (rfa::rdm::MMT_MARKET_PRICE);
 /* 7.5.9.3 Set response type. */
 	response.setRespType (rfa::message::RespMsg::RefreshEnum);
-	response.setIndicationMask (response.getIndicationMask() | rfa::message::RespMsg::RefreshCompleteFlag);
+	response.setIndicationMask (rfa::message::RespMsg::RefreshCompleteFlag);
 /* 7.5.9.4 Set the response type enumation. */
 	response.setRespTypeNum (rfa::rdm::REFRESH_UNSOLICITED);
 
@@ -1004,14 +1051,12 @@ hilo::stitch_t::sendRefresh()
  */
 /* HIGH_1 */
 		price_field.setFieldID (kRdmTodaysHighId);
-		const double high_price		= stream->hilo->high * 1000000.0;
-		const int64_t high_mantissa	= (int64_t)high_price;
+		const int64_t high_mantissa = bnymellon_mantissa (stream->hilo->high);
 		real64.setValue (high_mantissa);		
 		it.bind (price_field);
 /* LOW_1 */
 		price_field.setFieldID (kRdmTodaysLowId);
-		const double low_price		= stream->hilo->low * 1000000.0;
-		const int64_t low_mantissa	= (int64_t)low_price;
+		const int64_t low_mantissa = bnymellon_mantissa (stream->hilo->low);
 		real64.setValue (low_mantissa);
 		it.bind (price_field);
 /* ACTIV_DATE */
@@ -1043,9 +1088,9 @@ hilo::stitch_t::sendRefresh()
 	const ptime start (kUnixEpoch, seconds (start_time32));
 	const ptime end (kUnixEpoch, seconds (end_time32));
 	const int interval_seconds = std::stoi (config_.interval);
-	time_iterator time_it (start, seconds (interval_seconds));
 	__time32_t interval_start_time32 (start_time32);
-	while (++time_it <= end) {
+	for (time_iterator time_it (start, seconds (interval_seconds)); ++time_it <= end;)
+	{
 		__time32_t interval_end_time32 = (*time_it - ptime (kUnixEpoch)).total_seconds();
 
 		get_hilo (query_vector_, interval_start_time32, interval_end_time32);
@@ -1055,7 +1100,7 @@ hilo::stitch_t::sendRefresh()
 		const time_duration interval_end_tod = time_it->time_of_day();
 		std::ostringstream ss;
 		ss << std::setfill ('0')
-//		   << "."
+		   << '.'
 		   << std::setw (2) << interval_end_tod.hours()
 		   << std::setw (2) << interval_end_tod.minutes();
 
@@ -1087,14 +1132,12 @@ hilo::stitch_t::sendRefresh()
  */
 /* HIGH_1 */
 			price_field.setFieldID (kRdmTodaysHighId);
-			const double high_price		= stream->hilo->high * 1000000.0;
-			const int64_t high_mantissa	= (int64_t)high_price;
+			const int64_t high_mantissa = bnymellon_mantissa (stream->hilo->high);
 			real64.setValue (high_mantissa);		
 			it.bind (price_field);
 /* LOW_1 */
 			price_field.setFieldID (kRdmTodaysLowId);
-			const double low_price		= stream->hilo->low * 1000000.0;
-			const int64_t low_mantissa	= (int64_t)low_price;
+			const int64_t low_mantissa = bnymellon_mantissa (stream->hilo->low);
 			real64.setValue (low_mantissa);
 			it.bind (price_field);
 /* ACTIV_DATE */
@@ -1120,13 +1163,123 @@ hilo::stitch_t::sendRefresh()
 			DLOG(INFO) << rfa_name << " high=" << stream->hilo->high << " low=" << stream->hilo->low;
 
 /* do not reset analytic result set so next query extends previous result set */
+
 		});
 	}
 
-/* now reset result set */
+/* Publish a symbol list aka chain of all published historical item streams. */
+	std::vector<std::string> link_times;
+	link_times.reserve ((24 * 60 * 60) / interval_seconds);
+	for (time_iterator time_it (start, seconds (interval_seconds)); ++time_it <= end;)
+	{
+		const time_duration interval_end_tod = time_it->time_of_day();
+		std::ostringstream ss;
+		ss << std::setfill ('0')
+		   << '.'
+		   << std::setw (2) << interval_end_tod.hours()
+		   << std::setw (2) << interval_end_tod.minutes();
+		link_times.push_back (ss.str());
+	}
+
+	assert (link_times.size() > 0);
+
+	rfa::data::FieldEntry ref_count_field (false), link_field (false);
+	rfa::data::DataBuffer ref_count_data (false), link_data (false);
+	const size_t chain_index_max = link_times.size() / _countof (kRdmLinkId);
+
+	ref_count_field.setFieldID (kRdmReferenceCountId);
+	ref_count_field.setData (ref_count_data);
+	link_field.setData (link_data);
+
 	std::for_each (stream_vector_.begin(), stream_vector_.end(),
 		[&](std::unique_ptr<broadcast_stream_t>& stream)
 	{
+/* e.g. 0#.DJI .. 3#.DJI */
+		for (int j = chain_index_max; j >= 0; j--)
+		{
+			size_t i = j * _countof (kRdmLinkId);
+			std::ostringstream ss;
+			ss << j
+			   << '#'
+			   << stream->rfa_name.c_str();
+			RFA_String rfa_name (ss.str().c_str(), (int)ss.str().length(), true);
+			attribInfo.setName (rfa_name);
+
+			it.start (fields_);
+
+/* REF_COUNT */
+			const uint32_t ref_count = min (_countof (kRdmLinkId), (uint32_t)(link_times.size() - i));
+			ref_count_data.setUInt32 (ref_count);
+			it.bind (ref_count_field);
+/* LONGLINKx */
+			for (unsigned k = 0;
+			     k < _countof (kRdmLinkId);
+			     k++, i++)
+			{
+				link_field.setFieldID (kRdmLinkId[k]);
+				if (i < link_times.size()) {
+					RFA_String link_name (stream->rfa_name);
+					link_name.append (link_times[i].c_str());
+					link_data.setFromString (link_name, rfa::data::DataBuffer::StringRMTESEnum);
+					it.bind (link_field);
+				} else {
+					RFA_String null ("", 0, false);
+					link_data.setFromString (null, rfa::data::DataBuffer::StringRMTESEnum);
+					it.bind (link_field);
+				}
+			} 
+/* LONGPREVLR */
+			link_field.setFieldID (kRdmPreviousLinkId);
+			if (j > 0) {
+				std::ostringstream ss;
+				ss << (j - 1)
+				   << '#'
+				   << stream->rfa_name.c_str();
+				RFA_String previous_name (ss.str().c_str(), (int)ss.str().length(), true);
+				link_data.setFromString (previous_name, rfa::data::DataBuffer::StringRMTESEnum);
+				it.bind (link_field);
+			} else {
+				RFA_String null ("", 0, false);
+				link_data.setFromString (null, rfa::data::DataBuffer::StringRMTESEnum);
+				it.bind (link_field);
+			}
+/* LONGNEXTLR */
+			link_field.setFieldID (kRdmNextLinkId);
+			if ((j + 1) < chain_index_max) {
+				std::ostringstream ss;
+				ss << (j + 1)
+				   << '#'
+				   << stream->rfa_name.c_str();
+				RFA_String next_name (ss.str().c_str(), (int)ss.str().length(), true);
+				link_data.setFromString (next_name, rfa::data::DataBuffer::StringRMTESEnum);
+				it.bind (link_field);
+			} else {
+				RFA_String null ("", 0, false);
+				link_data.setFromString (null, rfa::data::DataBuffer::StringRMTESEnum);
+				it.bind (link_field);
+			}
+
+			it.complete();
+			response.setPayload (fields_);
+
+#ifdef DEBUG
+/* 4.2.8 Message Validation.  RFA provides an interface to verify that
+ * constructed messages of these types conform to the Reuters Domain
+ * Models as specified in RFA API 7 RDM Usage Guide.
+ */
+			RFA_String warningText;
+			const uint8_t validation_status = response.validateMsg (&warningText);
+			if (rfa::message::MsgValidationWarning == validation_status) {
+				LOG(WARNING) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+			} else {
+				assert (rfa::message::MsgValidationOk == validation_status);
+			}
+#endif
+			const std::string key (rfa_name.c_str());
+			provider_->send (*stream->chain[key].get(), static_cast<rfa::common::Msg&> (response));
+		}
+
+/* now reset result set */
 		stream->hilo->clear();
 	});
 

@@ -15,10 +15,13 @@
 #include <Data/Array.h>
 #include <Data/ArrayWriteIterator.h>
 #include <Data/ArrayEntry.h>
+#include <Data/DataDefWriteIterator.h>
 #include <Data/ElementList.h>
 #include <Data/ElementListWriteIterator.h>
 #include <Data/FieldList.h>
 #include <Data/FieldListWriteIterator.h>
+#include <Data/FieldListDef.h>
+#include <Data/FieldListDefWriteIterator.h>
 #include <Data/FilterEntry.h>
 #include <Data/FilterList.h>
 #include <Data/FilterListWriteIterator.h>

@@ -128,6 +128,10 @@ namespace hilo
  */
 		bool is_muted_;
 
+/* Last RespStatus details. */
+		int stream_state_;
+		int data_state_;
+
 /* Container of all item streams keyed by symbol name. */
 		std::unordered_map<std::string, item_stream_t*> directory_;
 

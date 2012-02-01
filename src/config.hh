@@ -28,7 +28,7 @@ namespace hilo
 		bool parseRfaNode (const xercesc::DOMNode* node);
 		bool parseServiceNode (const xercesc::DOMNode* node);
 		bool parseConnectionNode (const xercesc::DOMNode* node);
-		bool parseServerNode (const xercesc::DOMNode* node, const char* port);
+		bool parseServerNode (const xercesc::DOMNode* node);
 		bool parseLoginNode (const xercesc::DOMNode* node);
 		bool parseSessionNode (const xercesc::DOMNode* node);
 		bool parseMonitorNode (const xercesc::DOMNode* node);
@@ -54,11 +54,11 @@ namespace hilo
 //  TREP-RT service name, e.g. IDN_RDF.
 		std::string service_name;
 
-//  TREP-RT ADH hostname
-		std::string adh_address;
+//  TREP-RT ADH hostname or IP address.
+		std::vector<std::string> rssl_servers;
 
-//  TREP-RT ADH port, e.g. 14002
-		std::string adh_port;
+//  Default TREP-RT RSSL port, e.g. 14002, 14003.
+		std::string rssl_default_port;
 
 /* DACS application Id.  If the server authenticates with DACS, the consumer
  * application may be required to pass in a valid ApplicationId.
@@ -119,23 +119,29 @@ namespace hilo
 //  FX symbol name suffix for every publish.
 		std::string suffix;
 
-//  FX feed log file name for storing derived values.
-		std::string feedlog_path;
-
 //  FX currency cross rules.
 		std::vector<std::string> rules;
 	};
 
 	inline
 	std::ostream& operator<< (std::ostream& o, const config_t& config) {
+		std::ostringstream ss;
+		for (auto it = config.rssl_servers.begin();
+			it != config.rssl_servers.end();
+			++it)
+		{
+			if (it != config.rssl_servers.begin())
+				ss << ", ";
+			ss << '"' << *it << '"';
+		}		
 		o << "config_t: { "
 			  "is_snmp_enabled: \"" << config.is_snmp_enabled << "\""
 			", is_agentx_subagent: \"" << config.is_agentx_subagent << "\""
 			", agentx_socket: \"" << config.agentx_socket << "\""
 			", key: \"" << config.key << "\""
 			", service_name: \"" << config.service_name << "\""
-			", adh_address: \"" << config.adh_address << "\""
-			", adh_port: \"" << config.adh_port << "\""
+			", rssl_servers: [" << ss.str() << "]"
+			", rssl_default_port: \"" << config.rssl_default_port << "\""
 			", application_id: \"" << config.application_id << "\""
 			", instance_id: \"" << config.instance_id << "\""
 			", user_name: \"" << config.user_name << "\""
@@ -150,7 +156,6 @@ namespace hilo
 			", tolerable_delay: \"" << config.tolerable_delay << "\""
 			", reset_time: \"" << config.reset_time << "\""
 			", suffix: \"" << config.suffix << "\""
-			", feedlog_path: \"" << config.feedlog_path << "\""
 			", rules: [ ";
 		for (auto it = config.rules.begin();
 			it != config.rules.end();

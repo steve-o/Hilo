@@ -309,13 +309,30 @@ stitchPluginTable_handler (
 				break;
 
 			case COLUMN_STITCHPLUGINADHADDRESS:
+			{
+				const char *rssl_server = "";
+				size_t rssl_server_len = 0;
+				if (!stitch->config_.rssl_servers.empty()) {
+					std::ostringstream ss;
+					for (auto it = stitch->config_.rssl_servers.begin();
+						it != stitch->config_.rssl_servers.end();
+						++it)
+					{
+						if (it != stitch->config_.rssl_servers.begin())
+							ss << ", ";
+						ss << *it;
+					}
+					rssl_server     = ss.str().c_str();
+					rssl_server_len = ss.str().length();
+				}
 				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.adh_address.c_str(), stitch->config_.adh_address.length());
+					(const u_char*)rssl_server, rssl_server_len);
 				break;
+			}
 
 			case COLUMN_STITCHPLUGINADHPORT:
 				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.adh_port.c_str(), stitch->config_.adh_port.length());
+					(const u_char*)stitch->config_.rssl_default_port.c_str(), stitch->config_.rssl_default_port.length());
 				break;
 
 			case COLUMN_STITCHPLUGINAPPLICATIONID:
@@ -389,9 +406,12 @@ stitchPluginTable_handler (
 				break;
 
 			case COLUMN_STITCHPLUGINFEEDLOGPATH:
+			{
+				const std::string feedlog_path ("/dev/null");
 				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.feedlog_path.c_str(), stitch->config_.feedlog_path.length());
+					(const u_char*)feedlog_path.c_str(), feedlog_path.length());
 				break;
+			}
 
 			default:
 				snmp_log (__netsnmp_LOG_ERR, "stitchPluginTable_handler: unknown column.\n");
@@ -438,7 +458,7 @@ initialize_table_stitchPluginPerformanceTable(void)
 					  ASN_UNSIGNED,  /* index: stitchPluginPerformanceInstance */
 					  0);
 	table_info->min_column = COLUMN_STITCHTCLQUERYRECEIVED;
-	table_info->max_column = COLUMN_STITCHTOKENSGENERATED;
+	table_info->max_column = COLUMN_STITCHMMTLOGINDATASTATE;
     
 	iinfo = SNMP_MALLOC_TYPEDEF( netsnmp_iterator_info );
 	if (nullptr == iinfo)
@@ -472,7 +492,7 @@ stitchPluginPerformanceTable_get_first_data_point (
 {
 	assert (nullptr != my_loop_context);
 	assert (nullptr != my_data_context);
-	assert (nullptr != put_index_Data);
+	assert (nullptr != put_index_data);
 	assert (nullptr != mydata);
 
 	DLOG(INFO) << "stitchPluginPerformanceTable_get_first_data_point()";
@@ -843,6 +863,24 @@ stitchPluginPerformanceTable_handler (
 					const unsigned tokens_generated = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_TOKENS_GENERATED];
 					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
 						(const u_char*)&tokens_generated, sizeof (tokens_generated));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINSTREAMSTATE:
+				{
+/* 0 = rfa::common::RespStatus::UnspecifiedEnum */
+					const int stream_state = nullptr == stitch->provider_ ? 0 : stitch->provider_->stream_state_;
+					snmp_set_var_typed_value (var, ASN_INTEGER,
+						(const u_char*)&stream_state, sizeof (stream_state));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINDATASTATE:
+				{
+/* 0 = rfa::common::RespStatus::UnspecifiedStreamStateEnum */
+					const int data_state = nullptr == stitch->provider_ ? 0 : stitch->provider_->data_state_;
+					snmp_set_var_typed_value (var, ASN_INTEGER,
+						(const u_char*)&data_state, sizeof (data_state));
 				}
 				break;
 
