@@ -24,7 +24,9 @@ namespace hilo
 	class leg_t : boost::noncopyable
 	{
 	public:
-		leg_t ()
+		leg_t () :
+			bid_field_idx (-1),
+			ask_field_idx (-1)
 		{
 			clear();
 		}
@@ -35,8 +37,8 @@ namespace hilo
 		}
 
 		std::string symbol_name;
-		std::string bid_field;
-		std::string ask_field;
+		std::string bid_field; int bid_field_idx;
+		std::string ask_field; int ask_field_idx;
 		double last_bid;
 		double last_ask;
 		bool is_null;

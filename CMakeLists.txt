@@ -79,6 +79,10 @@ set(cxx-sources
 	src/chromium/synchronization/lock_impl_win.cc
 )
 
+set(rc-sources
+	src/version.rc
+)
+
 include_directories(
 	include
 	${NETSNMP_ROOT}/include
@@ -100,7 +104,7 @@ link_directories(
 #-----------------------------------------------------------------------------
 # output
 
-add_library(Hilo SHARED ${cxx-sources})
+add_library(Hilo SHARED ${cxx-sources} ${rc-sources})
 
 target_link_libraries(Hilo
 	netsnmp.lib
@@ -155,8 +159,8 @@ set (CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
 set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
 set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
 set (CPACK_PACKAGE_VERSION_MAJOR "1")
-set (CPACK_PACKAGE_VERSION_MINOR "4")
-set (CPACK_PACKAGE_VERSION_PATCH "0")
+set (CPACK_PACKAGE_VERSION_MINOR "5")
+set (CPACK_PACKAGE_VERSION_PATCH "34")
 include (CPack)
 
 # end of file
