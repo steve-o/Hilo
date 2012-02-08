@@ -60,8 +60,8 @@ namespace hilo
 		}
 
 		std::shared_ptr<hilo_t>	hilo;
-		std::unordered_map<std::string, std::unique_ptr<item_stream_t>> historical;
-		std::unordered_map<std::string, std::unique_ptr<item_stream_t>> chain;
+		std::unordered_map<std::string, std::shared_ptr<item_stream_t>> historical;
+		std::unordered_map<std::string, std::shared_ptr<item_stream_t>> chain;
 	};
 
 	struct flex_filter_t
@@ -73,20 +73,20 @@ namespace hilo
 	class event_pump_t
 	{
 	public:
-		event_pump_t (rfa::common::EventQueue& event_queue) :
+		event_pump_t (std::shared_ptr<rfa::common::EventQueue> event_queue) :
 			event_queue_ (event_queue)
 		{
 		}
 
 		void operator()()
 		{
-			while (event_queue_.isActive()) {
-				event_queue_.dispatch (rfa::common::Dispatchable::InfiniteWait);
+			while (event_queue_->isActive()) {
+				event_queue_->dispatch (rfa::common::Dispatchable::InfiniteWait);
 			}
 		}
 
 	private:
-		rfa::common::EventQueue& event_queue_;
+		std::shared_ptr<rfa::common::EventQueue> event_queue_;
 	};
 
 	class stitch_t :
@@ -146,7 +146,7 @@ namespace hilo
 		bool is_shutdown_;
 
 /* SNMP implant. */
-		snmp_agent_t* snmp_agent_;
+		std::unique_ptr<snmp_agent_t> snmp_agent_;
 		friend class snmp_agent_t;
 
 #ifdef STITCHMIB_H
@@ -157,30 +157,30 @@ namespace hilo
 #endif /* STITCHMIB_H */
 
 /* RFA context. */
-		rfa_t* rfa_;
+		std::shared_ptr<rfa_t> rfa_;
 
 /* RFA asynchronous event queue. */
-		rfa::common::EventQueue* event_queue_;
+		std::shared_ptr<rfa::common::EventQueue> event_queue_;
 
 /* RFA logging */
-		logging::LogEventProvider* log_;
+		std::shared_ptr<logging::LogEventProvider> log_;
 
 /* RFA provider */
-		provider_t* provider_;
+		std::shared_ptr<provider_t> provider_;
 
 /* Publish instruments. */
 		std::vector<std::shared_ptr<hilo_t>> query_vector_;
-		std::vector<std::unique_ptr<broadcast_stream_t>> stream_vector_;
+		std::vector<std::shared_ptr<broadcast_stream_t>> stream_vector_;
 
 /* Event pump and thread. */
-		event_pump_t* event_pump_;
-		boost::thread* thread_;
+		std::unique_ptr<event_pump_t> event_pump_;
+		std::unique_ptr<boost::thread> thread_;
 
 /* Publish fields. */
 		rfa::data::FieldList fields_;
 
 /* Threadpool timer. */
-		ms::timer* timer_;
+		ms::timer timer_;
 
 /** Performance Counters. **/
 		boost::posix_time::ptime last_activity_;

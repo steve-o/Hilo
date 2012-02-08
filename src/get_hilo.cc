@@ -334,7 +334,7 @@ hilo::get_hilo (
 			query_item.is_null = false;
 			query_item.low  = bid_price;
 			query_item.high = ask_price;
-			LOG(INFO) << query_item.name << " start low=" << bid_price << " high=" << ask_price;
+			DLOG(INFO) << query_item.name << " start low=" << bid_price << " high=" << ask_price;
 			return;
 		}
 		if (bid_price < query_item.low) {

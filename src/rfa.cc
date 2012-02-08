@@ -5,6 +5,8 @@
 
 #include <cassert>
 
+#include "deleter.hh"
+
 using rfa::common::RFA_String;
 
 static const RFA_String kContextName ("RFA");
@@ -43,15 +45,13 @@ fix_rfa_string_path (
 }
 
 hilo::rfa_t::rfa_t (const config_t& config) :
-	config_ (config),
-	rfa_config_ (nullptr)
+	config_ (config)
 {
 }
 
 hilo::rfa_t::~rfa_t()
 {
-	if (nullptr != rfa_config_)
-		rfa_config_->release();
+	rfa_config_.release();
 	rfa::common::Context::uninitialize();
 }
 
@@ -65,8 +65,9 @@ hilo::rfa_t::init()
 
 /* 8.2.3 Populate Config Database.
  */
-	rfa::config::StagingConfigDatabase* staging = rfa::config::StagingConfigDatabase::create();
-	assert (nullptr != staging);
+	std::unique_ptr<rfa::config::StagingConfigDatabase, internal::destroy_deleter> staging (rfa::config::StagingConfigDatabase::create());
+	if (!(bool)staging)
+		return false;
 
 /* Disable Windows Event Logger. */
 	RFA_String name, value;
@@ -102,24 +103,22 @@ hilo::rfa_t::init()
 	value.set (config_.rssl_default_port.c_str());
 	staging->setString (name, value);
 
-	rfa_config_ = rfa::config::ConfigDatabase::acquire (kContextName);
-	assert (nullptr != rfa_config_);
+	rfa_config_.reset (rfa::config::ConfigDatabase::acquire (kContextName));
+	if (!(bool)rfa_config_)
+		return false;
 
-	bool is_config_merged = rfa_config_->merge (*staging);
-	staging->destroy();
-	if (!is_config_merged)
+	if (!rfa_config_->merge (*staging.get()))
 		return false;
 
 /* Windows Registry override. */
 	if (!config_.key.empty()) {
-		staging = rfa::config::StagingConfigDatabase::create();
-		assert (nullptr != staging);
+		staging.reset (rfa::config::StagingConfigDatabase::create());
+		if (!(bool)staging)
+			return false;
 		name = config_.key.c_str();
 		fix_rfa_string_path (name);
 		staging->load (rfa::config::windowsRegistry, name);
-		is_config_merged = rfa_config_->merge (*staging);
-		staging->destroy();
-		if (!is_config_merged)
+		if (!rfa_config_->merge (*staging.get()))
 			return false;
 	}
 

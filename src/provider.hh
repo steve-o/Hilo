@@ -17,6 +17,7 @@
 
 #include "rfa.hh"
 #include "config.hh"
+#include "deleter.hh"
 
 namespace hilo
 {
@@ -65,12 +66,12 @@ namespace hilo
 		boost::noncopyable
 	{
 	public:
-		provider_t (const config_t& config, rfa_t& rfa, rfa::common::EventQueue& event_queue);
+		provider_t (const config_t& config, std::shared_ptr<rfa_t> rfa, std::shared_ptr<rfa::common::EventQueue> event_queue);
 		~provider_t();
 
 		bool init() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
 
-		bool createItemStream (const char* name, item_stream_t& item_stream) throw (rfa::common::InvalidUsageException);
+		bool createItemStream (const char* name, std::shared_ptr<item_stream_t> item_stream) throw (rfa::common::InvalidUsageException);
 		bool send (item_stream_t& item_stream, rfa::common::Msg& msg) throw (rfa::common::InvalidUsageException);
 
 /* RFA event callback. */
@@ -107,16 +108,21 @@ namespace hilo
 		const config_t& config_;
 
 /* RFA context. */
-		rfa_t& rfa_;
+		std::shared_ptr<rfa_t> rfa_;
 
 /* RFA asynchronous event queue. */
-		rfa::common::EventQueue& event_queue_;
+		std::shared_ptr<rfa::common::EventQueue> event_queue_;
 
 /* RFA session defines one or more connections for horizontal scaling. */
-		rfa::sessionLayer::Session* session_;
+		std::unique_ptr<rfa::sessionLayer::Session, internal::release_deleter> session_;
 
 /* RFA OMM provider interface. */
-		rfa::sessionLayer::OMMProvider* provider_;
+		std::unique_ptr<rfa::sessionLayer::OMMProvider, internal::destroy_deleter> provider_;
+
+/* RFA Error Item event consumer */
+		rfa::common::Handle* error_item_handle_;
+/* RFA Item event consumer */
+		rfa::common::Handle* item_handle_;
 
 /* Reuters Wire Format versions. */
 		uint8_t rwf_major_version_;
@@ -133,7 +139,7 @@ namespace hilo
 		int data_state_;
 
 /* Container of all item streams keyed by symbol name. */
-		std::unordered_map<std::string, item_stream_t*> directory_;
+		std::unordered_map<std::string, std::weak_ptr<item_stream_t>> directory_;
 
 /** Performance Counters **/
 		uint32_t cumulative_stats_[PROVIDER_PC_MAX];

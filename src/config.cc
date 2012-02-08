@@ -32,12 +32,14 @@ hilo::config_t::config_t() :
 	suffix ("VTA")
 {
 /* C++11 initializer lists not supported in MSVC2010 */
+#ifdef CONFIG_DEMO_DATA
 	rssl_servers.push_back ("localhost");
 
 	rules.push_back ("JPYKRW=,DIV,KRW=,BidPrice,AskPrice,JPY=EBS,BidPrice,AskPrice");
 	rules.push_back ("GBPHKD=,MUL,GBP=D2,BidPrice,AskPrice,HKD=D2,BidPrice,AskPrice");
 	rules.push_back ("USDCAD=,EQ,CAD=D2,BidPrice,AskPrice");
 	rules.push_back ("USDCAD=TOB,EQ,CAD=D2,GeneralValue1,GeneralValue3");
+#endif
 }
 
 /* Minimal error handling parsing of an Xml node pulled from the
@@ -62,9 +64,14 @@ hilo::config_t::parseDomElement (
 /* Plugin configuration wrapped within a <config> node. */
 	nodeList = root->getElementsByTagName (L"config");
 
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseConfigNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseConfigNode (nodeList->item (i))) {
+			LOG(ERROR) << "Failed parsing <config> nth-node #" << (1 + i) << '.';
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <config> nodes found in configuration.";
+
 	LOG(INFO) << "Parsing complete.";
 	return true;
 }
@@ -80,19 +87,30 @@ hilo::config_t::parseConfigNode (
 
 /* <Snmp> */
 	nodeList = config->getElementsByTagName (L"Snmp");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseSnmpNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseSnmpNode (nodeList->item (i))) {
+			LOG(ERROR) << "Failed parsing <Snmp> nth-node #" << (1 + i) << '.';
 			return false;
+		}
+	}
 /* <Rfa> */
 	nodeList = config->getElementsByTagName (L"Rfa");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseRfaNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseRfaNode (nodeList->item (i))) {
+			LOG(ERROR) << "Failed parsing <Rfa> nth-node #" << (1 + i) << '.';
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <Rfa> nodes found in configuration.";
 /* <crosses> */
 	nodeList = config->getElementsByTagName (L"crosses");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseCrossesNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseCrossesNode (nodeList->item (i))) {
+			LOG(ERROR) << "Failed parsing <crosses> nth-node #" << (1 + i) << '.';
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <crosses> nodes found in configuration.";
 	return true;
 }
 
@@ -107,9 +125,14 @@ hilo::config_t::parseSnmpNode (
 
 /* <agentX> */
 	nodeList = snmp->getElementsByTagName (L"agentX");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseAgentXNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseAgentXNode (nodeList->item (i))) {
+			vpf::XMLStringPool xml;
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <agentX> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
 	this->is_snmp_enabled = true;
 	return true;
 }
@@ -155,44 +178,79 @@ hilo::config_t::parseRfaNode (
 
 /* <service> */
 	nodeList = rfa->getElementsByTagName (L"service");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseServiceNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseServiceNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <service> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <service> nodes found in configuration.";
 /* <connection> */
 	nodeList = rfa->getElementsByTagName (L"connection");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseConnectionNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseConnectionNode (nodeList->item (i))) {
+			LOG(ERROR) << "Failed parsing <connection> nth-node #" << (1 + i) << '.';
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <connection> nodes found, RFA behaviour is undefined without a server list.";
 /* <login> */
 	nodeList = rfa->getElementsByTagName (L"login");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseLoginNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseLoginNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <login> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <login> nodes found in configuration.";
 /* <session> */
 	nodeList = rfa->getElementsByTagName (L"session");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseSessionNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseSessionNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <session> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
 /* <monitor> */
 	nodeList = rfa->getElementsByTagName (L"monitor");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseMonitorNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseMonitorNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <monitor> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
 /* <eventQueue> */
 	nodeList = rfa->getElementsByTagName (L"eventQueue");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseEventQueueNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseEventQueueNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <eventQueue> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
 /* <publisher> */
 	nodeList = rfa->getElementsByTagName (L"publisher");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parsePublisherNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parsePublisherNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <publisher> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
 /* <vendor> */
 	nodeList = rfa->getElementsByTagName (L"vendor");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseVendorNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseVendorNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <vendor> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
 	return true;
 }
 
@@ -209,7 +267,7 @@ hilo::config_t::parseServiceNode (
 	attr = xml.transcode (service->getAttribute (L"name"));
 	if (attr.empty()) {
 /* service name cannot be empty */
-		LOG(ERROR) << "<service> node 'name' attribute not specified.";
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
 		return false;
 	}
 	service_name = attr;
@@ -234,14 +292,16 @@ hilo::config_t::parseConnectionNode (
 	attr = xml.transcode (connection->getAttribute (L"defaultPort"));
 	const char* default_port = attr.empty() ? kDefaultAdhPort : attr.c_str();
 
-/* reset all connections */
-	rssl_servers.clear();
-	
 /* <server> */
 	nodeList = connection->getElementsByTagName (L"server");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseServerNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseServerNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <server> nth-node #" << (1 + i) << ": \"" << text_content << "\".";			
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <server> nodes found, RFA behaviour is undefined without a server list.";
 	return true;
 }
 
@@ -253,8 +313,11 @@ hilo::config_t::parseServerNode (
 	const DOMElement* server = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	const std::string server_text = xml.transcode (server->getTextContent());
-	if (server_text.size() > 0)
-		rssl_servers.push_back (server_text);
+	if (server_text.size() == 0) {
+		LOG(ERROR) << "Undefined hostname or IPv4 address.";
+		return false;
+	}
+	rssl_servers.push_back (server_text);
 	return true;
 }
 
@@ -400,14 +463,24 @@ hilo::config_t::parseCrossesNode (
 	rules.clear();
 /* <synthetic> */
 	nodeList = crosses->getElementsByTagName (L"synthetic");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parseSyntheticNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseSyntheticNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <synthetic> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <synthetic> nodes found.";
 /* <pair> */
 	nodeList = crosses->getElementsByTagName (L"pair");
-	for (int i = 0; i < nodeList->getLength(); i++)
-		if (!parsePairNode (nodeList->item (i)))
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parsePairNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <pair> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
+		}
+	}
+	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <pair> nodes found.";
 	return true;
 }
 
@@ -434,18 +507,18 @@ hilo::config_t::parseSyntheticNode (
 	vpf::XMLStringPool xml;
 
 	if (!synthetic->hasAttributes()) {
-		LOG(ERROR) << "<synthetic> node attributes not found.";
+		LOG(ERROR) << "No attributes found, a \"name\" attribute is required.";
 		return false;
 	}
 	if (!synthetic->hasChildNodes()) {
-		LOG(ERROR) << "<synthetic> node empty.";
+		LOG(ERROR) << "No child nodes found, a math operator node and two <leg> nodes are required.";
 		return false;
 	}
 
 /* name="RIC" */
 	const std::string name = xml.transcode (synthetic->getAttribute (L"name"));
 	if (name.empty()) {
-		LOG(ERROR) << "<synthetic> node 'name' attribute not specified.";
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
 		return false;
 	}
 
@@ -467,7 +540,7 @@ hilo::config_t::parseSyntheticNode (
 		cursor = cursor->getNextSibling();
 	}
 	if (math_op.empty()) {
-		LOG(ERROR) << "<synthetic name='" << name << "'> node math operator node not found.";
+		LOG(ERROR) << "Malformed math operator, a <times> or <divide> node is expected.";
 		return false;
 	}
 /* first leg */
@@ -483,7 +556,7 @@ hilo::config_t::parseSyntheticNode (
 		cursor = cursor->getNextSibling();
 	}
 	if (first_leg.empty()) {
-		LOG(ERROR) << "<synthetic name='" << name << "'> node <leg> child nodes not found.";
+		LOG(ERROR) << "Undefined first leg.";
 		return false;
 	}
 /* if specified both bid and ask fields must be present */
@@ -492,7 +565,7 @@ hilo::config_t::parseSyntheticNode (
 		bid = xml.transcode (elem->getAttribute (L"bid"));
 		ask = xml.transcode (elem->getAttribute (L"ask"));
 		if ((!bid.empty() && ask.empty()) || (bid.empty() && !ask.empty())) {
-			LOG(ERROR) << "<synthetic name='" << name << "'>, first <leg> node 'bid' and 'ask' attributes not specified.";
+			LOG(ERROR) << "Bid and ask fields must both be present.";
 			return false;
 		}
 		first_leg += ',' + bid + ',' + ask;
@@ -512,7 +585,7 @@ hilo::config_t::parseSyntheticNode (
 		cursor = cursor->getNextSibling();
 	}
 	if (second_leg.empty()) {
-		LOG(ERROR) << "<synthetic name='" << name << "'> node missing second <leg> child node.";
+		LOG(ERROR) << "Undefined second leg.";
 		return false;
 	}
 /* fields must be present for second leg if provided for first. */
@@ -521,12 +594,12 @@ hilo::config_t::parseSyntheticNode (
 		bid = xml.transcode (elem->getAttribute (L"bid"));
 		ask = xml.transcode (elem->getAttribute (L"ask"));
 		if ((!bid.empty() && ask.empty()) || (bid.empty() && !ask.empty())) {
-			LOG(ERROR) << "<synthetic name='" << name << "'>, second <leg> node 'bid' and 'ask' attributes not specified.";
+			LOG(ERROR) << "Bid and ask fields must both be present.";
 			return false;
 		}
 		second_leg += ',' + bid + ',' + ask;
 	} else if (!bid.empty()) {
-		LOG(ERROR) << "<synthetic name='" << name << "'>, second <leg> node 'bid' and 'ask' attributes required.";
+		LOG(ERROR) << "Bid and ask fields must be present for both legs.";
 		return false;
 	}
 
@@ -556,13 +629,13 @@ hilo::config_t::parsePairNode (
 	vpf::XMLStringPool xml;
 
 	if (!pair->hasAttributes()) {
-		LOG(ERROR) << "<pair> node attributes not found.";
+		LOG(ERROR) << "No attributes found, \"name\" and \"src\" attributes are required.";
 		return false;
 	}
 /* name="RIC" */
 	const std::string name = xml.transcode (pair->getAttribute (L"name"));
 	if (name.empty()) {
-		LOG(ERROR) << "<pair> node 'name' attribute not specified.";
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
 		return false;
 	}
 /* src="RIC" */
@@ -575,7 +648,7 @@ hilo::config_t::parsePairNode (
 	bid = xml.transcode (pair->getAttribute (L"bid"));
 	ask = xml.transcode (pair->getAttribute (L"ask"));
 	if ((!bid.empty() && ask.empty()) || (bid.empty() && !ask.empty())) {
-		LOG(ERROR) << "<pair name='" << name << "'> node 'bid' and 'ask' attributes not specified.";
+		LOG(ERROR) << "Bid and ask fields must both be present.";
 		return false;
 	}
 /* add rule. */

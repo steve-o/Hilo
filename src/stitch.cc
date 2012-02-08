@@ -16,6 +16,7 @@
 #include "get_hilo.hh"
 #include "snmp_agent.hh"
 #include "error.hh"
+#include "rfaostream.hh"
 
 /* RDM Usage Guide: Section 6.5: Enterprise Platform
  * For future compatibility, the DictionaryId should be set to 1 by providers.
@@ -185,13 +186,6 @@ on_timer (
 
 hilo::stitch_t::stitch_t() :
 	is_shutdown_ (false),
-	rfa_ (nullptr),
-	event_queue_ (nullptr),
-	log_ (nullptr),
-	provider_ (nullptr),
-	event_pump_ (nullptr),
-	thread_ (nullptr),
-	timer_ (nullptr),
 	last_activity_ (boost::posix_time::microsec_clock::universal_time()),
 	min_tcl_time_ (boost::posix_time::pos_infin),
 	max_tcl_time_ (boost::posix_time::neg_infin),
@@ -235,7 +229,9 @@ hilo::stitch_t::init (
 	plugin_type_.assign (vpf_config.getPluginType());
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
-		", instance: " << instance_ << " }";
+		", instance: " << instance_ << "\""
+		", version: \"1.5.35\""
+		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
 		goto cleanup;
@@ -245,24 +241,24 @@ hilo::stitch_t::init (
 /** RFA initialisation. **/
 	try {
 /* RFA context. */
-		rfa_ = new rfa_t (config_);
-		if (nullptr == rfa_ || !rfa_->init())
+		rfa_.reset (new rfa_t (config_));
+		if (!(bool)rfa_ || !rfa_->init())
 			goto cleanup;
 
 /* RFA asynchronous event queue. */
 		const RFA_String eventQueueName (config_.event_queue_name.c_str(), 0, false);
-		event_queue_ = rfa::common::EventQueue::create (eventQueueName);
-		if (nullptr == event_queue_)
+		event_queue_.reset (rfa::common::EventQueue::create (eventQueueName), std::mem_fun (&rfa::common::EventQueue::destroy));
+		if (!(bool)event_queue_)
 			goto cleanup;
 
 /* RFA logging. */
-		log_ = new logging::LogEventProvider (config_, *event_queue_);
-		if (nullptr == log_ || !log_->Register())
+		log_.reset (new logging::LogEventProvider (config_, event_queue_));
+		if (!(bool)log_ || !log_->Register())
 			goto cleanup;
 
 /* RFA provider. */
-		provider_ = new provider_t (config_, *rfa_, *event_queue_);
-		if (nullptr == provider_ || !provider_->init())
+		provider_.reset (new provider_t (config_, rfa_, event_queue_));
+		if (!(bool)provider_ || !provider_->init())
 			goto cleanup;
 
 /* Create state for published instruments. */
@@ -271,7 +267,7 @@ hilo::stitch_t::init (
 			++it)
 		{
 /* rule */
-			std::shared_ptr<hilo_t> rule (new hilo_t);
+			auto rule = std::make_shared<hilo_t> ();
 			assert ((bool)rule);
 			if (!parseRule (*it, *rule.get()))
 				goto cleanup;
@@ -279,9 +275,9 @@ hilo::stitch_t::init (
 
 /* analytic publish stream */
 			std::string symbol_name = rule->name + config_.suffix;
-			std::unique_ptr<broadcast_stream_t> stream (new broadcast_stream_t (rule));
+			auto stream = std::make_shared<broadcast_stream_t> (rule);
 			assert ((bool)stream);
-			if (!provider_->createItemStream (symbol_name.c_str(), *stream.get()))
+			if (!provider_->createItemStream (symbol_name.c_str(), stream))
 				goto cleanup;
 
 /* streams for historical analytics */
@@ -302,9 +298,9 @@ hilo::stitch_t::init (
 				   << '.'
 				   << std::setw (2) << interval_end_tod.hours()
 				   << std::setw (2) << interval_end_tod.minutes();
-				std::unique_ptr<item_stream_t> historical_stream (new item_stream_t);
+				auto historical_stream = std::make_shared<item_stream_t> ();
 				assert ((bool)historical_stream);
-				if (!provider_->createItemStream (ss.str().c_str(), *historical_stream.get()))
+				if (!provider_->createItemStream (ss.str().c_str(), historical_stream))
 					goto cleanup;
 				auto status = stream->historical.insert (std::make_pair (ss.str(), std::move (historical_stream)));
 				assert (true == status.second);
@@ -322,9 +318,9 @@ hilo::stitch_t::init (
 				chain_name << chain_index
 					   << '#'
 					   << symbol_name;
-				std::unique_ptr<item_stream_t> chain_stream (new item_stream_t);
+				auto chain_stream = std::make_shared<item_stream_t> ();
 				assert ((bool)chain_stream);
-				if (!provider_->createItemStream (chain_name.str().c_str(), *chain_stream.get()))
+				if (!provider_->createItemStream (chain_name.str().c_str(), chain_stream))
 					goto cleanup;
 				auto status = stream->chain.insert (std::make_pair (chain_name.str(), std::move (chain_stream)));
 				assert (true == status.second);
@@ -334,8 +330,8 @@ hilo::stitch_t::init (
 		}
 
 /* Microsoft threadpool timer. */
-		timer_ = new ms::timer (CreateThreadpoolTimer (static_cast<PTP_TIMER_CALLBACK>(on_timer), this /* closure */, nullptr /* env */));
-		if (!timer_)
+		timer_.reset (CreateThreadpoolTimer (static_cast<PTP_TIMER_CALLBACK>(on_timer), this /* closure */, nullptr /* env */));
+		if (!(bool)timer_)
 			goto cleanup;
 
 	} catch (rfa::common::InvalidUsageException& e) {
@@ -355,16 +351,16 @@ hilo::stitch_t::init (
 	}
 
 /* No main loop inside this thread, must spawn new thread for message pump. */
-	event_pump_ = new event_pump_t (*event_queue_);
-	if (nullptr == event_pump_)
+	event_pump_.reset (new event_pump_t (event_queue_));
+	if (!(bool)event_pump_)
 		goto cleanup;
-	thread_ = new boost::thread (*event_pump_);
-	if (nullptr == thread_)
+	thread_.reset (new boost::thread (*event_pump_.get()));
+	if (!(bool)thread_)
 		goto cleanup;
 
 /* Spawn SNMP implant. */
-	snmp_agent_ = new snmp_agent_t (*this);
-	if (nullptr == snmp_agent_)
+	snmp_agent_.reset (new snmp_agent_t (*this));
+	if (!(bool)snmp_agent_)
 		goto cleanup;
 
 /* Register Tcl API. */
@@ -379,7 +375,7 @@ hilo::stitch_t::init (
 	get_next_interval (due_time);
 	const DWORD timer_period = std::stoul (config_.interval) * 1000;
 #if 1
-	SetThreadpoolTimer (timer_->get(), &due_time, timer_period, 0);
+	SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
 	LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
 #else
 /* requires Platform SDK 7.1 */
@@ -403,18 +399,19 @@ hilo::stitch_t::init (
 	if (nullptr != hKernel32Module)
 		pFnSetWaitableTimerEx = (SetWaitableTimerExProc) ::GetProcAddress (hKernel32Module, "SetWaitableTimerEx");
 	if (nullptr != pFnSetWaitableTimerEx)
-		timer_status = pFnSetWaitableTimerEx (timer_->get(), &due_time, timer_period, nullptr, nullptr, &reasonContext, tolerance);
+		timer_status = pFnSetWaitableTimerEx (timer_.get(), &due_time, timer_period, nullptr, nullptr, &reasonContext, tolerance);
 	if (timer_status) {
 		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms, tolerance " << tolerance << "ms";
 	} else {
-		SetThreadpoolTimer (timer_->get(), &due_time, timer_period, 0);
+		SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
 		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
 	}
 #endif	
+	LOG(INFO) << "Init complete, awaiting queries.";
 
 	return;
 cleanup:
-	LOG(INFO) << "Init failed, cleaning up";
+	LOG(INFO) << "Init failed, cleaning up.";
 	clear();
 	is_shutdown_ = true;
 	throw vpf::UserPluginException ("Init failed.");
@@ -423,32 +420,22 @@ cleanup:
 void
 hilo::stitch_t::clear()
 {
-	LOG(INFO) << "clear()";
 /* Stop generating new events. */
 #if _WIN32_WINNT >= _WIN32_WINNT_WS08
 	if (timer_)
-		SetThreadpoolTimer (timer_->get(), nullptr, 0, 0);
+		SetThreadpoolTimer (timer_.get(), nullptr, 0, 0);
 #endif
-	delete timer_; timer_ = nullptr;
+	timer_.release();
 
 /* Close SNMP agent. */
-	delete snmp_agent_; snmp_agent_ = nullptr;
+	snmp_agent_.release();
 
 /* Signal message pump thread to exit. */
-	if (nullptr != event_queue_)
+	if ((bool)event_queue_)
 		event_queue_->deactivate();
 /* Drain and close event queue. */
-	if (nullptr != thread_)
+	if ((bool)thread_)
 		thread_->join();
-
-	delete provider_; provider_ = nullptr;
-	if (nullptr != log_)
-		log_->Unregister();
-	delete log_; log_ = nullptr;
-	if (nullptr != event_queue_)
-		event_queue_->destroy();
-	event_queue_ = nullptr;
-	delete rfa_; rfa_ = nullptr;
 }
 
 /* Plugin exit point.
@@ -457,15 +444,19 @@ hilo::stitch_t::clear()
 void
 hilo::stitch_t::destroy()
 {
-	LOG(INFO) << "destroy()";
+	LOG(INFO) << "Closing instance.";
 /* Unregister Tcl API. */
 	deregisterCommand (getId(), kFeedLogFunctionName);
 	LOG(INFO) << "Unregistered Tcl API \"" << kFeedLogFunctionName << "\"";
 	deregisterCommand (getId(), kBasicFunctionName);
 	LOG(INFO) << "Unregistered Tcl API \"" << kBasicFunctionName << "\"";
 	clear();
-	LOG(INFO) << "Runtime summary: {}";
+	LOG(INFO) << "Runtime summary: {"
+		    " tclQueryReceived: " << cumulative_stats_[STITCH_PC_TCL_QUERY_RECEIVED] <<
+		   ", timerQueryReceived: " << cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED] <<
+		" }";
 	vpf::AbstractUserPlugin::destroy();
+	LOG(INFO) << "Instance closed.";
 }
 
 /* Tcl boilerplate.
@@ -600,7 +591,7 @@ hilo::stitch_t::tclHiloQuery (
 
 		int len = 0;
 		char* rule_text = Tcl_GetStringFromObj (objPtr, &len);
-		std::shared_ptr<hilo_t> rule (new hilo_t);
+		auto rule = std::make_shared<hilo_t> ();
 		assert ((bool)rule);
 		if (len > 0 && parseRule (rule_text, *rule.get())) {
 			query.push_back (rule);
@@ -776,7 +767,7 @@ hilo::stitch_t::tclFeedLogQuery (
 
 		int len = 0;
 		char* rule_text = Tcl_GetStringFromObj (objPtr, &len);
-		std::shared_ptr<hilo_t> rule (new hilo_t);
+		auto rule = std::make_shared<hilo_t> ();
 		assert ((bool)rule);
 		if (len > 0 && parseRule (rule_text, *rule.get())) {
 			query.push_back (rule);
@@ -1038,7 +1029,7 @@ hilo::stitch_t::sendRefresh()
 	response.setRespStatus (status);
 
 	std::for_each (stream_vector_.begin(), stream_vector_.end(),
-		[&](std::unique_ptr<broadcast_stream_t>& stream)
+		[&](std::shared_ptr<broadcast_stream_t>& stream)
 	{
 		attribInfo.setName (stream->rfa_name);
 		it.start (fields_);
@@ -1117,7 +1108,7 @@ hilo::stitch_t::sendRefresh()
 		rfaDate.setYear  (/* rfa(yyyy) */ 1900 + _tm.tm_year /* tm(yyyy-1900 */);
 
 		std::for_each (stream_vector_.begin(), stream_vector_.end(),
-			[&](std::unique_ptr<broadcast_stream_t>& stream)
+			[&](std::shared_ptr<broadcast_stream_t>& stream)
 		{
 			rfa::common::RFA_String rfa_name (stream->rfa_name);
 			rfa_name.append (ss.str().c_str());
@@ -1192,7 +1183,7 @@ hilo::stitch_t::sendRefresh()
 	link_field.setData (link_data);
 
 	std::for_each (stream_vector_.begin(), stream_vector_.end(),
-		[&](std::unique_ptr<broadcast_stream_t>& stream)
+		[&](std::shared_ptr<broadcast_stream_t>& stream)
 	{
 /* e.g. 0#.DJI .. 3#.DJI */
 		for (int j = chain_index_max; j >= 0; j--)

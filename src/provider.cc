@@ -12,6 +12,7 @@
 
 #include "chromium/logging.hh"
 #include "error.hh"
+#include "rfaostream.hh"
 
 using rfa::common::RFA_String;
 
@@ -26,14 +27,14 @@ static const RFA_String kEnumTypeDictionaryName ("RWFEnum");
 
 hilo::provider_t::provider_t (
 	const hilo::config_t& config,
-	hilo::rfa_t& rfa,
-	rfa::common::EventQueue& event_queue
+	std::shared_ptr<hilo::rfa_t> rfa,
+	std::shared_ptr<rfa::common::EventQueue> event_queue
 	) :
 	config_ (config),
 	rfa_ (rfa),
 	event_queue_ (event_queue),
-	session_ (nullptr),
-	provider_ (nullptr),
+	error_item_handle_ (nullptr),
+	item_handle_ (nullptr),
 	rwf_major_version_ (0),
 	rwf_minor_version_ (0),
 	is_muted_ (true)
@@ -44,8 +45,12 @@ hilo::provider_t::provider_t (
 
 hilo::provider_t::~provider_t()
 {
-	if (nullptr != provider_)
-		provider_->destroy();
+	if (nullptr != item_handle_)
+		provider_->unregisterClient (item_handle_), item_handle_ = nullptr;
+	if (nullptr != error_item_handle_)
+		provider_->unregisterClient (error_item_handle_), error_item_handle_ = nullptr;
+	provider_.release();
+	session_.release();
 }
 
 bool
@@ -54,8 +59,9 @@ hilo::provider_t::init()
 /* 7.2.1 Configuring the Session Layer Package.
  */
 	const RFA_String sessionName (config_.session_name.c_str(), 0, false);
-	session_ = rfa::sessionLayer::Session::acquire (sessionName);
-	assert (nullptr != session_);
+	session_.reset (rfa::sessionLayer::Session::acquire (sessionName));
+	if (!(bool)session_)
+		return false;
 
 /* 6.2.2.1 RFA Version Info.  The version is only available if an application
  * has acquired a Session (i.e., the Session Layer library is loaded).
@@ -64,15 +70,15 @@ hilo::provider_t::init()
 
 /* 7.5.6 Initializing an OMM Non-Interactive Provider. */
 	const RFA_String publisherName (config_.publisher_name.c_str(), 0, false);
-	provider_ = session_->createOMMProvider (publisherName, nullptr);
-	if (nullptr == provider_)
+	provider_.reset (session_->createOMMProvider (publisherName, nullptr));
+	if (!(bool)provider_)
 		return false;
 
 /* 7.5.7 Registering for Events from an OMM Non-Interactive Provider. */
 /* receive error events (OMMCmdErrorEvent) related to calls to submit(). */
 	rfa::sessionLayer::OMMErrorIntSpec ommErrorIntSpec;
-	rfa::common::Handle* handle = provider_->registerClient (&event_queue_, &ommErrorIntSpec, *this, nullptr /* closure */);
-	if (nullptr == handle)
+	error_item_handle_ = provider_->registerClient (event_queue_.get(), &ommErrorIntSpec, *this, nullptr /* closure */);
+	if (nullptr == error_item_handle_)
 		return false;
 
 	return sendLoginRequest();
@@ -142,7 +148,7 @@ hilo::provider_t::sendLoginRequest()
  * Models as specified in RFA API 7 RDM Usage Guide.
  */
 	RFA_String warningText;
-	uint8_t validation_status = request.validateMsg (&warningText);
+	const uint8_t validation_status = request.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
 		LOG(WARNING) << "MMT_LOGIN::validateMsg: { warningText: \"" << warningText << "\" }";
 		cumulative_stats_[PROVIDER_PC_MMT_LOGIN_MALFORMED]++;
@@ -160,14 +166,14 @@ hilo::provider_t::sendLoginRequest()
  */
 	rfa::sessionLayer::OMMItemIntSpec ommItemIntSpec;
 	ommItemIntSpec.setMsg (&request);
-	rfa::common::Handle* handle = provider_->registerClient (&event_queue_, &ommItemIntSpec, *this, nullptr /* closure */);
+	item_handle_ = provider_->registerClient (event_queue_.get(), &ommItemIntSpec, *this, nullptr /* closure */);
 	cumulative_stats_[PROVIDER_PC_MMT_LOGIN_SENT]++;
-	if (nullptr == handle)
+	if (nullptr == item_handle_)
 		return false;
 
 /* Store negotiated Reuters Wire Format version information. */
 	rfa::data::Map map;
-	map.setAssociatedMetaInfo (*handle);
+	map.setAssociatedMetaInfo (*item_handle_);
 	rwf_major_version_ = map.getMajorVersion();
 	rwf_minor_version_ = map.getMinorVersion();
 	LOG(INFO) << "RWF: { MajorVersion: " << (unsigned)rwf_major_version_
@@ -181,21 +187,21 @@ hilo::provider_t::sendLoginRequest()
 bool
 hilo::provider_t::createItemStream (
 	const char* name,
-	item_stream_t& item_stream
+	std::shared_ptr<item_stream_t> item_stream
 	)
 {
-	item_stream.rfa_name.set (name, 0, true);
+	item_stream->rfa_name.set (name, 0, true);
 	if (!is_muted_) {
 		DLOG(INFO) << "Generating token for " << name;
-		item_stream.token = &( provider_->generateItemToken() );
-		assert (nullptr != item_stream.token);
+		item_stream->token = &( provider_->generateItemToken() );
+		assert (nullptr != item_stream->token);
 		cumulative_stats_[PROVIDER_PC_TOKENS_GENERATED]++;
 	} else {
 		DLOG(INFO) << "Not generating token for " << name << " as provider is muted.";
-		assert (nullptr == item_stream.token);
+		assert (nullptr == item_stream->token);
 	}
 	const std::string key (name);
-	auto status = directory_.insert (std::make_pair (key, &item_stream));
+	auto status = directory_.emplace (std::make_pair (key, item_stream));
 	assert (true == status.second);
 	assert (directory_.end() != directory_.find (key));
 	DLOG(INFO) << "Directory size: " << directory_.size();
@@ -647,18 +653,23 @@ hilo::provider_t::getServiceState (
 bool
 hilo::provider_t::resetTokens()
 {
+	if (!(bool)provider_) {
+		LOG(WARNING) << "reset tokens whilst invalid provider.";
+		return false;
+	}
+
 	LOG(INFO) << "Resetting " << directory_.size() << " provider tokens";
 	unsigned i = 0;
 	assert (nullptr != provider_);
 /* Cannot use std::for_each (auto λ) due to language limitations. */
 	std::for_each (directory_.begin(), directory_.end(),
-		[&](std::pair<std::string, item_stream_t*> it)
+		[&](std::pair<std::string, std::weak_ptr<item_stream_t>> it)
 	{
-		LOG(INFO) << "Token #" << ++i << ": " << it.first;
-		assert (nullptr != it.second);
-		it.second->token = &( provider_->generateItemToken() );
-		assert (nullptr != it.second->token);
-		cumulative_stats_[PROVIDER_PC_TOKENS_GENERATED]++;
+		if (auto sp = it.second.lock()) {
+			sp->token = &( provider_->generateItemToken() );
+			assert (nullptr != sp->token);
+			cumulative_stats_[PROVIDER_PC_TOKENS_GENERATED]++;
+		}
 	});
 	return true;
 }
