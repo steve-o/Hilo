@@ -7,6 +7,7 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
+#include "chromium/command_line.hh"
 #include "chromium/logging.hh"
 #include "stitch.hh"
 
@@ -14,6 +15,25 @@ static const char* kPluginType = "HiloPlugin";
 
 namespace
 {
+	class env_t
+	{
+	public:
+		env_t (const char* varname)
+		{
+			char* buffer;
+			size_t numberOfElements;
+			const errno_t err = _dupenv_s (&buffer, &numberOfElements, varname);
+			if (!err) {
+				std::string command_line (kPluginType);
+				command_line.append (" ");
+				command_line.append (buffer);
+				CommandLine::FromString (command_line);
+				free (buffer);
+			}
+			logging::InitLogging();
+		}
+	};
+
 	class winsock_t
 	{
 		bool initialized;
@@ -44,9 +64,11 @@ namespace
 
 	class factory_t : public vpf::ObjectFactory
 	{
+		env_t env;
 		winsock_t winsock;
 	public:
 		factory_t() :
+			env ("TR_DEBUG"),
 			winsock (2, 2)
 		{
 			registerType (kPluginType);

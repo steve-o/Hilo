@@ -71,12 +71,18 @@ set(cxx-sources
 	src/snmp_agent.cc
 	src/stitch.cc
 	src/stitchMIB.cc
+	src/chromium/chromium_switches.cc
+	src/chromium/command_line.cc
 	src/chromium/debug/stack_trace.cc
 	src/chromium/debug/stack_trace_win.cc
 	src/chromium/memory/singleton.cc
 	src/chromium/logging.cc
+	src/chromium/string_piece.cc
+	src/chromium/string_split.cc
+	src/chromium/string_util.cc
 	src/chromium/synchronization/lock.cc
 	src/chromium/synchronization/lock_impl_win.cc
+	src/chromium/vlog.cc
 )
 
 set(rc-sources
@@ -159,8 +165,8 @@ set (CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
 set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
 set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
 set (CPACK_PACKAGE_VERSION_MAJOR "1")
-set (CPACK_PACKAGE_VERSION_MINOR "5")
-set (CPACK_PACKAGE_VERSION_PATCH "35")
+set (CPACK_PACKAGE_VERSION_MINOR "6")
+set (CPACK_PACKAGE_VERSION_PATCH "36")
 include (CPack)
 
 # end of file

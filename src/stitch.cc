@@ -230,7 +230,7 @@ hilo::stitch_t::init (
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
 		", instance: " << instance_ << "\""
-		", version: \"1.5.35\""
+		", version: \"1.6.36\""
 		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))

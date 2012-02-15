@@ -18,12 +18,17 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
+#include "chromium_switches.hh"
+#include "command_line.hh"
 #include "debug/stack_trace.hh"
 #include "synchronization/lock_impl.hh"
+#include "vlog.hh"
 
 namespace logging {
 
 namespace {
+
+VlogInfo* g_vlog_info = nullptr;
 
 const char* const log_severity_names[LOG_NUM_SEVERITIES] = {
 	"INFO", "WARNING", "ERROR", "FATAL" };
@@ -98,7 +103,19 @@ chromium::internal::LockImpl* LoggingLock::log_lock = NULL;
 
 }  /* anonymous namespace */
 
-bool InitLoggingImpl() {
+bool ChromiumInitLoggingImpl() {
+
+  CommandLine* command_line = CommandLine::ForCurrentProcess();
+
+  // Don't bother initializing g_vlog_info unless we use one of the
+  // vlog switches.
+  if (command_line->HasSwitch(switches::kV) ||
+      command_line->HasSwitch(switches::kVModule)) {
+    g_vlog_info =
+        new VlogInfo(command_line->GetSwitchValueASCII(switches::kV),
+                     command_line->GetSwitchValueASCII(switches::kVModule),
+                     &min_log_level);
+  }
 
   LoggingLock::Init();
 
@@ -117,6 +134,16 @@ int GetMinLogLevel() {
 
 int GetVlogVerbosity() {
   return std::max(-1, LOG_INFO - GetMinLogLevel());
+}
+
+int GetVlogLevelHelper(const char*file, size_t N) {
+  DCHECK_GT(N, 0U);
+    // Note: g_vlog_info may change on a different thread during startup
+  // (but will always be valid or NULL).
+  VlogInfo* vlog_info = g_vlog_info;
+  return vlog_info ?
+      vlog_info->GetVlogLevel(chromium::StringPiece(file, N - 1)) :
+      GetVlogVerbosity();
 }
 
 void SetLogItems(bool enable_process_id, bool enable_thread_id,

@@ -264,7 +264,7 @@ hilo::provider_t::processEvent (
 
         default:
 		cumulative_stats_[PROVIDER_PC_RFA_EVENTS_DISCARDED]++;
-		LOG(INFO) << "Uncaught: " << event_;
+		LOG(WARNING) << "Uncaught: " << event_;
                 break;
         }
 }
@@ -282,7 +282,7 @@ hilo::provider_t::processOMMItemEvent (
 /* Verify event is a response event */
 	if (rfa::message::RespMsgEnum != msg.getMsgType()) {
 		cumulative_stats_[PROVIDER_PC_OMM_ITEM_EVENTS_DISCARDED]++;
-		LOG(INFO) << "Uncaught: " << msg;
+		LOG(WARNING) << "Uncaught: " << msg;
 		return;
 	}
 
@@ -298,7 +298,7 @@ hilo::provider_t::processRespMsg (
 /* Verify event is a login response event */
 	if (rfa::rdm::MMT_LOGIN != reply_msg.getMsgModelType()) {
 		cumulative_stats_[PROVIDER_PC_RESPONSE_MSGS_DISCARDED]++;
-		LOG(INFO) << "Uncaught: " << reply_msg;
+		LOG(WARNING) << "Uncaught: " << reply_msg;
 		return;
 	}
 
@@ -322,7 +322,7 @@ hilo::provider_t::processRespMsg (
 
 		default:
 			cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_DISCARDED]++;
-			LOG(INFO) << "Uncaught: " << reply_msg;
+			LOG(WARNING) << "Uncaught: " << reply_msg;
 			break;
 		}
 		break;
@@ -333,7 +333,7 @@ hilo::provider_t::processRespMsg (
 
 	default:
 		cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_DISCARDED]++;
-		LOG(INFO) << "Uncaught: " << reply_msg;
+		LOG(WARNING) << "Uncaught: " << reply_msg;
 		break;
 	}
 }
@@ -382,6 +382,7 @@ hilo::provider_t::sendDirectoryResponse()
 	response.setMsgModelType (rfa::rdm::MMT_DIRECTORY);
 /* 7.5.9.3 Set response type. */
 	response.setRespType (rfa::message::RespMsg::RefreshEnum);
+	response.setIndicationMask (rfa::message::RespMsg::RefreshCompleteFlag);
 /* 7.5.9.4 Set the response type enumation.
  * Note type is unsolicited despite being a mandatory requirement before
  * publishing.
@@ -632,7 +633,7 @@ hilo::provider_t::getServiceState (
 	element.setData (dataBuffer);
 	it.bind (element);
 
-/* AcceptingRequests<UInt>
+/* AcceptingRequests<UInt> (optional, interactive-only)
  * 1: Yes
  * 0: No
  * If the value is 0, then consuming applications should not send any new
@@ -640,10 +641,12 @@ hilo::provider_t::getServiceState (
  * application makes new requests to the service, they will be queued. All
  * existing streams are left unchanged.
  */
+#if 0
 	element.setName (rfa::rdm::ENAME_ACCEPTING_REQS);
 	dataBuffer.setUInt32 (1);
 	element.setData (dataBuffer);
 	it.bind (element);
+#endif
 
 	it.complete();
 }
@@ -654,13 +657,11 @@ bool
 hilo::provider_t::resetTokens()
 {
 	if (!(bool)provider_) {
-		LOG(WARNING) << "reset tokens whilst invalid provider.";
+		LOG(WARNING) << "reset tokens whilst provider is invalid.";
 		return false;
 	}
 
 	LOG(INFO) << "Resetting " << directory_.size() << " provider tokens";
-	unsigned i = 0;
-	assert (nullptr != provider_);
 /* Cannot use std::for_each (auto λ) due to language limitations. */
 	std::for_each (directory_.begin(), directory_.end(),
 		[&](std::pair<std::string, std::weak_ptr<item_stream_t>> it)
