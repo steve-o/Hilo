@@ -258,3 +258,5 @@ void CommandLine::ParseFromString(const std::string& command_line) {
   chromium::SplitString(command_line, ' ', &args);
   InitFromArgv(args);
 }
+
+/* eof */

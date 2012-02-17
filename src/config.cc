@@ -5,41 +5,12 @@
 
 #include "chromium/logging.hh"
 
-static const char* kDefaultAdhPort = "14003";
-
 hilo::config_t::config_t() :
 /* default values */
 	is_snmp_enabled (false),
-	is_agentx_subagent (true),
-	service_name ("NI_VTA"),
-	rssl_default_port (kDefaultAdhPort),
-	application_id ("256"),
-	instance_id ("Instance1"),
-	user_name ("user1"),
-	position (""),
-	session_name ("SessionName"),
-	monitor_name ("ApplicationLoggerMonitorName"),
-	event_queue_name ("EventQueueName"),
-	connection_name ("ConnectionName"),
-	publisher_name ("PublisherName"),
-	vendor_name ("VendorName"),
-/* 15 mins = 900 seconds */
-	interval ("900"),
-/* 100ms */
-	tolerable_delay ("100"),
-/* 5pm EST = 10pm GMT = 22:00 UTC */
-	reset_time ("22:00:00.000"),
-	suffix ("VTA")
+	is_agentx_subagent (true)
 {
 /* C++11 initializer lists not supported in MSVC2010 */
-#ifdef CONFIG_DEMO_DATA
-	rssl_servers.push_back ("localhost");
-
-	rules.push_back ("JPYKRW=,DIV,KRW=,BidPrice,AskPrice,JPY=EBS,BidPrice,AskPrice");
-	rules.push_back ("GBPHKD=,MUL,GBP=D2,BidPrice,AskPrice,HKD=D2,BidPrice,AskPrice");
-	rules.push_back ("USDCAD=,EQ,CAD=D2,BidPrice,AskPrice");
-	rules.push_back ("USDCAD=TOB,EQ,CAD=D2,GeneralValue1,GeneralValue3");
-#endif
 }
 
 /* Minimal error handling parsing of an Xml node pulled from the
@@ -51,6 +22,77 @@ hilo::config_t::config_t() :
 using namespace xercesc;
 
 /** L"" prefix is used in preference to u"" because of MSVC2010 **/
+
+bool
+hilo::config_t::validate()
+{
+	if (service_name.empty()) {
+		LOG(ERROR) << "Undefined service name.";
+		return false;
+	}
+	if (sessions.empty()) {
+		LOG(ERROR) << "Undefined session, expecting one or more session node.";
+		return false;
+	}
+	for (auto it = sessions.begin();
+		it != sessions.end();
+		++it)
+	{
+		if (it->session_name.empty()) {
+			LOG(ERROR) << "Undefined session name.";
+			return false;
+		}
+		if (it->connection_name.empty()) {
+			LOG(ERROR) << "Undefined connection name for <session name=\"" << it->session_name << "\">.";
+			return false;
+		}
+		if (it->publisher_name.empty()) {
+			LOG(ERROR) << "Undefined publisher name for <session name=\"" << it->session_name << "\">.";
+			return false;
+		}
+		if (it->rssl_servers.empty()) {
+			LOG(ERROR) << "Undefined server list for <connection name=\"" << it->connection_name << "\">.";
+			return false;
+		}
+		if (it->application_id.empty()) {
+			LOG(ERROR) << "Undefined application ID for <session name=\"" << it->session_name << "\">.";
+			return false;
+		}
+		if (it->instance_id.empty()) {
+			LOG(ERROR) << "Undefined instance ID for <session name=\"" << it->session_name << "\">.";
+			return false;
+		}
+		if (it->user_name.empty()) {
+			LOG(ERROR) << "Undefined user name for <session name=\"" << it->session_name << "\">.";
+			return false;
+		}
+	}
+	if (monitor_name.empty()) {
+		LOG(ERROR) << "Undefined monitor name.";
+		return false;
+	}
+	if (event_queue_name.empty()) {
+		LOG(ERROR) << "Undefined event queue name.";
+		return false;
+	}
+	if (vendor_name.empty()) {
+		LOG(ERROR) << "Undefined vendor name.";
+		return false;
+	}
+	if (interval.empty()) {
+		LOG(ERROR) << "Undefined interval.";
+		return false;
+	}
+	if (reset_time.empty()) {
+		LOG(ERROR) << "Undefined reset time.";
+		return false;
+	}
+	if (rules.empty()) {
+		LOG(ERROR) << "Undefined FX currency cross rules.";
+		return false;
+	}
+	return true;
+}
 
 bool
 hilo::config_t::parseDomElement (
@@ -70,7 +112,13 @@ hilo::config_t::parseDomElement (
 			return false;
 		}
 	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <config> nodes found in configuration.";
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <config> nodes found in configuration.";
+
+	if (!validate()) {
+		LOG(ERROR) << "Failed validation, malformed configuration file requires correction.";
+		return false;
+	}
 
 	LOG(INFO) << "Parsing complete.";
 	return true;
@@ -81,12 +129,12 @@ hilo::config_t::parseConfigNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* config = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	const DOMNodeList* nodeList;
 
 /* <Snmp> */
-	nodeList = config->getElementsByTagName (L"Snmp");
+	nodeList = elem->getElementsByTagName (L"Snmp");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseSnmpNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <Snmp> nth-node #" << (1 + i) << '.';
@@ -94,23 +142,25 @@ hilo::config_t::parseConfigNode (
 		}
 	}
 /* <Rfa> */
-	nodeList = config->getElementsByTagName (L"Rfa");
+	nodeList = elem->getElementsByTagName (L"Rfa");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseRfaNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <Rfa> nth-node #" << (1 + i) << '.';
 			return false;
 		}
 	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <Rfa> nodes found in configuration.";
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <Rfa> nodes found in configuration.";
 /* <crosses> */
-	nodeList = config->getElementsByTagName (L"crosses");
+	nodeList = elem->getElementsByTagName (L"crosses");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseCrossesNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <crosses> nth-node #" << (1 + i) << '.';
 			return false;
 		}
 	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <crosses> nodes found in configuration.";
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <crosses> nodes found in configuration.";
 	return true;
 }
 
@@ -120,11 +170,18 @@ hilo::config_t::parseSnmpNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* snmp = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	const DOMNodeList* nodeList;
+	vpf::XMLStringPool xml;
+	std::string attr;
+
+/* logfile="file path" */
+	attr = xml.transcode (elem->getAttribute (L"filelog"));
+	if (!attr.empty())
+		snmp_filelog = attr;
 
 /* <agentX> */
-	nodeList = snmp->getElementsByTagName (L"agentX");
+	nodeList = elem->getElementsByTagName (L"agentX");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseAgentXNode (nodeList->item (i))) {
 			vpf::XMLStringPool xml;
@@ -142,17 +199,17 @@ hilo::config_t::parseAgentXNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* agentX = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	std::string attr;
 
 /* subagent="bool" */
-	attr = xml.transcode (agentX->getAttribute (L"subagent"));
+	attr = xml.transcode (elem->getAttribute (L"subagent"));
 	if (!attr.empty())
 		is_agentx_subagent = (0 == attr.compare ("true"));
 
 /* socket="..." */
-	attr = xml.transcode (agentX->getAttribute (L"socket"));
+	attr = xml.transcode (elem->getAttribute (L"socket"));
 	if (!attr.empty())
 		agentx_socket = attr;
 	return true;
@@ -166,18 +223,18 @@ hilo::config_t::parseRfaNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* rfa = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	const DOMNodeList* nodeList;
 	std::string attr;
 
 /* key="name" */
-	attr = xml.transcode (rfa->getAttribute (L"key"));
+	attr = xml.transcode (elem->getAttribute (L"key"));
 	if (!attr.empty())
 		key = attr;
 
 /* <service> */
-	nodeList = rfa->getElementsByTagName (L"service");
+	nodeList = elem->getElementsByTagName (L"service");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseServiceNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
@@ -187,36 +244,18 @@ hilo::config_t::parseRfaNode (
 	}
 	if (0 == nodeList->getLength())
 		LOG(WARNING) << "No <service> nodes found in configuration.";
-/* <connection> */
-	nodeList = rfa->getElementsByTagName (L"connection");
-	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseConnectionNode (nodeList->item (i))) {
-			LOG(ERROR) << "Failed parsing <connection> nth-node #" << (1 + i) << '.';
-			return false;
-		}
-	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <connection> nodes found, RFA behaviour is undefined without a server list.";
-/* <login> */
-	nodeList = rfa->getElementsByTagName (L"login");
-	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseLoginNode (nodeList->item (i))) {
-			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
-			LOG(ERROR) << "Failed parsing <login> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
-			return false;
-		}
-	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <login> nodes found in configuration.";
 /* <session> */
-	nodeList = rfa->getElementsByTagName (L"session");
+	nodeList = elem->getElementsByTagName (L"session");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseSessionNode (nodeList->item (i))) {
-			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
-			LOG(ERROR) << "Failed parsing <session> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
+			LOG(ERROR) << "Failed parsing <session> nth-node #" << (1 + i) << ".";
 			return false;
 		}
 	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <session> nodes found, RFA behaviour is undefined without a server list.";
 /* <monitor> */
-	nodeList = rfa->getElementsByTagName (L"monitor");
+	nodeList = elem->getElementsByTagName (L"monitor");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseMonitorNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
@@ -225,7 +264,7 @@ hilo::config_t::parseRfaNode (
 		}
 	}
 /* <eventQueue> */
-	nodeList = rfa->getElementsByTagName (L"eventQueue");
+	nodeList = elem->getElementsByTagName (L"eventQueue");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseEventQueueNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
@@ -233,17 +272,8 @@ hilo::config_t::parseRfaNode (
 			return false;
 		}
 	}
-/* <publisher> */
-	nodeList = rfa->getElementsByTagName (L"publisher");
-	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parsePublisherNode (nodeList->item (i))) {
-			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
-			LOG(ERROR) << "Failed parsing <publisher> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
-			return false;
-		}
-	}
 /* <vendor> */
-	nodeList = rfa->getElementsByTagName (L"vendor");
+	nodeList = elem->getElementsByTagName (L"vendor");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseVendorNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
@@ -259,12 +289,12 @@ hilo::config_t::parseServiceNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* service = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	std::string attr;
 
 /* name="name" */
-	attr = xml.transcode (service->getAttribute (L"name"));
+	attr = xml.transcode (elem->getAttribute (L"name"));
 	if (attr.empty()) {
 /* service name cannot be empty */
 		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
@@ -275,93 +305,126 @@ hilo::config_t::parseServiceNode (
 }
 
 bool
-hilo::config_t::parseConnectionNode (
+hilo::config_t::parseSessionNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* connection = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	const DOMNodeList* nodeList;
-	std::string attr;
+	session_config_t session;
 
 /* name="name" */
-	attr = xml.transcode (connection->getAttribute (L"name"));
-	if (!attr.empty())
-		connection_name = attr;
+	session.session_name = xml.transcode (elem->getAttribute (L"name"));
+	if (session.session_name.empty()) {
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
+		return false;
+	}
+
+/* <publisher> */
+	nodeList = elem->getElementsByTagName (L"publisher");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parsePublisherNode (nodeList->item (i), session.publisher_name)) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <publisher> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
+			return false;
+		}
+	}
+/* <connection> */
+	nodeList = elem->getElementsByTagName (L"connection");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseConnectionNode (nodeList->item (i), session)) {
+			LOG(ERROR) << "Failed parsing <connection> nth-node #" << (1 + i) << '.';
+			return false;
+		}
+	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <connection> nodes found, RFA behaviour is undefined without a server list.";
+/* <login> */
+	nodeList = elem->getElementsByTagName (L"login");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseLoginNode (nodeList->item (i), session)) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <login> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
+			return false;
+		}
+	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <login> nodes found in configuration.";	
+		
+	sessions.push_back (session);
+	return true;
+}
+
+bool
+hilo::config_t::parseConnectionNode (
+	const DOMNode*		node,
+	session_config_t&	session
+	)
+{
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
+	vpf::XMLStringPool xml;
+	const DOMNodeList* nodeList;
+
+/* name="name" */
+	session.connection_name = xml.transcode (elem->getAttribute (L"name"));
+	if (session.connection_name.empty()) {
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
+		return false;
+	}
 /* defaultPort="port" */
-	attr = xml.transcode (connection->getAttribute (L"defaultPort"));
-	const char* default_port = attr.empty() ? kDefaultAdhPort : attr.c_str();
+	session.rssl_default_port = xml.transcode (elem->getAttribute (L"defaultPort"));
 
 /* <server> */
-	nodeList = connection->getElementsByTagName (L"server");
+	nodeList = elem->getElementsByTagName (L"server");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseServerNode (nodeList->item (i))) {
+		std::string server;
+		if (!parseServerNode (nodeList->item (i), server)) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <server> nth-node #" << (1 + i) << ": \"" << text_content << "\".";			
 			return false;
 		}
+		session.rssl_servers.push_back (server);
 	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <server> nodes found, RFA behaviour is undefined without a server list.";
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <server> nodes found, RFA behaviour is undefined without a server list.";
+
 	return true;
 }
 
 bool
 hilo::config_t::parseServerNode (
-	const DOMNode*		node
+	const DOMNode*		node,
+	std::string&		server
 	)
 {
-	const DOMElement* server = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
-	const std::string server_text = xml.transcode (server->getTextContent());
-	if (server_text.size() == 0) {
+	server = xml.transcode (elem->getTextContent());
+	if (server.size() == 0) {
 		LOG(ERROR) << "Undefined hostname or IPv4 address.";
 		return false;
 	}
-	rssl_servers.push_back (server_text);
 	return true;
 }
 
 bool
 hilo::config_t::parseLoginNode (
-	const DOMNode*		node
+	const DOMNode*		node,
+	session_config_t&	session
 	)
 {
-	const DOMElement* login = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
-	std::string attr;
 
 /* applicationId="id" */
-	attr = xml.transcode (login->getAttribute (L"applicationId"));
-	if (!attr.empty())
-		application_id = attr;
+	session.application_id = xml.transcode (elem->getAttribute (L"applicationId"));
 /* instanceId="id" */
-	attr = xml.transcode (login->getAttribute (L"instanceId"));
-	if (!attr.empty())
-		instance_id = attr;
+	session.instance_id = xml.transcode (elem->getAttribute (L"instanceId"));
 /* userName="name" */
-	attr = xml.transcode (login->getAttribute (L"userName"));
-	if (!attr.empty())
-		user_name = attr;
+	session.user_name = xml.transcode (elem->getAttribute (L"userName"));
 /* position="..." */
-	attr = xml.transcode (login->getAttribute (L"position"));
-	if (!attr.empty())
-		position = attr;
-	return true;
-}
-
-bool
-hilo::config_t::parseSessionNode (
-	const DOMNode*		node
-	)
-{
-	const DOMElement* session = static_cast<const DOMElement*>(node);
-	vpf::XMLStringPool xml;
-	std::string attr;
-
-/* name="name" */
-	attr = xml.transcode (session->getAttribute (L"name"));
-	if (!attr.empty())
-		session_name = attr;
+	session.position = xml.transcode (elem->getAttribute (L"position"));
 	return true;
 }
 
@@ -370,12 +433,12 @@ hilo::config_t::parseMonitorNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* monitor = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	std::string attr;
 
 /* name="name" */
-	attr = xml.transcode (monitor->getAttribute (L"name"));
+	attr = xml.transcode (elem->getAttribute (L"name"));
 	if (!attr.empty())
 		monitor_name = attr;
 	return true;
@@ -386,12 +449,12 @@ hilo::config_t::parseEventQueueNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* event_queue = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	std::string attr;
 
 /* name="name" */
-	attr = xml.transcode (event_queue->getAttribute (L"name"));
+	attr = xml.transcode (elem->getAttribute (L"name"));
 	if (!attr.empty())
 		event_queue_name = attr;
 	return true;
@@ -399,17 +462,15 @@ hilo::config_t::parseEventQueueNode (
 
 bool
 hilo::config_t::parsePublisherNode (
-	const DOMNode*		node
+	const DOMNode*		node,
+	std::string&		name
 	)
 {
-	const DOMElement* publisher = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
-	std::string attr;
 
 /* name="name" */
-	attr = xml.transcode (publisher->getAttribute (L"name"));
-	if (!attr.empty())
-		publisher_name = attr;
+	name = xml.transcode (elem->getAttribute (L"name"));
 	return true;
 }
 
@@ -418,12 +479,12 @@ hilo::config_t::parseVendorNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* vendor = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	std::string attr;
 
 /* name="name" */
-	attr = xml.transcode (vendor->getAttribute (L"name"));
+	attr = xml.transcode (elem->getAttribute (L"name"));
 	if (!attr.empty())
 		vendor_name = attr;
 	return true;
@@ -437,32 +498,32 @@ hilo::config_t::parseCrossesNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* crosses = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 	const DOMNodeList* nodeList;
 	std::string attr;
 
 /* interval="seconds" */
-	attr = xml.transcode (crosses->getAttribute (L"interval"));
+	attr = xml.transcode (elem->getAttribute (L"interval"));
 	if (!attr.empty())
 		interval = attr;
 /* tolerableDelay="milliseconds" */
-	attr = xml.transcode (crosses->getAttribute (L"tolerableDelay"));
+	attr = xml.transcode (elem->getAttribute (L"tolerableDelay"));
 	if (!attr.empty())
 		tolerable_delay = attr;
 /* reset="time" */
-	attr = xml.transcode (crosses->getAttribute (L"reset"));
+	attr = xml.transcode (elem->getAttribute (L"reset"));
 	if (!attr.empty())
 		reset_time = attr;
 /* suffix="text" */
-	attr = xml.transcode (crosses->getAttribute (L"suffix"));
+	attr = xml.transcode (elem->getAttribute (L"suffix"));
 	if (!attr.empty())
 		suffix = attr;
 
 /* reset all rules */
 	rules.clear();
 /* <synthetic> */
-	nodeList = crosses->getElementsByTagName (L"synthetic");
+	nodeList = elem->getElementsByTagName (L"synthetic");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parseSyntheticNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
@@ -470,9 +531,10 @@ hilo::config_t::parseCrossesNode (
 			return false;
 		}
 	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <synthetic> nodes found.";
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <synthetic> nodes found.";
 /* <pair> */
-	nodeList = crosses->getElementsByTagName (L"pair");
+	nodeList = elem->getElementsByTagName (L"pair");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		if (!parsePairNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
@@ -480,7 +542,8 @@ hilo::config_t::parseCrossesNode (
 			return false;
 		}
 	}
-	LOG_IF(WARNING, 0 == nodeList->getLength()) << "No <pair> nodes found.";
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <pair> nodes found.";
 	return true;
 }
 
@@ -503,27 +566,27 @@ hilo::config_t::parseSyntheticNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* synthetic = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 
-	if (!synthetic->hasAttributes()) {
+	if (!elem->hasAttributes()) {
 		LOG(ERROR) << "No attributes found, a \"name\" attribute is required.";
 		return false;
 	}
-	if (!synthetic->hasChildNodes()) {
+	if (!elem->hasChildNodes()) {
 		LOG(ERROR) << "No child nodes found, a math operator node and two <leg> nodes are required.";
 		return false;
 	}
 
 /* name="RIC" */
-	const std::string name = xml.transcode (synthetic->getAttribute (L"name"));
+	const std::string name = xml.transcode (elem->getAttribute (L"name"));
 	if (name.empty()) {
 		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
 		return false;
 	}
 
 /* iterate through children */
-	const DOMNode* cursor = synthetic->getFirstChild();
+	const DOMNode* cursor = elem->getFirstChild();
 /* math operator */
 	std::string math_op;
 	while (nullptr != cursor) {
@@ -625,28 +688,28 @@ hilo::config_t::parsePairNode (
 	const DOMNode*		node
 	)
 {
-	const DOMElement* pair = static_cast<const DOMElement*>(node);
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
 	vpf::XMLStringPool xml;
 
-	if (!pair->hasAttributes()) {
+	if (!elem->hasAttributes()) {
 		LOG(ERROR) << "No attributes found, \"name\" and \"src\" attributes are required.";
 		return false;
 	}
 /* name="RIC" */
-	const std::string name = xml.transcode (pair->getAttribute (L"name"));
+	const std::string name = xml.transcode (elem->getAttribute (L"name"));
 	if (name.empty()) {
 		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
 		return false;
 	}
 /* src="RIC" */
-	std::string src = xml.transcode (pair->getAttribute (L"src"));
+	std::string src = xml.transcode (elem->getAttribute (L"src"));
 	if (src.empty())
 		src = name;
 /* bid="field" */
 /* ask="field" */
 	std::string bid, ask;
-	bid = xml.transcode (pair->getAttribute (L"bid"));
-	ask = xml.transcode (pair->getAttribute (L"ask"));
+	bid = xml.transcode (elem->getAttribute (L"bid"));
+	ask = xml.transcode (elem->getAttribute (L"ask"));
 	if ((!bid.empty() && ask.empty()) || (bid.empty() && !ask.empty())) {
 		LOG(ERROR) << "Bid and ask fields must both be present.";
 		return false;

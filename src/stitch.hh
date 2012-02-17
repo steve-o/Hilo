@@ -8,6 +8,10 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
+
+/* Boost Posix Time */
+#include "boost/date_time/posix_time/posix_time.hpp"
 
 /* Boost noncopyable base class. */
 #include <boost/utility.hpp>
@@ -25,9 +29,12 @@
 #include "microsoft/timer.hh"
 
 #include "config.hh"
-#include "rfa.hh"
-#include "rfa_logging.hh"
 #include "provider.hh"
+
+namespace logging
+{
+	class LogEventProvider;
+}
 
 namespace hilo
 {
@@ -48,6 +55,8 @@ namespace hilo
 	};
 
 	class hilo_t;
+	class rfa_t;
+	class provider_t;
 	class snmp_agent_t;
 
 /* Basic state for each item stream. */
@@ -152,8 +161,15 @@ namespace hilo
 #ifdef STITCHMIB_H
 		friend Netsnmp_Next_Data_Point stitchPluginTable_get_next_data_point;
 		friend Netsnmp_Node_Handler stitchPluginTable_handler;
+
 		friend Netsnmp_Next_Data_Point stitchPluginPerformanceTable_get_next_data_point;
 		friend Netsnmp_Node_Handler stitchPluginPerformanceTable_handler;
+
+		friend Netsnmp_First_Data_Point stitchSessionTable_get_first_data_point;
+		friend Netsnmp_Next_Data_Point stitchSessionTable_get_next_data_point;
+
+		friend Netsnmp_First_Data_Point stitchSessionPerformanceTable_get_first_data_point;
+		friend Netsnmp_Next_Data_Point stitchSessionPerformanceTable_get_next_data_point;
 #endif /* STITCHMIB_H */
 
 /* RFA context. */

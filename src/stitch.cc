@@ -9,13 +9,13 @@
 #include <inttypes.h>
 
 /* Boost Posix Time */
-#include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 
 #include "chromium/logging.hh"
 #include "get_hilo.hh"
 #include "snmp_agent.hh"
 #include "error.hh"
+#include "rfa_logging.hh"
 #include "rfaostream.hh"
 
 /* RDM Usage Guide: Section 6.5: Enterprise Platform
@@ -229,8 +229,8 @@ hilo::stitch_t::init (
 	plugin_type_.assign (vpf_config.getPluginType());
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
-		", instance: " << instance_ << "\""
-		", version: \"1.6.36\""
+		", instance: " << instance_ <<
+		", version: \"2.0.37\""
 		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
@@ -267,6 +267,7 @@ hilo::stitch_t::init (
 			++it)
 		{
 /* rule */
+			VLOG(3) << "Parsing rule \"" << *it << "\"";
 			auto rule = std::make_shared<hilo_t> ();
 			assert ((bool)rule);
 			if (!parseRule (*it, *rule.get()))
@@ -354,6 +355,7 @@ hilo::stitch_t::init (
 	event_pump_.reset (new event_pump_t (event_queue_));
 	if (!(bool)event_pump_)
 		goto cleanup;
+
 	thread_.reset (new boost::thread (*event_pump_.get()));
 	if (!(bool)thread_)
 		goto cleanup;
@@ -421,14 +423,12 @@ void
 hilo::stitch_t::clear()
 {
 /* Stop generating new events. */
-#if _WIN32_WINNT >= _WIN32_WINNT_WS08
 	if (timer_)
 		SetThreadpoolTimer (timer_.get(), nullptr, 0, 0);
-#endif
-	timer_.release();
+	timer_.reset();
 
 /* Close SNMP agent. */
-	snmp_agent_.release();
+	snmp_agent_.reset();
 
 /* Signal message pump thread to exit. */
 	if ((bool)event_queue_)
@@ -436,6 +436,20 @@ hilo::stitch_t::clear()
 /* Drain and close event queue. */
 	if ((bool)thread_)
 		thread_->join();
+
+/* Release everything with an RFA dependency. */
+	thread_.reset();
+	event_pump_.reset();
+	stream_vector_.clear();
+	query_vector_.clear();
+	assert (provider_.use_count() <= 1);
+	provider_.reset();
+	assert (log_.use_count() <= 1);
+	log_.reset();
+	assert (event_queue_.use_count() <= 1);
+	event_queue_.reset();
+	assert (rfa_.use_count() <= 1);
+	rfa_.reset();
 }
 
 /* Plugin exit point.
@@ -455,8 +469,8 @@ hilo::stitch_t::destroy()
 		    " tclQueryReceived: " << cumulative_stats_[STITCH_PC_TCL_QUERY_RECEIVED] <<
 		   ", timerQueryReceived: " << cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED] <<
 		" }";
-	vpf::AbstractUserPlugin::destroy();
 	LOG(INFO) << "Instance closed.";
+	vpf::AbstractUserPlugin::destroy();
 }
 
 /* Tcl boilerplate.

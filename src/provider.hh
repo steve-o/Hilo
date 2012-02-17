@@ -9,6 +9,9 @@
 #include <cstdint>
 #include <unordered_map>
 
+/* Boost Posix Time */
+#include "boost/date_time/posix_time/posix_time.hpp"
+
 /* Boost noncopyable base class */
 #include <boost/utility.hpp>
 
@@ -23,26 +26,7 @@ namespace hilo
 {
 /* Performance Counters */
 	enum {
-		PROVIDER_PC_RFA_MSGS_SENT,
-		PROVIDER_PC_RFA_EVENTS_RECEIVED,
-		PROVIDER_PC_RFA_EVENTS_DISCARDED,
-		PROVIDER_PC_OMM_ITEM_EVENTS_RECEIVED,
-		PROVIDER_PC_OMM_ITEM_EVENTS_DISCARDED,
-		PROVIDER_PC_RESPONSE_MSGS_RECEIVED,
-		PROVIDER_PC_RESPONSE_MSGS_DISCARDED,
-		PROVIDER_PC_MMT_LOGIN_RESPONSE_RECEIVED,
-		PROVIDER_PC_MMT_LOGIN_RESPONSE_DISCARDED,
-		PROVIDER_PC_MMT_LOGIN_SUCCESS_RECEIVED,
-		PROVIDER_PC_MMT_LOGIN_SUSPECT_RECEIVED,
-		PROVIDER_PC_MMT_LOGIN_CLOSED_RECEIVED,
-		PROVIDER_PC_OMM_CMD_ERRORS,
-		PROVIDER_PC_MMT_LOGIN_VALIDATED,
-		PROVIDER_PC_MMT_LOGIN_MALFORMED,
-		PROVIDER_PC_MMT_LOGIN_SENT,
-		PROVIDER_PC_MMT_DIRECTORY_VALIDATED,
-		PROVIDER_PC_MMT_DIRECTORY_MALFORMED,
-		PROVIDER_PC_MMT_DIRECTORY_SENT,
-		PROVIDER_PC_TOKENS_GENERATED,
+		PROVIDER_PC_MSGS_SENT,
 /* marker */
 		PROVIDER_PC_MAX
 	};
@@ -50,19 +34,15 @@ namespace hilo
 	class item_stream_t : boost::noncopyable
 	{
 	public:
-		item_stream_t () :
-			token (nullptr)
-		{
-		}
-
 /* Fixed name for this stream. */
 		rfa::common::RFA_String rfa_name;
 /* Session token which is valid from login success to login close. */
-		rfa::sessionLayer::ItemToken* token;
+		std::vector<rfa::sessionLayer::ItemToken*> token;
 	};
 
+	class session_t;
+
 	class provider_t :
-		public rfa::common::Client,
 		boost::noncopyable
 	{
 	public:
@@ -74,79 +54,47 @@ namespace hilo
 		bool createItemStream (const char* name, std::shared_ptr<item_stream_t> item_stream) throw (rfa::common::InvalidUsageException);
 		bool send (item_stream_t& item_stream, rfa::common::Msg& msg) throw (rfa::common::InvalidUsageException);
 
-/* RFA event callback. */
-		void processEvent (const rfa::common::Event& event);
-
 		uint8_t getRwfMajorVersion() {
-			return rwf_major_version_;
+			return min_rwf_major_version_;
 		}
 		uint8_t getRwfMinorVersion() {
-			return rwf_minor_version_;
+			return min_rwf_minor_version_;
 		}
 
 	private:
-		void processOMMItemEvent (const rfa::sessionLayer::OMMItemEvent& event);
-                void processRespMsg (const rfa::message::RespMsg& msg);
-                void processLoginResponse (const rfa::message::RespMsg& msg);
-                void processLoginSuccess (const rfa::message::RespMsg& msg);
-                void processLoginSuspect (const rfa::message::RespMsg& msg);
-                void processLoginClosed (const rfa::message::RespMsg& msg);
-		void processOMMCmdErrorEvent (const rfa::sessionLayer::OMMCmdErrorEvent& event);
-
-		bool sendLoginRequest() throw (rfa::common::InvalidUsageException);
-		bool sendDirectoryResponse();
 		void getServiceDirectory (rfa::data::Map& map);
 		void getServiceFilterList (rfa::data::FilterList& filterList);
 		void getServiceInformation (rfa::data::ElementList& elementList);
 		void getServiceCapabilities (rfa::data::Array& capabilities);
 		void getServiceDictionaries (rfa::data::Array& dictionaries);
 		void getServiceState (rfa::data::ElementList& elementList);
-		bool resetTokens();
-
-		uint32_t submit (rfa::common::Msg& msg, rfa::sessionLayer::ItemToken& token, void* closure = nullptr) throw (rfa::common::InvalidUsageException);
 
 		const config_t& config_;
 
-/* RFA context. */
-		std::shared_ptr<rfa_t> rfa_;
-
-/* RFA asynchronous event queue. */
-		std::shared_ptr<rfa::common::EventQueue> event_queue_;
-
-/* RFA session defines one or more connections for horizontal scaling. */
-		std::unique_ptr<rfa::sessionLayer::Session, internal::release_deleter> session_;
-
-/* RFA OMM provider interface. */
-		std::unique_ptr<rfa::sessionLayer::OMMProvider, internal::destroy_deleter> provider_;
-
-/* RFA Error Item event consumer */
-		rfa::common::Handle* error_item_handle_;
-/* RFA Item event consumer */
-		rfa::common::Handle* item_handle_;
-
 /* Reuters Wire Format versions. */
-		uint8_t rwf_major_version_;
-		uint8_t rwf_minor_version_;
+		uint8_t min_rwf_major_version_;
+		uint8_t min_rwf_minor_version_;
 
-/* RFA will return a CmdError message if the provider application submits data
- * before receiving a login success message.  Mute downstream publishing until
- * permission is granted to submit data.
- */
-		bool is_muted_;
-
-/* Last RespStatus details. */
-		int stream_state_;
-		int data_state_;
+		std::vector<std::unique_ptr<session_t>> sessions_;
 
 /* Container of all item streams keyed by symbol name. */
 		std::unordered_map<std::string, std::weak_ptr<item_stream_t>> directory_;
 
+		friend session_t;
+
 /** Performance Counters **/
+		boost::posix_time::ptime last_activity_;
 		uint32_t cumulative_stats_[PROVIDER_PC_MAX];
 		uint32_t snap_stats_[PROVIDER_PC_MAX];
 
 #ifdef STITCHMIB_H
 		friend Netsnmp_Node_Handler stitchPluginPerformanceTable_handler;
+
+		friend Netsnmp_First_Data_Point stitchSessionTable_get_first_data_point;
+		friend Netsnmp_Next_Data_Point stitchSessionTable_get_next_data_point;
+
+		friend Netsnmp_First_Data_Point stitchSessionPerformanceTable_get_first_data_point;
+		friend Netsnmp_Next_Data_Point stitchSessionPerformanceTable_get_next_data_point;
 #endif /* STITCHMIB_H */
 	};
 

@@ -1,8 +1,19 @@
 <?xml version="1.0"?>
 <!-- HiloAndStitch.xml
+
      Velocity Analytics Engine plugin configuration file.
 
+     Notice:
+       * All XML elements must have a closing tag.
+       * XML tags are case sensitive.
+       * XML elements must be properly nested.
+       * XML attribute values must be quoted.
+       * Comments may appear anywhere in a document outside other markup.
+       * The string (double-hyphen) must not occur within comments.
+
      Cross rates verified 2011/01/03.
+     BNYM update for spot rates 2012/02/09.
+
   -->
 <PluginFrameworkModule id="HiloAndStitch">
 
@@ -17,8 +28,16 @@
 <!-- SNMP implant settings, uncomment node to enable.  Subagent in Net-SNMP terminology
      means that this implant will connect to a separate running agent, i.e. snmpd.exe.
 
+     Optional filelog attribute for a somewhat insubstancial Net-SNMP output, e.g.
+
+	<Snmp filelog="/snmp.log">
+        ...
+        </Snmp>
+
+     NB:  Net-SNMP subagents are incompatible with Microsoft's SNMP daemon.
+
      NB:  TREP-VA by default configures snmpd to listen to tcp:<hostname>:705 instead of
-     tcp:localhost:705 for subagent connectivity.
+          tcp:localhost:705 for subagent connectivity.
 
   -->
 <!--	<Snmp>
@@ -48,21 +67,31 @@
      the ADH, configure firewalls appropriately.
 
   -->
-		<connection name="ConnectionName" defaultPort="14003">
-			<server>adh.local:14003</server>
-		</connection>
-
+		<session name="SESSIONA">
+			<publisher name="PUBLISHERA"/>		<!-- Name used for logging. -->
+			<connection name="CONNECTIONA" defaultPort="14003">
+				<server>adh1.local</server>
+			</connection>
 <!-- DACS required parameters. -->
-		<login applicationId="256"
-			instanceId="Instance1"
-			userName="user1"/>
+			<login applicationId="256"
+				instanceId="Instance1"
+				userName="user1"/>
+		</session>
+
+		<session name="SESSIONB">
+			<publisher name="PUBLISHERB"/>
+			<connection name="CONNECTIONB">
+				<server>adh2.local:14003</server>
+			</connection>
+			<login applicationId="256"
+				instanceId="Instance1"
+				userName="user1"/>
+		</session>
 
 <!-- Clutter -->
-		<session name="SessionName"/>
 		<monitor name="ApplicationLoggerMonitorName"/>
 		<eventQueue name="EventQueueName"/>
-		<publisher name="PublisherName"/>
-		<vendor name="VendorName"/>
+		<vendor name="Thomson Reuters"/>
 	</Rfa>
 
 <!-- Cross currency pairs and synthetic pairs 
@@ -104,16 +133,16 @@
      AUD= ~1.03 BRL= ~1.82 AUDBRL=R ~1.89 => AUDBRL=VTA = AUD= * BRL=
   -->
 		<synthetic name="AUDBRL="><times/><leg>AUD=X</leg><leg>BRL=X</leg></synthetic>
-		<pair name="AUDCAD="/>
+		<pair name="AUDCAD=" src="AUDCAD=X"/>
 		<synthetic name="AUDCLP="><times/><leg>AUD=X</leg><leg>CLP=X</leg></synthetic>
 		<synthetic name="AUDDKK="><times/><leg>AUD=X</leg><leg>DKK=X</leg></synthetic>
 		<synthetic name="AUDEGP="><times/><leg>AUD=X</leg><leg>EGP=X</leg></synthetic>
 		<synthetic name="AUDHKD="><times/><leg>AUD=X</leg><leg>HKD=X</leg></synthetic>
-		<pair name="AUDJPY="/>
+		<pair name="AUDJPY=" src="AUDJPY=X"/>
 		<synthetic name="AUDPHP="><times/><leg>AUD=X</leg><leg>PHP=X</leg></synthetic>
 		<synthetic name="AUDSGD="><times/><leg>AUD=X</leg><leg>SGD=X</leg></synthetic>
 		<synthetic name="AUDTWD="><times/><leg>AUD=X</leg><leg>TWD=X</leg></synthetic>
-		<pair name="AUDUSD=" src="AUD="/>
+		<pair name="AUDUSD=" src="AUD=D2"/>
 
 <!-- Brazilian real
      BRL= ~1.82 CAD=~ 1.01 BRLCAD=R ~0.55 => BRLCAD=VTA = CAD= / BRL=
@@ -124,7 +153,7 @@
 <!-- Canadian dollar
      CAD= ~1.01 CLP= ~512.55 CADCLP=R ~506.97 => CADCLP=VTA = CLP= / CAD=
   -->
-		<pair name="CADCHF="/>
+		<pair name="CADCHF=" src="CADCHF=X"/>
 		<synthetic name="CADCLP="><divide/><leg>CLP=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADDKK="><divide/><leg>DKK=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADEGP="><divide/><leg>EGP=X</leg><leg>CAD=X</leg></synthetic>
@@ -132,13 +161,13 @@
 		<synthetic name="CADIDR="><divide/><leg>IDR=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADILS="><divide/><leg>ILS=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADINR="><divide/><leg>INR=X</leg><leg>CAD=X</leg></synthetic>
-		<pair name="CADJPY="/>
+		<pair name="CADJPY=" src="CADJPY=X"/>
 		<synthetic name="CADKRW="><divide/><leg>KRW=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADMXN="><divide/><leg>MXN=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADMYR="><divide/><leg>MYR=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADNOK="><divide/><leg>NOK=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADPHP="><divide/><leg>PHP=X</leg><leg>CAD=X</leg></synthetic>
-		<pair name="CADPLN="/>
+		<pair name="CADPLN=" src="CADPLN=X"/>
 		<synthetic name="CADSEK="><divide/><leg>SEK=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADSGD="><divide/><leg>SGD=X</leg><leg>CAD=X</leg></synthetic>
 		<synthetic name="CADTHB="><divide/><leg>THB=X</leg><leg>CAD=X</leg></synthetic>
@@ -179,44 +208,44 @@
      EUR= ~1.30 AED=~3.67 EURAED=R ~4.79 => EURAED=VTA = EUR= * AED=
   -->
 		<synthetic name="EURAED="><times/><leg>EUR=X</leg><leg>AED=X</leg></synthetic>
-		<pair name="EURAUD="/>
+		<pair name="EURAUD=" src="EURAUD=X"/>
 		<synthetic name="EURBRL="><times/><leg>EUR=X</leg><leg>BRL=X</leg></synthetic>
-		<pair name="EURCAD="/>
-		<pair name="EURCHF="/>
+		<pair name="EURCAD=" src="EURCAD=X"/>
+		<pair name="EURCHF=" src="EURCHF=EBS"/>
 		<synthetic name="EURCLP="><times/><leg>EUR=X</leg><leg>CLP=X</leg></synthetic>
 		<synthetic name="EURCNY="><times/><leg>EUR=X</leg><leg>CNY=X</leg></synthetic>
 		<synthetic name="EURCOP="><times/><leg>EUR=X</leg><leg>COP=X</leg></synthetic>
-		<pair name="EURCZK="/>
-		<pair name="EURDKK="/>
-		<pair name="EUREGP="/>
-		<pair name="EURGBP="/>
-		<pair name="EURHKD="/>
-		<pair name="EURHUF="/>
-		<pair name="EURIDR="/>
-		<pair name="EURILS="/>
+		<pair name="EURCZK=" src="EURCZK=D2"/>
+		<pair name="EURDKK=" src="EURDKK=D2"/>
+		<pair name="EUREGP=" src="EUREGP=X"/>
+		<pair name="EURGBP=" src="EURGBP=D2"/>
+		<pair name="EURHKD=" src="EURHKD=X"/>
+		<pair name="EURHUF=" src="EURHUF=D2"/>
+		<pair name="EURIDR=" src="EURIDR=X"/>
+		<pair name="EURILS=" src="EURILS=X"/>
 		<synthetic name="EURINR="><times/><leg>EUR=X</leg><leg>INR=X</leg></synthetic>
-		<pair name="EURJPY="/>
+		<pair name="EURJPY=" src="EURJPY=EBS"/>
 		<synthetic name="EURKRW="><times/><leg>EUR=X</leg><leg>KRW=X</leg></synthetic>
-		<pair name="EURMAD="/>
+		<pair name="EURMAD=" src="EURMAD=X"/>
 		<synthetic name="EURMUR="><times/><leg>EUR=X</leg><leg>MUR=X</leg></synthetic>
-		<pair name="EURMXN="/>
+		<pair name="EURMXN=" src="EURMXN=X"/>
 		<synthetic name="EURMYR="><times/><leg>EUR=X</leg><leg>MYR=X</leg></synthetic>
-		<pair name="EURNOK="/>
-		<pair name="EURNZD="/>
+		<pair name="EURNOK=" src="EURNOK=D2"/>
+		<pair name="EURNZD=" src="EURNZD=X"/>
 		<synthetic name="EURPEN="><times/><leg>EUR=X</leg><leg>PEN=X</leg></synthetic>
 		<synthetic name="EURPHP="><times/><leg>EUR=X</leg><leg>PHP=X</leg></synthetic>
-		<pair name="EURPLN="/>
-		<pair name="EURRON="/>
-		<pair name="EURRSD="/>
-		<pair name="EURRUB="/>
-		<pair name="EURSEK="/>
-		<pair name="EURSGD="/>
-		<pair name="EURTHB="/>
-		<pair name="EURTRY="/>
+		<pair name="EURPLN=" src="EURPLN=D2"/>
+		<pair name="EURRON=" src="EURRON=X"/>
+		<pair name="EURRSD=" src="EURRSD=X"/>
+		<pair name="EURRUB=" src="EURRUB=X"/>
+		<pair name="EURSEK=" src="EURSEK=D2"/>
+		<pair name="EURSGD=" src="EURSGD=X"/>
+		<pair name="EURTHB=" src="EURTHB=X"/>
+		<pair name="EURTRY=" src="EURTRY=X"/>
 		<synthetic name="EURTWD="><times/><leg>EUR=X</leg><leg>TWD=X</leg></synthetic>
-		<pair name="EURUSD=" src="EUR="/>
-		<pair name="EURXOF="/>
-		<pair name="EURZAR="/>
+		<pair name="EURUSD=" src="EUR=EBS"/>
+		<pair name="EURXOF=" src="EURXOF=X"/>
+		<pair name="EURZAR=" src="EURZAR=X"/>
 
 
 <!-- Great British pound
@@ -224,40 +253,40 @@
      GBP= ~1.56 AED=~3.67 GBPAED=R ~5.74 => GBPAED=VTA = GBP= * AED=
   -->
 		<synthetic name="GBPAED="><times/><leg>GBP=X</leg><leg>AED=X</leg></synthetic>
-		<pair name="GBPAUD="/>
+		<pair name="GBPAUD=" src="GBPAUD=X"/>
 		<synthetic name="GBPBRL="><times/><leg>GBP=X</leg><leg>BRL=X</leg></synthetic>
-		<pair name="GBPCAD="/>
-		<pair name="GBPCHF="/>
+		<pair name="GBPCAD=" src="GBPCAD=X"/>
+		<pair name="GBPCHF=" src="GBPCHF=X"/>
 		<synthetic name="GBPCLP="><times/><leg>GBP=X</leg><leg>CLP=X</leg></synthetic>
 		<synthetic name="GBPCOP="><times/><leg>GBP=X</leg><leg>COP=X</leg></synthetic>
-		<pair name="GBPCZK="/>
-		<pair name="GBPDKK="/>
-		<pair name="GBPEGP="/>
+		<pair name="GBPCZK=" src="GBPCZK=X"/>
+		<pair name="GBPDKK=" src="GBPDKK=X"/>
+		<pair name="GBPEGP=" src="GBPEGP=X"/>
 		<synthetic name="GBPHKD="><times/><leg>GBP=X</leg><leg>HKD=X</leg></synthetic>
-		<pair name="GBPHUF="/>
+		<pair name="GBPHUF=" src="GBPHUF=X"/>
 		<synthetic name="GBPIDR="><times/><leg>GBP=X</leg><leg>IDR=X</leg></synthetic>
 		<synthetic name="GBPILS="><times/><leg>GBP=X</leg><leg>ILS=X</leg></synthetic>
 		<synthetic name="GBPINR="><times/><leg>GBP=X</leg><leg>INR=X</leg></synthetic>
-		<pair name="GBPJPY="/>
+		<pair name="GBPJPY=" src="GBPJPY=X"/>
 		<synthetic name="GBPKES="><times/><leg>GBP=X</leg><leg>KES=X</leg></synthetic>
 		<synthetic name="GBPKRW="><times/><leg>GBP=X</leg><leg>KRW=X</leg></synthetic>
 		<synthetic name="GBPLKR="><times/><leg>GBP=X</leg><leg>LKR=X</leg></synthetic>
 		<synthetic name="GBPMXN="><times/><leg>GBP=X</leg><leg>MXN=X</leg></synthetic>
 		<synthetic name="GBPMYR="><times/><leg>GBP=X</leg><leg>MYR=X</leg></synthetic>
-		<pair name="GBPNGN="/>
-		<pair name="GBPNOK="/>
-		<pair name="GBPNZD="/>
+		<pair name="GBPNGN=" src="GBPNGN=X"/>
+		<pair name="GBPNOK=" src="GBPNOK=X"/>
+		<pair name="GBPNZD=" src="GBPNZD=X"/>
 		<synthetic name="GBPPEN="><times/><leg>GBP=X</leg><leg>PEN=X</leg></synthetic>
 		<synthetic name="GBPPHP="><times/><leg>GBP=X</leg><leg>PHP=X</leg></synthetic>
-		<pair name="GBPPLN="/>
+		<pair name="GBPPLN=" src="GBPPLN=X"/>
 		<synthetic name="GBPQAR="><times/><leg>GBP=X</leg><leg>QAR=X</leg></synthetic>
-		<pair name="GBPSEK="/>
+		<pair name="GBPSEK=" src="GBPSEK=X"/>
 		<synthetic name="GBPSGD="><times/><leg>GBP=X</leg><leg>SGD=X</leg></synthetic>
-		<pair name="GBPTHB="/>
+		<pair name="GBPTHB=" src="GBPTHB=X"/>
 		<synthetic name="GBPTRY="><times/><leg>GBP=X</leg><leg>TRY=X</leg></synthetic>
 		<synthetic name="GBPTWD="><times/><leg>GBP=X</leg><leg>TWD=X</leg></synthetic>
-		<pair name="GBPUSD=" src="GBP="/>
-		<pair name="GBPZAR="/>
+		<pair name="GBPUSD=" src="GBP=D2"/>
+		<pair name="GBPZAR=" src="GBPZAR=X"/>
 
 <!-- HK dollar
      HKD= ~7.76 IDR= ~9110 HKDIDR=R ~1172.76 => HKDIDR=VTA = IDR= / HKD=
@@ -266,9 +295,9 @@
 		<synthetic name="HKDINR="><divide/><leg>INR=X</leg><leg>HKD=X</leg></synthetic>
 		<synthetic name="HKDJPY="><divide/><leg>JPY=X</leg><leg>HKD=X</leg></synthetic>
 		<synthetic name="HKDKRW="><divide/><leg>KRW=X</leg><leg>HKD=X</leg></synthetic>
-		<pair name="HKDTHB="/>
+		<pair name="HKDTHB=" src="HKDTHB=X"/>
 		<synthetic name="HKDTWD="><divide/><leg>TWD=X</leg><leg>HKD=X</leg></synthetic>
-		<pair name="HKDVND="/>
+		<pair name="HKDVND=" src="HKDVND=X"/>
 
 <!-- Japanese yen
      JPY= ~76.61 IDR= ~9110 JPYIDR=R ~118.79 => JPYIDR=VTA = IDR= / JPY=
@@ -287,7 +316,7 @@
      NZD= ~0.78 CAD= ~1.01 NZDCAD=R ~0.79 => NZDCAD=VTA = NZD= * CAD=
   -->
 		<synthetic name="NZDCAD="><times/><leg>NZD=X</leg><leg>CAD=X</leg></synthetic>
-		<pair name="NZDUSD=" src="NZD="/>
+		<pair name="NZDUSD=" src="NZD=D2"/>
 
 <!-- Pinoy peso
      PHP= ~43.74 JPY= ~76.61 PHPJPY=R ~1.75 => PHPJPY=VTA = JPY= / PHP=
@@ -316,59 +345,59 @@
 		<synthetic name="TWDJPY="><divide/><leg>JPY=X</leg><leg>TWD=X</leg></synthetic>
 
 <!-- US dollar -->
-		<pair name="USDAED=" src="AED="/>
-		<pair name="USDARS=" src="ARS="/>
-		<pair name="USDBDT=" src="BDT="/>
-		<pair name="USDBHD=" src="BHD="/>
+		<pair name="USDAED=" src="AED=X"/>
+		<pair name="USDARS=" src="ARS=X"/>
+		<pair name="USDBDT=" src="BDT=X"/>
+		<pair name="USDBHD=" src="BHD=X"/>
 		<pair name="USDBRL=" src="BRL=BR"/>
-		<pair name="USDBWP=" src="BWP="/>
-		<pair name="USDCAD=" src="CAD="/>
-		<pair name="USDCHF=" src="CHF="/>
-		<pair name="USDCLP=" src="CLP="/>
-		<pair name="USDCNY=" src="CNY="/>
-		<pair name="USDCOP=" src="COP="/>
-		<pair name="USDCZK=" src="CZK="/>
-		<pair name="USDDKK=" src="DKK="/>
-		<pair name="USDEGP=" src="EGP="/>
-		<pair name="USDGHS=" src="GHS="/>
-		<pair name="USDHKD=" src="HKD="/>
-		<pair name="USDHRK=" src="HRK="/>
-		<pair name="USDHUF=" src="HUF="/>
-		<pair name="USDIDR=" src="IDR=ID"/>
-		<pair name="USDILS=" src="ILS="/>
+		<pair name="USDBWP=" src="BWP=X"/>
+		<pair name="USDCAD=" src="CAD=D2"/>
+		<pair name="USDCHF=" src="CHF=EBS"/>
+		<pair name="USDCLP=" src="CLP=X"/>
+		<pair name="USDCNY=" src="CNY=X"/>
+		<pair name="USDCOP=" src="COP=X"/>
+		<pair name="USDCZK=" src="CZK=X"/>
+		<pair name="USDDKK=" src="DKK=X"/>
+		<pair name="USDEGP=" src="EGP=X"/>
+		<pair name="USDGHS=" src="GHS=X"/>
+		<pair name="USDHKD=" src="HKD=D2"/>
+		<pair name="USDHRK=" src="HRK=X"/>
+		<pair name="USDHUF=" src="HUF=X"/>
+		<pair name="USDIDR=" src="IDR=X"/>
+		<pair name="USDILS=" src="ILS=D2"/>
 		<pair name="USDINR=" src="INR=IN"/>
-		<pair name="USDJOD=" src="JOD="/>
-		<pair name="USDJPY=" src="JPY="/>
-		<pair name="USDKES=" src="KES="/>
+		<pair name="USDJOD=" src="JOD=X"/>
+		<pair name="USDJPY=" src="JPY=EBS"/>
+		<pair name="USDKES=" src="KES=X"/>
 		<pair name="USDKRW=" src="KRW=KFTC"/>
-		<pair name="USDKWD=" src="KWD="/>
-		<pair name="USDLKR=" src="LKR="/>
-		<pair name="USDMAD=" src="MAD="/>
-		<pair name="USDMUR=" src="MUR="/>
-		<pair name="USDMXN=" src="MXN="/>
-		<pair name="USDMYR=" src="MYR=MY"/>
-		<pair name="USDNGN=" src="NGN="/>
-		<pair name="USDNOK=" src="NOK="/>
-		<pair name="USDOMR=" src="OMR="/>
-		<pair name="USDPEN=" src="PEN="/>
-		<pair name="USDPHP=" src="PHP=PH"/>
-		<pair name="USDPKR=" src="PKR="/>
-		<pair name="USDPLN=" src="PLN="/>
-		<pair name="USDQAR=" src="QAR="/>
-		<pair name="USDRON=" src="RON="/>
-		<pair name="USDRSD=" src="RSD="/>
-		<pair name="USDRUB=" src="RUB="/>
-		<pair name="USDSAR=" src="SAR="/>
-		<pair name="USDSEK=" src="SEK="/>
-		<pair name="USDSGD=" src="SGD="/>
-		<pair name="USDTHB=" src="THB=TH"/>
-		<pair name="USDTND=" src="TND="/>
-		<pair name="USDTRY=" src="TRY="/>
+		<pair name="USDKWD=" src="KWD=X"/>
+		<pair name="USDLKR=" src="LKR=X"/>
+		<pair name="USDMAD=" src="MAD=X"/>
+		<pair name="USDMUR=" src="MUR=X"/>
+		<pair name="USDMXN=" src="MXN=D2"/>
+		<pair name="USDMYR=" src="MYR=X"/>
+		<pair name="USDNGN=" src="NGN=X"/>
+		<pair name="USDNOK=" src="NOK=X"/>
+		<pair name="USDOMR=" src="OMR=X"/>
+		<pair name="USDPEN=" src="PEN=X"/>
+		<pair name="USDPHP=" src="PHP=X"/>
+		<pair name="USDPKR=" src="PKR=X"/>
+		<pair name="USDPLN=" src="PLN=X"/>
+		<pair name="USDQAR=" src="QAR=X"/>
+		<pair name="USDRON=" src="RON=X"/>
+		<pair name="USDRSD=" src="RSD=X"/>
+		<pair name="USDRUB=" src="RUB=X"/>
+		<pair name="USDSAR=" src="SAR=X"/>
+		<pair name="USDSEK=" src="SEK=X"/>
+		<pair name="USDSGD=" src="SGD=D2"/>
+		<pair name="USDTHB=" src="THB=X"/>
+		<pair name="USDTND=" src="TND=X"/>
+		<pair name="USDTRY=" src="TRYTOM=D2"/>
 		<pair name="USDTWD=" src="TWD=TP"/>
-		<pair name="USDVND=" src="VND=VN"/>
-		<pair name="USDXOF=" src="XOF="/>
-		<pair name="USDZAR=" src="ZAR="/>
-		<pair name="USDZMK=" src="ZMK="/>
+		<pair name="USDVND=" src="VND=X"/>
+		<pair name="USDXOF=" src="XOF=X"/>
+		<pair name="USDZAR=" src="ZAR=D2"/>
+		<pair name="USDZMK=" src="ZMK=X"/>
 		
 	</crosses>
 

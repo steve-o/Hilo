@@ -20,17 +20,33 @@ namespace
 	public:
 		env_t (const char* varname)
 		{
+/* startup from clean string */
+			CommandLine::Init (0, nullptr);
+/* the program name */
+			std::string command_line (kPluginType);
+/* parameters from environment */
 			char* buffer;
 			size_t numberOfElements;
 			const errno_t err = _dupenv_s (&buffer, &numberOfElements, varname);
-			if (!err) {
-				std::string command_line (kPluginType);
+			if (0 == err && numberOfElements > 0) {
 				command_line.append (" ");
 				command_line.append (buffer);
-				CommandLine::FromString (command_line);
 				free (buffer);
 			}
-			logging::InitLogging();
+/* update command line */
+			CommandLine::ForCurrentProcess()->ParseFromString (command_line);
+/* forward onto logging */
+			logging::InitLogging(
+				"/Hilo.log",
+#if 0
+				logging::LOG_ONLY_TO_FILE,
+#else
+				logging::LOG_ONLY_TO_VHAYU_LOG,
+#endif
+				logging::DONT_LOCK_LOG_FILE,
+				logging::APPEND_TO_OLD_LOG_FILE,
+				logging::ENABLE_DCHECK_FOR_NON_OFFICIAL_RELEASE_BUILDS
+				);
 		}
 	};
 

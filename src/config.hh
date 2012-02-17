@@ -16,48 +16,21 @@
 
 namespace hilo
 {
-
-	struct config_t
+	struct session_config_t
 	{
-		config_t();
+//  RFA session name, one session contains a horizontal scaling set of connections.
+		std::string session_name;
 
-		bool parseDomElement (const xercesc::DOMElement* elem);
-		bool parseConfigNode (const xercesc::DOMNode* node);
-		bool parseSnmpNode (const xercesc::DOMNode* node);
-		bool parseAgentXNode (const xercesc::DOMNode* node);
-		bool parseRfaNode (const xercesc::DOMNode* node);
-		bool parseServiceNode (const xercesc::DOMNode* node);
-		bool parseConnectionNode (const xercesc::DOMNode* node);
-		bool parseServerNode (const xercesc::DOMNode* node);
-		bool parseLoginNode (const xercesc::DOMNode* node);
-		bool parseSessionNode (const xercesc::DOMNode* node);
-		bool parseMonitorNode (const xercesc::DOMNode* node);
-		bool parseEventQueueNode (const xercesc::DOMNode* node);
-		bool parsePublisherNode (const xercesc::DOMNode* node);
-		bool parseVendorNode (const xercesc::DOMNode* node);
-		bool parseCrossesNode (const xercesc::DOMNode* node);
-		bool parseSyntheticNode (const xercesc::DOMNode* node);
-		bool parsePairNode (const xercesc::DOMNode* node);
+//  RFA connection name, used for logging.
+		std::string connection_name;
 
-//  SNMP implant.
-		bool is_snmp_enabled;
-
-//  Net-SNMP agent or sub-agent.
-		bool is_agentx_subagent;
-
-//  AgentX port number to connect to master agent.
-		std::string agentx_socket;
-
-//  Windows registry key path.
-		std::string key;
-
-//  TREP-RT service name, e.g. IDN_RDF.
-		std::string service_name;
+//  RFA publisher name, used for logging.
+		std::string publisher_name;
 
 //  TREP-RT ADH hostname or IP address.
 		std::vector<std::string> rssl_servers;
 
-//  Default TREP-RT RSSL port, e.g. 14002, 14003.
+//  Default TREP-RT RSSL port, e.g. 14002 (interactive), 14003 (non-interactive).
 		std::string rssl_default_port;
 
 /* DACS application Id.  If the server authenticates with DACS, the consumer
@@ -84,21 +57,59 @@ namespace hilo
  * Range: "" (None) or "<IPv4 address>/hostname" or "<IPv4 address>/net"
  */
 		std::string position;
+	};
 
-//  RFA session name.
-		std::string session_name;
+	struct config_t
+	{
+		config_t();
+
+		bool parseDomElement (const xercesc::DOMElement* elem);
+		bool parseConfigNode (const xercesc::DOMNode* node);
+		bool parseSnmpNode (const xercesc::DOMNode* node);
+		bool parseAgentXNode (const xercesc::DOMNode* node);
+		bool parseRfaNode (const xercesc::DOMNode* node);
+		bool parseServiceNode (const xercesc::DOMNode* node);
+		bool parseConnectionNode (const xercesc::DOMNode* node, session_config_t& session);
+		bool parseServerNode (const xercesc::DOMNode* node, std::string& server);
+		bool parsePublisherNode (const xercesc::DOMNode* node, std::string& publisher);
+		bool parseLoginNode (const xercesc::DOMNode* node, session_config_t& session);
+		bool parseSessionNode (const xercesc::DOMNode* node);
+		bool parseMonitorNode (const xercesc::DOMNode* node);
+		bool parseEventQueueNode (const xercesc::DOMNode* node);
+		bool parseVendorNode (const xercesc::DOMNode* node);
+		bool parseCrossesNode (const xercesc::DOMNode* node);
+		bool parseSyntheticNode (const xercesc::DOMNode* node);
+		bool parsePairNode (const xercesc::DOMNode* node);
+
+		bool validate();
+
+//  SNMP implant.
+		bool is_snmp_enabled;
+
+//  Net-SNMP agent or sub-agent.
+		bool is_agentx_subagent;
+
+//  Net-SNMP file log target.
+		std::string snmp_filelog;
+
+//  AgentX port number to connect to master agent.
+		std::string agentx_socket;
+
+//  Windows registry key path.
+		std::string key;
+
+//  TREP-RT service name, e.g. IDN_RDF.
+		std::string service_name;
+
+//  RFA sessions comprising of session names, connection names,
+//  RSSL hostname or IP address and default RSSL port, e.g. 14002, 14003.
+		std::vector<session_config_t> sessions;
 
 //  RFA application logger monitor name.
 		std::string monitor_name;
 
 //  RFA event queue name.
 		std::string event_queue_name;
-
-//  RFA connection name.
-		std::string connection_name;
-
-//  RFA publisher name.
-		std::string publisher_name;
 
 //  RFA vendor name.
 		std::string vendor_name;
@@ -124,33 +135,50 @@ namespace hilo
 	};
 
 	inline
-	std::ostream& operator<< (std::ostream& o, const config_t& config) {
-		std::ostringstream ss;
-		for (auto it = config.rssl_servers.begin();
-			it != config.rssl_servers.end();
+	std::ostream& operator<< (std::ostream& o, const session_config_t& session) {
+		o << "{ "
+			  "session_name: \"" << session.session_name << "\""
+			", connection_name: \"" << session.connection_name << "\""
+			", publisher_name: \"" << session.publisher_name << "\""
+			", rssl_servers: [ ";
+		for (auto it = session.rssl_servers.begin();
+			it != session.rssl_servers.end();
 			++it)
 		{
-			if (it != config.rssl_servers.begin())
-				ss << ", ";
-			ss << '"' << *it << '"';
-		}		
+			if (it != session.rssl_servers.begin())
+				o << ", ";
+			o << '"' << *it << '"';
+		}
+		o << " ]"
+			", rssl_default_port: \"" << session.rssl_default_port << "\""
+			", application_id: \"" << session.application_id << "\""
+			", instance_id: \"" << session.instance_id << "\""
+			", user_name: \"" << session.user_name << "\""
+			", position: \"" << session.position << "\""
+			" }";
+		return o;
+	}
+
+	inline
+	std::ostream& operator<< (std::ostream& o, const config_t& config) {
 		o << "config_t: { "
 			  "is_snmp_enabled: \"" << config.is_snmp_enabled << "\""
 			", is_agentx_subagent: \"" << config.is_agentx_subagent << "\""
 			", agentx_socket: \"" << config.agentx_socket << "\""
 			", key: \"" << config.key << "\""
 			", service_name: \"" << config.service_name << "\""
-			", rssl_servers: [" << ss.str() << "]"
-			", rssl_default_port: \"" << config.rssl_default_port << "\""
-			", application_id: \"" << config.application_id << "\""
-			", instance_id: \"" << config.instance_id << "\""
-			", user_name: \"" << config.user_name << "\""
-			", position: \"" << config.position << "\" }"
-			", session_name: \"" << config.session_name << "\""
+			", sessions: [";
+		for (auto it = config.sessions.begin();
+			it != config.sessions.end();
+			++it)
+		{
+			if (it != config.sessions.begin())
+				o << ", ";
+			o << *it;
+		}
+		o << " ]"
 			", monitor_name: \"" << config.monitor_name << "\""
 			", event_queue_name: \"" << config.event_queue_name << "\""
-			", connection_name: \"" << config.connection_name << "\""
-			", publisher_name: \"" << config.publisher_name << "\""
 			", vendor_name: \"" << config.vendor_name << "\""
 			", interval: \"" << config.interval << "\""
 			", tolerable_delay: \"" << config.tolerable_delay << "\""

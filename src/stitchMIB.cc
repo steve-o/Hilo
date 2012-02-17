@@ -46,6 +46,8 @@ static_assert (__netsnmp_LOG_DEBUG   == LOG_DEBUG,   "LOG_DEBUG mismatch");
 
 #include "chromium/logging.hh"
 #include "stitch.hh"
+#include "provider.hh"
+#include "session.hh"
 
 namespace hilo {
 
@@ -64,6 +66,18 @@ static Netsnmp_First_Data_Point stitchPluginPerformanceTable_get_first_data_poin
 static Netsnmp_Next_Data_Point stitchPluginPerformanceTable_get_next_data_point;
 static Netsnmp_Free_Loop_Context stitchPluginPerformanceTable_free_loop_context;
 
+static int initialize_table_stitchSessionTable(void);
+static Netsnmp_Node_Handler stitchSessionTable_handler;
+static Netsnmp_First_Data_Point stitchSessionTable_get_first_data_point;
+static Netsnmp_Next_Data_Point stitchSessionTable_get_next_data_point;
+static Netsnmp_Free_Loop_Context stitchSessionTable_free_loop_context;
+
+static int initialize_table_stitchSessionPerformanceTable(void);
+static Netsnmp_Node_Handler stitchSessionPerformanceTable_handler;
+static Netsnmp_First_Data_Point stitchSessionPerformanceTable_get_first_data_point;
+static Netsnmp_Next_Data_Point stitchSessionPerformanceTable_get_next_data_point;
+static Netsnmp_Free_Loop_Context stitchSessionPerformanceTable_free_loop_context;
+
 /* Context during a SNMP query, lock on global list of stitch_t objects and iterator.
  */
 class snmp_context_t
@@ -74,18 +88,13 @@ public:
 		stitch_list (list_),
 		stitch_it (stitch_list.begin())
 	{
-		DLOG(INFO) << "ctor";
-	}
-
-	~snmp_context_t()
-	{
-		DLOG(INFO) << "dtor";
 	}
 
 /* Plugins are owned by AE, locking is required. */
 	boost::shared_lock<boost::shared_mutex> lock;
 	std::list<hilo::stitch_t*>& stitch_list;
 	std::list<hilo::stitch_t*>::iterator stitch_it;
+	std::vector<std::unique_ptr<hilo::session_t>>::iterator session_it;
 
 /* SNMP agent is not-reentrant, ignore locking. */
 	static std::list<std::shared_ptr<snmp_context_t>> global_list;
@@ -107,6 +116,14 @@ init_stitchMIB(void)
 		LOG(ERROR) << "stitchPluginPerformanceTable registration: see SNMP log for further details.";
 		return false;
 	}
+	if (MIB_REGISTERED_OK != initialize_table_stitchSessionTable()) {
+		LOG(ERROR) << "stitchSessionTable registration: see SNMP log for further details.";
+		return false;
+	}
+	if (MIB_REGISTERED_OK != initialize_table_stitchSessionPerformanceTable()) {
+		LOG(ERROR) << "stitchSessionPerformanceTable registration: see SNMP log for further details.";
+		return false;
+	}
 	return true;
 }
 
@@ -116,7 +133,7 @@ static
 int
 initialize_table_stitchPluginTable(void)
 {
-	LOG(INFO) << "initialize_table_stitchPluginTable()";
+	DLOG(INFO) << "initialize_table_stitchPluginTable()";
 
 	static const oid stitchPluginTable_oid[] = {1,3,6,1,4,1,67,1,1,2};
 	const size_t stitchPluginTable_oid_len = OID_LENGTH (stitchPluginTable_oid);
@@ -140,7 +157,7 @@ initialize_table_stitchPluginTable(void)
 					  ASN_UNSIGNED,  /* index: stitchPluginInstance */
 					  0);
 	table_info->min_column = COLUMN_STITCHPLUGINWINDOWSREGISTRYKEY;
-	table_info->max_column = COLUMN_STITCHPLUGINFEEDLOGPATH;
+	table_info->max_column = COLUMN_STITCHPLUGINRICSUFFIX;
     
 	iinfo = SNMP_MALLOC_TYPEDEF (netsnmp_iterator_info);
 	if (nullptr == iinfo)
@@ -214,7 +231,7 @@ stitchPluginTable_get_next_data_point (
 
 /* end of data points */
 	if (context->stitch_it == context->stitch_list.end()) {
-		DLOG(INFO) << "End of instances.";
+		DLOG(INFO) << "End of plugin instances.";
 		return nullptr;
 	}
 
@@ -308,58 +325,6 @@ stitchPluginTable_handler (
 					(const u_char*)stitch->config_.service_name.c_str(), stitch->config_.service_name.length());
 				break;
 
-			case COLUMN_STITCHPLUGINADHADDRESS:
-			{
-				const char *rssl_server = "";
-				size_t rssl_server_len = 0;
-				if (!stitch->config_.rssl_servers.empty()) {
-					std::ostringstream ss;
-					for (auto it = stitch->config_.rssl_servers.begin();
-						it != stitch->config_.rssl_servers.end();
-						++it)
-					{
-						if (it != stitch->config_.rssl_servers.begin())
-							ss << ", ";
-						ss << *it;
-					}
-					rssl_server     = ss.str().c_str();
-					rssl_server_len = ss.str().length();
-				}
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)rssl_server, rssl_server_len);
-				break;
-			}
-
-			case COLUMN_STITCHPLUGINADHPORT:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.rssl_default_port.c_str(), stitch->config_.rssl_default_port.length());
-				break;
-
-			case COLUMN_STITCHPLUGINAPPLICATIONID:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.application_id.c_str(), stitch->config_.application_id.length());
-				break;
-
-			case COLUMN_STITCHPLUGININSTANCEID:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.instance_id.c_str(), stitch->config_.instance_id.length());
-				break;
-
-			case COLUMN_STITCHPLUGINUSERNAME:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.user_name.c_str(), stitch->config_.user_name.length());
-				break;
-
-			case COLUMN_STITCHPLUGINPOSITION:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.position.c_str(), stitch->config_.position.length());
-				break;
-
-			case COLUMN_STITCHPLUGINSESSIONNAME:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.session_name.c_str(), stitch->config_.session_name.length());
-				break;
-
 			case COLUMN_STITCHPLUGINMONITORNAME:
 				snmp_set_var_typed_value (var, ASN_OCTET_STR,
 					(const u_char*)stitch->config_.monitor_name.c_str(), stitch->config_.monitor_name.length());
@@ -368,16 +333,6 @@ stitchPluginTable_handler (
 			case COLUMN_STITCHPLUGINEVENTQUEUENAME:
 				snmp_set_var_typed_value (var, ASN_OCTET_STR,
 					(const u_char*)stitch->config_.event_queue_name.c_str(), stitch->config_.event_queue_name.length());
-				break;
-
-			case COLUMN_STITCHPLUGINCONNECTIONNAME:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.connection_name.c_str(), stitch->config_.connection_name.length());
-				break;
-
-			case COLUMN_STITCHPLUGINPUBLISHERNAME:
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)stitch->config_.publisher_name.c_str(), stitch->config_.publisher_name.length());
 				break;
 
 			case COLUMN_STITCHPLUGINVENDORNAME:
@@ -404,14 +359,6 @@ stitchPluginTable_handler (
 				snmp_set_var_typed_value (var, ASN_OCTET_STR,
 					(const u_char*)stitch->config_.suffix.c_str(), stitch->config_.suffix.length());
 				break;
-
-			case COLUMN_STITCHPLUGINFEEDLOGPATH:
-			{
-				const std::string feedlog_path ("/dev/null");
-				snmp_set_var_typed_value (var, ASN_OCTET_STR,
-					(const u_char*)feedlog_path.c_str(), feedlog_path.length());
-				break;
-			}
 
 			default:
 				snmp_log (__netsnmp_LOG_ERR, "stitchPluginTable_handler: unknown column.\n");
@@ -458,7 +405,7 @@ initialize_table_stitchPluginPerformanceTable(void)
 					  ASN_UNSIGNED,  /* index: stitchPluginPerformanceInstance */
 					  0);
 	table_info->min_column = COLUMN_STITCHTCLQUERYRECEIVED;
-	table_info->max_column = COLUMN_STITCHMMTLOGINDATASTATE;
+	table_info->max_column = COLUMN_STITCHLASTMSGSSENT;
     
 	iinfo = SNMP_MALLOC_TYPEDEF( netsnmp_iterator_info );
 	if (nullptr == iinfo)
@@ -706,181 +653,23 @@ stitchPluginPerformanceTable_handler (
 				}
 				break;
 
-			case COLUMN_STITCHRFAMSGSSENT:
+			case COLUMN_STITCHMSGSSENT:
 				{
-					const unsigned rfa_msg_sent = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_RFA_MSGS_SENT];
+					const unsigned msg_sent = (bool)stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MSGS_SENT];
 					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&rfa_msg_sent, sizeof (rfa_msg_sent));
+						(const u_char*)&msg_sent, sizeof (msg_sent));
 				}
 				break;
 
-			case COLUMN_STITCHRFAEVENTSRECEIVED:
+			case COLUMN_STITCHLASTMSGSSENT:
 				{
-					const unsigned rfa_events_received = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_RFA_EVENTS_RECEIVED];
+					union {
+						uint32_t	uint_value;
+						__time32_t	time32_t_value;
+					} last_activity;
+					last_activity.time32_t_value = (bool)stitch->provider_ ? 0 : ((stitch->provider_->last_activity_ - kUnixEpoch).total_seconds());
 					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&rfa_events_received, sizeof (rfa_events_received));
-				}
-				break;
-
-			case COLUMN_STITCHRFAEVENTSDISCARDED:
-				{
-					const unsigned rfa_events_discarded = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_RFA_EVENTS_DISCARDED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&rfa_events_discarded, sizeof (rfa_events_discarded));
-				}
-				break;
-            
-			case COLUMN_STITCHOMMITEMEVENTSRECEIVED:
-				{
-					const unsigned omm_item_events_received = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_OMM_ITEM_EVENTS_RECEIVED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&omm_item_events_received, sizeof (omm_item_events_received));
-				}
-				break;
-
-			case COLUMN_STITCHOMMITEMEVENTSDISCARDED:
-				{
-					const unsigned omm_item_events_discarded = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_OMM_ITEM_EVENTS_DISCARDED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&omm_item_events_discarded, sizeof (omm_item_events_discarded));
-				}
-				break;
-
-			case COLUMN_STITCHRESPONSEMSGSRECEIVED:
-				{
-					const unsigned response_msgs_received = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_RESPONSE_MSGS_RECEIVED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&response_msgs_received, sizeof (response_msgs_received));
-				}
-				break;
-
-			case COLUMN_STITCHRESPONSEMSGSDISCARDED:
-				{
-					const unsigned response_msgs_discarded = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_RESPONSE_MSGS_DISCARDED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&response_msgs_discarded, sizeof (response_msgs_discarded));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINRESPONSERECEIVED:
-				{
-					const unsigned mmt_login_responses_received = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_RECEIVED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_login_responses_received, sizeof (mmt_login_responses_received));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINRESPONSEDISCARDED:
-				{
-					const unsigned mmt_login_responses_discarded = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_RESPONSE_DISCARDED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_login_responses_discarded, sizeof (mmt_login_responses_discarded));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINSUCCESSRECEIVED:
-				{
-					const unsigned mmt_login_success_received = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_SUCCESS_RECEIVED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_login_success_received, sizeof (mmt_login_success_received));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINSUSPECTRECEIVED:
-				{
-					const unsigned mmt_login_suspect_received = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_SUSPECT_RECEIVED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_login_suspect_received, sizeof (mmt_login_suspect_received));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINCLOSEDRECEIVED:
-				{
-					const unsigned mmt_login_closed_received = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_CLOSED_RECEIVED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_login_closed_received, sizeof (mmt_login_closed_received));
-				}
-				break;
-
-			case COLUMN_STITCHOMMCMDERRORS:
-				{
-					const unsigned omm_cmd_errors = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_OMM_CMD_ERRORS];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&omm_cmd_errors, sizeof (omm_cmd_errors));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINSVALIDATED:
-				{
-					const unsigned mmt_logins_validated = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_VALIDATED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_logins_validated, sizeof (mmt_logins_validated));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINSMALFORMED:
-				{
-					const unsigned mmt_logins_malformed = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_MALFORMED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_logins_malformed, sizeof (mmt_logins_malformed));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINSSENT:
-				{
-					const unsigned mmt_logins_sent = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_LOGIN_SENT];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_logins_sent, sizeof (mmt_logins_sent));
-				}
-				break;
-
-			case COLUMN_STITCHMMTDIRECTORYSVALIDATED:
-				{
-					const unsigned mmt_directorys_validated = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_DIRECTORY_VALIDATED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_directorys_validated, sizeof (mmt_directorys_validated));
-				}
-				break;
-
-			case COLUMN_STITCHMMTDIRECTORYSMALFORMED:
-				{
-					const unsigned mmt_directorys_malformed = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_DIRECTORY_MALFORMED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_directorys_malformed, sizeof (mmt_directorys_malformed));
-				}
-				break;
-
-			case COLUMN_STITCHMMTDIRECTORYSSENT:
-				{
-					const unsigned mmt_directorys_sent = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MMT_DIRECTORY_SENT];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&mmt_directorys_sent, sizeof (mmt_directorys_sent));
-				}
-				break;
-
-			case COLUMN_STITCHTOKENSGENERATED:
-				{
-					const unsigned tokens_generated = nullptr == stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_TOKENS_GENERATED];
-					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
-						(const u_char*)&tokens_generated, sizeof (tokens_generated));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINSTREAMSTATE:
-				{
-/* 0 = rfa::common::RespStatus::UnspecifiedEnum */
-					const int stream_state = nullptr == stitch->provider_ ? 0 : stitch->provider_->stream_state_;
-					snmp_set_var_typed_value (var, ASN_INTEGER,
-						(const u_char*)&stream_state, sizeof (stream_state));
-				}
-				break;
-
-			case COLUMN_STITCHMMTLOGINDATASTATE:
-				{
-/* 0 = rfa::common::RespStatus::UnspecifiedStreamStateEnum */
-					const int data_state = nullptr == stitch->provider_ ? 0 : stitch->provider_->data_state_;
-					snmp_set_var_typed_value (var, ASN_INTEGER,
-						(const u_char*)&data_state, sizeof (data_state));
+						(const u_char*)&last_activity.uint_value, sizeof (last_activity.uint_value));
 				}
 				break;
 
@@ -894,6 +683,740 @@ stitchPluginPerformanceTable_handler (
 
 	default:
 		snmp_log (__netsnmp_LOG_ERR, "stitchPluginPerformanceTable_handler: unsupported mode.\n");
+		break;
+    }
+
+    return SNMP_ERR_NOERROR;
+}
+
+/* Initialize the stitchSessionTable table by defining its contents and how it's structured.
+ */
+static
+int
+initialize_table_stitchSessionTable(void)
+{
+	DLOG(INFO) << "initialize_table_stitchSessionTable()";
+
+	static const oid stitchSessionTable_oid[] = {1,3,6,1,4,1,67,1,1,5};
+	const size_t stitchSessionTable_oid_len = OID_LENGTH (stitchSessionTable_oid);
+	netsnmp_handler_registration* reg = nullptr;
+	netsnmp_iterator_info* iinfo = nullptr;
+	netsnmp_table_registration_info* table_info = nullptr;
+
+	reg = netsnmp_create_handler_registration (
+		"stitchSessionTable",	stitchSessionTable_handler,
+		stitchSessionTable_oid,	stitchSessionTable_oid_len,
+		HANDLER_CAN_RONLY
+		);
+	if (nullptr == reg)
+		goto error;
+
+	table_info = SNMP_MALLOC_TYPEDEF (netsnmp_table_registration_info);
+	if (nullptr == table_info)
+		goto error;
+	netsnmp_table_helper_add_indexes (table_info,
+					  ASN_OCTET_STR,  /* index: stitchSessionId */
+					  ASN_UNSIGNED,  /* index: stitchSessionPluginInstance */
+					  ASN_UNSIGNED,  /* index: stitchSessionUniqueInstance */
+					  0);
+	table_info->min_column = COLUMN_STITCHSESSIONRSSLSERVERS;
+	table_info->max_column = COLUMN_STITCHSESSIONPUBLISHERNAME;
+    
+	iinfo = SNMP_MALLOC_TYPEDEF (netsnmp_iterator_info);
+	if (nullptr == iinfo)
+		goto error;
+	iinfo->get_first_data_point	= stitchSessionTable_get_first_data_point;
+	iinfo->get_next_data_point	= stitchSessionTable_get_next_data_point;
+	iinfo->free_loop_context_at_end	= stitchSessionTable_free_loop_context;
+	iinfo->table_reginfo		= table_info;
+    
+	return netsnmp_register_table_iterator (reg, iinfo);
+
+error:
+	if (table_info && table_info->indexes)		/* table_data_free_func() is internal */
+		snmp_free_var (table_info->indexes);
+	SNMP_FREE (table_info);
+	SNMP_FREE (iinfo);
+	netsnmp_handler_registration_free (reg);
+	return -1;
+}
+
+/* Example iterator hook routines - using 'get_next' to do most of the work */
+static 
+netsnmp_variable_list*
+stitchSessionTable_get_first_data_point (
+	void**			my_loop_context,	/* valid through one query of multiple "data points" */
+	void**			my_data_context,	/* answer blob which is passed to handler() */
+	netsnmp_variable_list*	put_index_data,		/* answer */
+	netsnmp_iterator_info*	mydata			/* iinfo on init() */
+	)
+{
+	assert (nullptr != my_loop_context);
+	assert (nullptr != my_data_context);
+	assert (nullptr != put_index_data);
+	assert (nullptr != mydata);
+
+	DLOG(INFO) << "stitchSessionTable_get_first_data_point()";
+
+/* Create our own context for this SNMP loop, lock on list follows lifetime of context. */
+	std::shared_ptr<snmp_context_t> context (new snmp_context_t (hilo::stitch_t::global_list_lock_, hilo::stitch_t::global_list_));
+	if (!(bool)context || context->stitch_list.empty()) {
+		DLOG(INFO) << "No plugin instances.";
+		return nullptr;
+	}
+
+/* Find first node, through all plugin instances. */
+	for (context->stitch_it = context->stitch_list.begin();
+		context->stitch_it != context->stitch_list.end();
+		++(context->stitch_it))
+	{
+/* and through all sessions for each plugin provider. */
+		context->session_it = (*context->stitch_it)->provider_->sessions_.begin();
+		if (context->session_it != (*context->stitch_it)->provider_->sessions_.end()) {
+			break;
+		}
+	}
+
+/* no node found. */
+	if (context->session_it == (*context->stitch_it)->provider_->sessions_.end()) {
+		DLOG(INFO) << "No session instances.";
+		return nullptr;
+	}
+
+/* Save context with NET-SNMP iterator. */
+	*my_loop_context = context.get();
+	snmp_context_t::global_list.push_back (std::move (context));
+
+/* pass on for generic row access */
+	return stitchSessionTable_get_next_data_point (my_loop_context, my_data_context, put_index_data,  mydata);
+}
+
+static
+netsnmp_variable_list*
+stitchSessionTable_get_next_data_point (
+	void**			my_loop_context,
+	void**			my_data_context,
+	netsnmp_variable_list*	put_index_data,
+	netsnmp_iterator_info*	mydata
+	)
+{
+	assert (nullptr != my_loop_context);
+	assert (nullptr != my_data_context);
+	assert (nullptr != put_index_data);
+	assert (nullptr != mydata);
+
+	DLOG(INFO) << "stitchSessionTable_get_next_data_point()";
+
+	snmp_context_t* context = static_cast<snmp_context_t*>(*my_loop_context);
+	netsnmp_variable_list *idx = put_index_data;
+
+/* end of data points */
+	if (context->stitch_it == context->stitch_list.end()) {
+		DLOG(INFO) << "End of plugin instances.";
+		return nullptr;
+	}
+	if (context->session_it == (*context->stitch_it)->provider_->sessions_.end()) {
+		DLOG(INFO) << "End of session instances.";
+		return nullptr;
+	}
+
+/* this session instance as a data point */
+	const hilo::session_t* session = (*context->session_it).get();
+	const hilo::stitch_t* stitch = *context->stitch_it;
+
+/* stitchSessionPluginId */
+	snmp_set_var_typed_value (idx, ASN_OCTET_STR, (const u_char*)stitch->plugin_id_.c_str(), stitch->plugin_id_.length());
+        idx = idx->next_variable;
+
+/* stitchSessionPluginUniqueInstance */
+	const unsigned instance = stitch->instance_;
+	snmp_set_var_typed_value (idx, ASN_UNSIGNED, (const u_char*)&instance, sizeof (instance));
+        idx = idx->next_variable;
+
+/* stitchSessionUniqueInstance */
+	const unsigned session_instance = session->instance_id_;
+	snmp_set_var_typed_value (idx, ASN_UNSIGNED, (const u_char*)&session_instance, sizeof (session_instance));
+
+/* hunt for next valid node */
+	while (++(context->session_it) == (*context->stitch_it)->provider_->sessions_.end()) {
+		if (++(context->stitch_it) == context->stitch_list.end()) {
+			break;
+		}
+		context->session_it = (*context->stitch_it)->provider_->sessions_.begin();
+	}
+
+/* reference remains in list */
+        *my_data_context = (void*)session;
+        return put_index_data;
+}
+
+static
+void
+stitchSessionTable_free_loop_context (
+	void*			my_loop_context,
+	netsnmp_iterator_info*	mydata
+	)
+{
+	assert (nullptr != my_loop_context);
+	assert (nullptr != mydata);
+
+	DLOG(INFO) << "stitchSessionTable_free_loop_context ()";
+
+/* delete context and shared lock on global list of all stitch objects */
+	snmp_context_t* context = static_cast<snmp_context_t*>(my_loop_context);
+/* I'm sure there must be a better method :-( */
+	snmp_context_t::global_list.erase (std::remove_if (snmp_context_t::global_list.begin(),
+		snmp_context_t::global_list.end(),
+		[context](std::shared_ptr<snmp_context_t>& shared_context) -> bool {
+			return shared_context.get() == context;
+	}));
+}
+
+/* handles requests for the stitchPluginTable table
+ */
+static
+int
+stitchSessionTable_handler (
+	netsnmp_mib_handler*		handler,
+	netsnmp_handler_registration*	reginfo,
+	netsnmp_agent_request_info*	reqinfo,
+	netsnmp_request_info*		requests
+	)
+{
+	assert (nullptr != handler);
+	assert (nullptr != reginfo);
+	assert (nullptr != reqinfo);
+	assert (nullptr != requests);
+
+	DLOG(INFO) << "stitchSessionTable_handler()";
+
+	switch (reqinfo->mode) {
+
+/* Read-support (also covers GetNext requests) */
+
+	case MODE_GET:
+		for (netsnmp_request_info* request = requests;
+		     request;
+		     request = request->next)
+		{
+			const hilo::session_t* session = static_cast<hilo::session_t*>(netsnmp_extract_iterator_context (request));
+			if (nullptr == session) {
+				netsnmp_set_request_error (reqinfo, request, SNMP_NOSUCHINSTANCE);
+				continue;
+			}
+
+			netsnmp_variable_list* var = request->requestvb;
+			netsnmp_table_request_info* table_info = netsnmp_extract_table_info (request);
+			if (nullptr == table_info) {
+				snmp_log (__netsnmp_LOG_ERR, "stitchSessionTable_handler: empty table request info.\n");
+				continue;
+			}
+
+			switch (table_info->colnum) {
+						
+			case COLUMN_STITCHSESSIONRSSLSERVERS:
+			{
+				const char *rssl_server = "";
+				size_t rssl_server_len = 0;
+				if (!session->config_.rssl_servers.empty()) {
+					std::ostringstream ss;
+					for (auto it = session->config_.rssl_servers.begin();
+						it != session->config_.rssl_servers.end();
+						++it)
+					{
+						if (it != session->config_.rssl_servers.begin())
+							ss << ", ";
+						ss << *it;
+					}
+					rssl_server     = ss.str().c_str();
+					rssl_server_len = ss.str().length();
+				}
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)rssl_server, rssl_server_len);
+				break;
+			}
+
+			case COLUMN_STITCHSESSIONRSSLDEFAULTPORT:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.rssl_default_port.c_str(), session->config_.rssl_default_port.length());
+				break;
+
+			case COLUMN_STITCHSESSIONAPPLICATIONID:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.application_id.c_str(), session->config_.application_id.length());
+				break;
+
+			case COLUMN_STITCHSESSIONINSTANCEID:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.instance_id.c_str(), session->config_.instance_id.length());
+				break;
+
+			case COLUMN_STITCHSESSIONUSERNAME:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.user_name.c_str(), session->config_.user_name.length());
+				break;
+
+			case COLUMN_STITCHSESSIONPOSITION:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.position.c_str(), session->config_.position.length());
+				break;
+
+			case COLUMN_STITCHSESSIONSESSIONNAME:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.session_name.c_str(), session->config_.session_name.length());
+				break;
+
+			case COLUMN_STITCHSESSIONCONNECTIONNAME:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.connection_name.c_str(), session->config_.connection_name.length());
+				break;
+
+			case COLUMN_STITCHSESSIONPUBLISHERNAME:
+				snmp_set_var_typed_value (var, ASN_OCTET_STR,
+					(const u_char*)session->config_.publisher_name.c_str(), session->config_.publisher_name.length());
+				break;
+
+			default:
+				snmp_log (__netsnmp_LOG_ERR, "stitchSessionTable_handler: unknown column.\n");
+				netsnmp_set_request_error (reqinfo, request, SNMP_NOSUCHOBJECT);
+				break;
+			}
+		}
+		break;
+
+	default:
+		snmp_log (__netsnmp_LOG_ERR, "stitchSessionTable_handler: unnsupported mode.\n");
+		break;
+	}
+	return SNMP_ERR_NOERROR;
+}
+
+/* Initialize the stitchSessionPerformanceTable table by defining its contents and how it's structured
+*/
+static
+int
+initialize_table_stitchSessionPerformanceTable(void)
+{
+	DLOG(INFO) << "initialize_table_stitchSessionPerformanceTable()";
+
+	static const oid stitchSessionPerformanceTable_oid[] = {1,3,6,1,4,1,67,1,1,6};
+	const size_t stitchSessionPerformanceTable_oid_len = OID_LENGTH(stitchSessionPerformanceTable_oid);
+	netsnmp_handler_registration* reg = nullptr;
+	netsnmp_iterator_info* iinfo = nullptr;
+	netsnmp_table_registration_info* table_info = nullptr;
+
+	reg = netsnmp_create_handler_registration (
+		"stitchSessionPerformanceTable",   stitchSessionPerformanceTable_handler,
+		stitchSessionPerformanceTable_oid, stitchSessionPerformanceTable_oid_len,
+		HANDLER_CAN_RONLY
+		);
+	if (nullptr == reg)
+		goto error;
+
+	table_info = SNMP_MALLOC_TYPEDEF (netsnmp_table_registration_info);
+	if (nullptr == table_info)
+		goto error;
+	netsnmp_table_helper_add_indexes (table_info,
+					  ASN_OCTET_STR,  /* index: stitchSessionPerformancePluginId */
+					  ASN_UNSIGNED,  /* index: stitchSessionPerformancePluginUniqueInstance */
+					  ASN_UNSIGNED,  /* index: stitchSessionPerformanceUniqueInstance */
+					  0);
+	table_info->min_column = COLUMN_STITCHSESSIONLASTACTIVITY;
+	table_info->max_column = COLUMN_STITCHMMTLOGINDATASTATE;
+    
+	iinfo = SNMP_MALLOC_TYPEDEF( netsnmp_iterator_info );
+	if (nullptr == iinfo)
+		goto error;
+	iinfo->get_first_data_point	= stitchSessionPerformanceTable_get_first_data_point;
+	iinfo->get_next_data_point	= stitchSessionPerformanceTable_get_next_data_point;
+	iinfo->free_loop_context_at_end = stitchSessionPerformanceTable_free_loop_context;
+	iinfo->table_reginfo		= table_info;
+    
+	return netsnmp_register_table_iterator (reg, iinfo);
+
+error:
+	if (table_info && table_info->indexes)		/* table_data_free_func() is internal */
+		snmp_free_var (table_info->indexes);
+	SNMP_FREE (table_info);
+	SNMP_FREE (iinfo);
+	netsnmp_handler_registration_free (reg);
+	return -1;
+}
+
+/* Example iterator hook routines - using 'get_next' to do most of the work
+ */
+static
+netsnmp_variable_list*
+stitchSessionPerformanceTable_get_first_data_point (
+	void**			my_loop_context,	/* valid through one query of multiple "data points" */
+	void**			my_data_context,	/* answer blob which is passed to handler() */
+	netsnmp_variable_list*	put_index_data,		/* answer */
+	netsnmp_iterator_info*	mydata			/* iinfo on init() */
+	)
+{
+	assert (nullptr != my_loop_context);
+	assert (nullptr != my_data_context);
+	assert (nullptr != put_index_data);
+	assert (nullptr != mydata);
+
+	DLOG(INFO) << "stitchSessionerformanceTable_get_first_data_point()";
+
+/* Create our own context for this SNMP loop, lock on list follows lifetime of context */
+	std::shared_ptr<snmp_context_t> context (new snmp_context_t (hilo::stitch_t::global_list_lock_, hilo::stitch_t::global_list_));
+	if (!(bool)context || context->stitch_list.empty()) {
+		DLOG(INFO) << "No plugin instances";
+		return nullptr;
+	}
+
+/* Find first node, through all plugin instances. */
+	for (context->stitch_it = context->stitch_list.begin();
+		context->stitch_it != context->stitch_list.end();
+		++(context->stitch_it))
+	{
+/* and through all sessions for each plugin provider. */
+		context->session_it = (*context->stitch_it)->provider_->sessions_.begin();
+		if (context->session_it != (*context->stitch_it)->provider_->sessions_.end()) {
+			break;
+		}
+	}
+
+/* no node found. */
+	if (context->session_it == (*context->stitch_it)->provider_->sessions_.end()) {
+		DLOG(INFO) << "No session instances.";
+		return nullptr;
+	}
+
+/* Save context with NET-SNMP iterator. */
+	*my_loop_context = context.get();
+	snmp_context_t::global_list.push_back (std::move (context));
+
+/* pass on for generic row access */
+	return stitchSessionPerformanceTable_get_next_data_point(my_loop_context, my_data_context, put_index_data, mydata);
+}
+
+static
+netsnmp_variable_list*
+stitchSessionPerformanceTable_get_next_data_point (
+	void**			my_loop_context,
+	void**			my_data_context,
+	netsnmp_variable_list*	put_index_data,
+	netsnmp_iterator_info*	mydata
+	)
+{
+	assert (nullptr != my_loop_context);
+	assert (nullptr != my_data_context);
+	assert (nullptr != put_index_data);
+	assert (nullptr != mydata);
+
+	DLOG(INFO) << "stitchSessionPerformanceTable_get_next_data_point()";
+
+	snmp_context_t* context = static_cast<snmp_context_t*>(*my_loop_context);
+	netsnmp_variable_list *idx = put_index_data;
+
+/* end of data points */
+	if (context->stitch_it == context->stitch_list.end()) {
+		DLOG(INFO) << "End of plugin instances.";
+		return nullptr;
+	}
+	if (context->session_it == (*context->stitch_it)->provider_->sessions_.end()) {
+		DLOG(INFO) << "End of session instances.";
+		return nullptr;
+	}
+
+/* this plugin instance as a data point */
+	const hilo::session_t* session = (*context->session_it).get();
+	const hilo::stitch_t* stitch = *context->stitch_it;
+
+/* stitchSessionPerformancePluginId */
+	snmp_set_var_typed_value (idx, ASN_OCTET_STR, (const u_char*)stitch->plugin_id_.c_str(), stitch->plugin_id_.length());
+        idx = idx->next_variable;
+
+/* stitchSessionPerformancePluginUniqueInstance */
+	const unsigned instance = stitch->instance_;
+	snmp_set_var_typed_value (idx, ASN_UNSIGNED, (const u_char*)&instance, sizeof (instance));
+        idx = idx->next_variable;
+
+/* stitchSessionPerformanceUniqueInstance */
+	const unsigned session_instance = session->instance_id_;
+	snmp_set_var_typed_value (idx, ASN_UNSIGNED, (const u_char*)&session_instance, sizeof (session_instance));
+
+/* hunt for next valid node */
+	while (++(context->session_it) == (*context->stitch_it)->provider_->sessions_.end()) {
+		if (++(context->stitch_it) == context->stitch_list.end()) {
+			break;
+		}
+		context->session_it = (*context->stitch_it)->provider_->sessions_.begin();
+	}
+
+/* reference remains in list */
+        *my_data_context = (void*)session;
+	return put_index_data;
+}
+
+static
+void
+stitchSessionPerformanceTable_free_loop_context (
+	void*			my_loop_context,
+	netsnmp_iterator_info*	mydata
+	)
+{
+	assert (nullptr != my_loop_context);
+	assert (nullptr != mydata);
+
+	DLOG(INFO) << "stitchSessionPerformanceTable_free_loop_context()";
+
+/* delete context and shared lock on global list of all stitch objects */
+	snmp_context_t* context = static_cast<snmp_context_t*>(my_loop_context);
+/* I'm sure there must be a better method :-( */
+	snmp_context_t::global_list.erase (std::remove_if (snmp_context_t::global_list.begin(),
+		snmp_context_t::global_list.end(),
+		[context](std::shared_ptr<snmp_context_t>& shared_context) -> bool {
+			return shared_context.get() == context;
+	}));
+}
+
+/* handles requests for the stitchSessionPerformanceTable table
+ */
+static
+int
+stitchSessionPerformanceTable_handler (
+	netsnmp_mib_handler*		handler,
+	netsnmp_handler_registration*	reginfo,
+	netsnmp_agent_request_info*	reqinfo,
+	netsnmp_request_info*		requests
+	)
+{
+	assert (nullptr != handler);
+	assert (nullptr != reginfo);
+	assert (nullptr != reqinfo);
+	assert (nullptr != requests);
+
+	DLOG(INFO) << "stitchSessionPerformanceTable_handler()";
+
+	switch (reqinfo->mode) {
+        
+/* Read-support (also covers GetNext requests) */
+
+	case MODE_GET:
+		for (netsnmp_request_info* request = requests;
+		     request;
+		     request = request->next)
+		{
+			const hilo::session_t* session = static_cast<hilo::session_t*>(netsnmp_extract_iterator_context (request));
+			if (nullptr == session) {
+				netsnmp_set_request_error (reqinfo, request, SNMP_NOSUCHINSTANCE);
+				continue;
+			}
+
+			netsnmp_variable_list* var = request->requestvb;
+			netsnmp_table_request_info* table_info  = netsnmp_extract_table_info (request);
+			if (nullptr == table_info) {
+				snmp_log (__netsnmp_LOG_ERR, "stitchSessionPerformanceTable_handler: empty table request info.\n");
+				continue;
+			}
+    
+			switch (table_info->colnum) {
+
+			case COLUMN_STITCHSESSIONLASTACTIVITY:
+				{
+					union {
+						uint32_t	uint_value;
+						__time32_t	time32_t_value;
+					} last_activity;
+					last_activity.time32_t_value = (session->last_activity_ - kUnixEpoch).total_seconds();
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&last_activity.uint_value, sizeof (last_activity.uint_value));
+				}
+				break;
+
+			case COLUMN_STITCHSESSIONRFAMSGSSENT:
+				{
+					const unsigned rfa_msg_sent = session->cumulative_stats_[SESSION_PC_RFA_MSGS_SENT];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&rfa_msg_sent, sizeof (rfa_msg_sent));
+				}
+				break;
+
+			case COLUMN_STITCHRFAEVENTSRECEIVED:
+				{
+					const unsigned rfa_events_received = session->cumulative_stats_[SESSION_PC_RFA_EVENTS_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&rfa_events_received, sizeof (rfa_events_received));
+				}
+				break;
+
+			case COLUMN_STITCHRFAEVENTSDISCARDED:
+				{
+					const unsigned rfa_events_discarded = session->cumulative_stats_[SESSION_PC_RFA_EVENTS_DISCARDED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&rfa_events_discarded, sizeof (rfa_events_discarded));
+				}
+				break;
+            
+			case COLUMN_STITCHOMMITEMEVENTSRECEIVED:
+				{
+					const unsigned omm_item_events_received = session->cumulative_stats_[SESSION_PC_OMM_ITEM_EVENTS_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&omm_item_events_received, sizeof (omm_item_events_received));
+				}
+				break;
+
+			case COLUMN_STITCHOMMITEMEVENTSDISCARDED:
+				{
+					const unsigned omm_item_events_discarded = session->cumulative_stats_[SESSION_PC_OMM_ITEM_EVENTS_DISCARDED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&omm_item_events_discarded, sizeof (omm_item_events_discarded));
+				}
+				break;
+
+			case COLUMN_STITCHRESPONSEMSGSRECEIVED:
+				{
+					const unsigned response_msgs_received = session->cumulative_stats_[SESSION_PC_RESPONSE_MSGS_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&response_msgs_received, sizeof (response_msgs_received));
+				}
+				break;
+
+			case COLUMN_STITCHRESPONSEMSGSDISCARDED:
+				{
+					const unsigned response_msgs_discarded = session->cumulative_stats_[SESSION_PC_RESPONSE_MSGS_DISCARDED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&response_msgs_discarded, sizeof (response_msgs_discarded));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINRESPONSERECEIVED:
+				{
+					const unsigned mmt_login_responses_received = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_RESPONSE_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_login_responses_received, sizeof (mmt_login_responses_received));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINRESPONSEDISCARDED:
+				{
+					const unsigned mmt_login_responses_discarded = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_RESPONSE_DISCARDED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_login_responses_discarded, sizeof (mmt_login_responses_discarded));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINSUCCESSRECEIVED:
+				{
+					const unsigned mmt_login_success_received = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_SUCCESS_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_login_success_received, sizeof (mmt_login_success_received));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINSUSPECTRECEIVED:
+				{
+					const unsigned mmt_login_suspect_received = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_SUSPECT_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_login_suspect_received, sizeof (mmt_login_suspect_received));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINCLOSEDRECEIVED:
+				{
+					const unsigned mmt_login_closed_received = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_CLOSED_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_login_closed_received, sizeof (mmt_login_closed_received));
+				}
+				break;
+
+			case COLUMN_STITCHOMMCMDERRORS:
+				{
+					const unsigned omm_cmd_errors = session->cumulative_stats_[SESSION_PC_OMM_CMD_ERRORS];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&omm_cmd_errors, sizeof (omm_cmd_errors));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINSVALIDATED:
+				{
+					const unsigned mmt_logins_validated = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_VALIDATED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_logins_validated, sizeof (mmt_logins_validated));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINSMALFORMED:
+				{
+					const unsigned mmt_logins_malformed = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_MALFORMED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_logins_malformed, sizeof (mmt_logins_malformed));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINSSENT:
+				{
+					const unsigned mmt_logins_sent = session->cumulative_stats_[SESSION_PC_MMT_LOGIN_SENT];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_logins_sent, sizeof (mmt_logins_sent));
+				}
+				break;
+
+			case COLUMN_STITCHMMTDIRECTORYSVALIDATED:
+				{
+					const unsigned mmt_directorys_validated = session->cumulative_stats_[SESSION_PC_MMT_DIRECTORY_VALIDATED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_directorys_validated, sizeof (mmt_directorys_validated));
+				}
+				break;
+
+			case COLUMN_STITCHMMTDIRECTORYSMALFORMED:
+				{
+					const unsigned mmt_directorys_malformed = session->cumulative_stats_[SESSION_PC_MMT_DIRECTORY_MALFORMED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_directorys_malformed, sizeof (mmt_directorys_malformed));
+				}
+				break;
+
+			case COLUMN_STITCHMMTDIRECTORYSSENT:
+				{
+					const unsigned mmt_directorys_sent = session->cumulative_stats_[SESSION_PC_MMT_DIRECTORY_SENT];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mmt_directorys_sent, sizeof (mmt_directorys_sent));
+				}
+				break;
+
+			case COLUMN_STITCHTOKENSGENERATED:
+				{
+					const unsigned tokens_generated = session->cumulative_stats_[SESSION_PC_TOKENS_GENERATED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&tokens_generated, sizeof (tokens_generated));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINSTREAMSTATE:
+				{
+/* 0 = rfa::common::RespStatus::UnspecifiedEnum */
+					const int stream_state = session->stream_state_;
+					snmp_set_var_typed_value (var, ASN_INTEGER,
+						(const u_char*)&stream_state, sizeof (stream_state));
+				}
+				break;
+
+			case COLUMN_STITCHMMTLOGINDATASTATE:
+				{
+/* 0 = rfa::common::RespStatus::UnspecifiedStreamStateEnum */
+					const int data_state = session->data_state_;
+					snmp_set_var_typed_value (var, ASN_INTEGER,
+						(const u_char*)&data_state, sizeof (data_state));
+				}
+				break;
+
+			default:
+				snmp_log (__netsnmp_LOG_ERR, "stitchSessionPerformanceTable_handler: unknown column.\n");
+				netsnmp_set_request_error (reqinfo, request, SNMP_NOSUCHOBJECT);
+				break;
+			}
+		}
+		break;
+
+	default:
+		snmp_log (__netsnmp_LOG_ERR, "stitchSessionPerformanceTable_handler: unsupported mode.\n");
 		break;
     }
 

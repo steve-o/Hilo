@@ -47,17 +47,17 @@ public:
 			::snmp_select_info (&fds, &fdset, &timeout, &block);
 			FD_SET(s[0], &fdset);
 /* WinSock interpretation is count of descriptors, not the highest. */
-			DLOG(INFO) << "snmp select";
+			DVLOG(3) << "snmp select";
 			fds = ::select (0, &fdset, NULL, NULL, block ? NULL : &timeout);
 			if (fds) {
 				if (FD_ISSET(s[0], &fdset)) {
 					LOG(INFO) << "SNMP exit signaled";
 					break;
 				}
-				DLOG(INFO) << "snmp_read";
+				DVLOG(3) << "snmp_read";
 				::snmp_read (&fdset);
 			} else {
-				DLOG(INFO) << "snmp_timeout";
+				DVLOG(3) << "snmp_timeout";
 				::snmp_timeout();
 			}
 		}
@@ -73,14 +73,12 @@ hilo::snmp_agent_t::snmp_agent_t (hilo::stitch_t& stitch) :
 /* Awaiting C++11 full support */
 //	s_ ({ INVALID_SOCKET, INVALID_SOCKET }),
 {
-	DLOG(INFO) << "ctor";
 	s_[0] = s_[1] = INVALID_SOCKET;
 	run();
 }
 
 hilo::snmp_agent_t::~snmp_agent_t (void)
 {
-	DLOG(INFO) << "dtor";
 	clear();
 }
 
@@ -106,7 +104,10 @@ hilo::snmp_agent_t::run (void)
 					  TRUE);
 	}
 
-	::snmp_enable_filelog ("/snmp.log", 0);
+	if (!stitch_.config_.snmp_filelog.empty()) {
+		LOG(INFO) << "Setting Net-SNMP filelog to \"" << stitch_.config_.snmp_filelog << "\"";
+		::snmp_enable_filelog (stitch_.config_.snmp_filelog.c_str(), 0);
+	}
 
 	LOG(INFO) << "Initialising SNMP agent.";
 	if (0 != ::init_agent (kSnmpApplicationName)) {

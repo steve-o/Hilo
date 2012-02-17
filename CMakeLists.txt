@@ -68,6 +68,7 @@ set(cxx-sources
 	src/provider.cc
 	src/rfa.cc
 	src/rfa_logging.cc
+	src/session.cc
 	src/snmp_agent.cc
 	src/stitch.cc
 	src/stitchMIB.cc
@@ -143,7 +144,11 @@ set(rfa_runtime_libraries
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
 )
 
-file(GLOB config "${CMAKE_CURRENT_SOURCE_DIR}/config/*.xml")
+set(config
+	${CMAKE_CURRENT_SOURCE_DIR}/config/HiloAndStitch.xml
+	${CMAKE_CURRENT_SOURCE_DIR}/config/create-symbol-list.pl
+	${CMAKE_CURRENT_SOURCE_DIR}/config/example.reg
+)
 file(GLOB mibs "${CMAKE_CURRENT_SOURCE_DIR}/mibs/*.txt")
 
 install (TARGETS Hilo DESTINATION bin)
@@ -164,9 +169,9 @@ set (CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
 set (CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
 set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
 set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
-set (CPACK_PACKAGE_VERSION_MAJOR "1")
-set (CPACK_PACKAGE_VERSION_MINOR "6")
-set (CPACK_PACKAGE_VERSION_PATCH "36")
+set (CPACK_PACKAGE_VERSION_MAJOR "2")
+set (CPACK_PACKAGE_VERSION_MINOR "0")
+set (CPACK_PACKAGE_VERSION_PATCH "37")
 include (CPack)
 
 # end of file
