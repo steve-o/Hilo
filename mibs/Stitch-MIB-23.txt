@@ -16,7 +16,7 @@ IMPORTS
 -- A brief description and update information about this mib.
 --
 stitchMIB MODULE-IDENTITY
-	LAST-UPDATED "201202120000Z"
+	LAST-UPDATED "201202220000Z"
 	ORGANIZATION
 		"Thomson Reuters"
 	CONTACT-INFO
@@ -29,6 +29,9 @@ stitchMIB MODULE-IDENTITY
 		USA"
 	DESCRIPTION
 		"The MIB module for managing Bank of New York Mellon's FX High and Low Calculator."
+	REVISION "201202220000Z"
+	DESCRIPTION
+		"Version 2.3: Fix sequential OIDs."
 	REVISION "201202120000Z"
 	DESCRIPTION
 		"Version 2.2: Split provider with session performance counters."

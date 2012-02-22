@@ -655,7 +655,7 @@ stitchPluginPerformanceTable_handler (
 
 			case COLUMN_STITCHMSGSSENT:
 				{
-					const unsigned msg_sent = (bool)stitch->provider_ ? 0 : stitch->provider_->cumulative_stats_[PROVIDER_PC_MSGS_SENT];
+					const unsigned msg_sent = (bool)stitch->provider_ ? stitch->provider_->cumulative_stats_[PROVIDER_PC_MSGS_SENT] : 0;
 					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
 						(const u_char*)&msg_sent, sizeof (msg_sent));
 				}
@@ -667,7 +667,7 @@ stitchPluginPerformanceTable_handler (
 						uint32_t	uint_value;
 						__time32_t	time32_t_value;
 					} last_activity;
-					last_activity.time32_t_value = (bool)stitch->provider_ ? 0 : ((stitch->provider_->last_activity_ - kUnixEpoch).total_seconds());
+					last_activity.time32_t_value = (bool)stitch->provider_ ? ((stitch->provider_->last_activity_ - kUnixEpoch).total_seconds()) : 0;
 					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
 						(const u_char*)&last_activity.uint_value, sizeof (last_activity.uint_value));
 				}

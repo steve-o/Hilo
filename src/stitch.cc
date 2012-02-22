@@ -230,7 +230,7 @@ hilo::stitch_t::init (
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
 		", instance: " << instance_ <<
-		", version: \"2.0.37\""
+		", version: \"2.0.38\""
 		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
@@ -1077,7 +1077,7 @@ hilo::stitch_t::sendRefresh()
 		RFA_String warningText;
 		const uint8_t validation_status = response.validateMsg (&warningText);
 		if (rfa::message::MsgValidationWarning == validation_status) {
-			LOG(WARNING) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+			LOG(ERROR) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
 		} else {
 			assert (rfa::message::MsgValidationOk == validation_status);
 		}
@@ -1158,7 +1158,7 @@ hilo::stitch_t::sendRefresh()
 			RFA_String warningText;
 			const uint8_t validation_status = response.validateMsg (&warningText);
 			if (rfa::message::MsgValidationWarning == validation_status) {
-				LOG(WARNING) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+				LOG(ERROR) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
 			} else {
 				assert (rfa::message::MsgValidationOk == validation_status);
 			}
@@ -1275,7 +1275,7 @@ hilo::stitch_t::sendRefresh()
 			RFA_String warningText;
 			const uint8_t validation_status = response.validateMsg (&warningText);
 			if (rfa::message::MsgValidationWarning == validation_status) {
-				LOG(WARNING) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+				LOG(ERROR) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
 			} else {
 				assert (rfa::message::MsgValidationOk == validation_status);
 			}

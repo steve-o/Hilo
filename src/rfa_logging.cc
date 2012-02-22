@@ -86,11 +86,9 @@ logging::LogEventProvider::Unregister()
 /* 9.2.4.4 Closing an Event Stream for the Application Logger Monitor. */
 	if (nullptr != handle_)
 		monitor_->unregisterLoggerClient (handle_), handle_ = nullptr;
-	if ((bool)monitor_)
-		monitor_.reset();
+	monitor_.reset();
 /* 9.2.3.2 Shutting down the application logger. */
-	if ((bool)logger_)
-		logger_.reset();
+	logger_.reset();
 	return true;
 }
 

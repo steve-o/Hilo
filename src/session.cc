@@ -275,7 +275,7 @@ hilo::session_t::processEvent (
 
         default:
 		cumulative_stats_[SESSION_PC_RFA_EVENTS_DISCARDED]++;
-		LOG(INFO) << prefix_ << "Uncaught: " << event_;
+		LOG(WARNING) << prefix_ << "Uncaught: " << event_;
                 break;
         }
 }
@@ -294,7 +294,7 @@ hilo::session_t::processOMMItemEvent (
 /* Verify event is a response event */
 	if (rfa::message::RespMsgEnum != msg.getMsgType()) {
 		cumulative_stats_[SESSION_PC_OMM_ITEM_EVENTS_DISCARDED]++;
-		LOG(INFO) << prefix_ << "Uncaught: " << msg;
+		LOG(WARNING) << prefix_ << "Uncaught: " << msg;
 		return;
 	}
 
@@ -310,7 +310,7 @@ hilo::session_t::processRespMsg (
 /* Verify event is a login response event */
 	if (rfa::rdm::MMT_LOGIN != reply_msg.getMsgModelType()) {
 		cumulative_stats_[SESSION_PC_RESPONSE_MSGS_DISCARDED]++;
-		LOG(INFO) << prefix_ << "Uncaught: " << reply_msg;
+		LOG(WARNING) << prefix_ << "Uncaught: " << reply_msg;
 		return;
 	}
 
@@ -334,7 +334,7 @@ hilo::session_t::processRespMsg (
 
 		default:
 			cumulative_stats_[SESSION_PC_MMT_LOGIN_RESPONSE_DISCARDED]++;
-			LOG(INFO) << prefix_ << "Uncaught: " << reply_msg;
+			LOG(WARNING) << prefix_ << "Uncaught: " << reply_msg;
 			break;
 		}
 		break;
@@ -345,7 +345,7 @@ hilo::session_t::processRespMsg (
 
 	default:
 		cumulative_stats_[SESSION_PC_MMT_LOGIN_RESPONSE_DISCARDED]++;
-		LOG(INFO) << prefix_ << "Uncaught: " << reply_msg;
+		LOG(WARNING) << prefix_ << "Uncaught: " << reply_msg;
 		break;
 	}
 }
@@ -387,7 +387,8 @@ hilo::session_t::processLoginSuccess (
 bool
 hilo::session_t::sendDirectoryResponse()
 {
-	VLOG(2) << prefix_<< "Sending directory response.";
+	VLOG(2) << prefix_ << "Sending directory response.";
+
 /* 7.5.9.1 Create a response message (4.2.2) */
 	rfa::message::RespMsg response;
 
@@ -448,7 +449,7 @@ hilo::session_t::sendDirectoryResponse()
 	uint8_t validation_status = response.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_VALIDATED]++;
-		LOG(WARNING) << prefix_ << "MMT_DIRECTORY::validateMsg: { warningText: \"" << warningText << "\" }";
+		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::validateMsg: { warningText: \"" << warningText << "\" }";
 	} else {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_MALFORMED]++;
 		assert (rfa::message::MsgValidationOk == validation_status);
