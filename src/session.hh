@@ -62,7 +62,7 @@ namespace hilo
 
 		bool init() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
 
-		bool createItemStream (const char* name, rfa::sessionLayer::ItemToken* token) throw (rfa::common::InvalidUsageException);
+		bool createItemStream (const char* name, rfa::sessionLayer::ItemToken** token) throw (rfa::common::InvalidUsageException);
 		uint32_t send (rfa::common::Msg& msg, rfa::sessionLayer::ItemToken& token, void* closure) throw (rfa::common::InvalidUsageException);
 
 /* RFA event callback. */

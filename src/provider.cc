@@ -92,7 +92,7 @@ hilo::provider_t::createItemStream (
 	{
 		assert ((bool)it);
 		assert (!item_stream->token.empty());
-		it->createItemStream (name, item_stream->token[i]);
+		it->createItemStream (name, &item_stream->token[i]);
 		++i;
 	});
 	const std::string key (name);

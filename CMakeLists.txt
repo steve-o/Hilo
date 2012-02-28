@@ -139,8 +139,12 @@ set(rfa_runtime_libraries
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Config100_x64.dll
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Logger100_x64.dll
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Data100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Cons_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Prov_Adapter100_x64.dll
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections100_x64.dll
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections_OMM100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer_OMM100_x64.dll
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
 )
 
@@ -171,7 +175,7 @@ set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
 set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
 set (CPACK_PACKAGE_VERSION_MAJOR "2")
 set (CPACK_PACKAGE_VERSION_MINOR "0")
-set (CPACK_PACKAGE_VERSION_PATCH "38")
+set (CPACK_PACKAGE_VERSION_PATCH "39")
 include (CPack)
 
 # end of file

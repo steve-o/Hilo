@@ -1,4 +1,4 @@
-﻿/* A basic Velocity Analytics User-Plugin to exporting a new Tcl command and
+/* A basic Velocity Analytics User-Plugin to exporting a new Tcl command and
  * periodically publishing out to ADH via RFA using RDM/MarketPrice.
  */
 
@@ -230,7 +230,7 @@ hilo::stitch_t::init (
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
 		", instance: " << instance_ <<
-		", version: \"2.0.38\""
+		", version: \"2.0.39\""
 		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
@@ -1050,7 +1050,7 @@ hilo::stitch_t::sendRefresh()
 /* TIMACT */
 		it.bind (timeact_field);
 
-/* PRICE field is a rfa::Real64 value specified as <mantissa> × 10⁶.
+/* PRICE field is a rfa::Real64 value specified as <mantissa> � 10?.
  * Rfa deprecates setting via <double> data types so we create a mantissa from
  * source value and consider that we publish to 6 decimal places.
  */
@@ -1131,7 +1131,7 @@ hilo::stitch_t::sendRefresh()
 /* TIMACT */
 			it.bind (timeact_field);
 
-/* PRICE field is a rfa::Real64 value specified as <mantissa> × 10⁶.
+/* PRICE field is a rfa::Real64 value specified as <mantissa> � 10?.
  * Rfa deprecates setting via <double> data types so we create a mantissa from
  * source value and consider that we publish to 6 decimal places.
  */

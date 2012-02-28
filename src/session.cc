@@ -201,19 +201,20 @@ hilo::session_t::sendLoginRequest()
 bool
 hilo::session_t::createItemStream (
 	const char* name,
-	rfa::sessionLayer::ItemToken* token
+	rfa::sessionLayer::ItemToken** token
 	)
 {
+	assert (nullptr != token);
 	VLOG(4) << prefix_ << "Creating item stream for RIC \"" << name << "\".";
 	if (!is_muted_) {
 		DVLOG(4) << prefix_ << "Generating token for " << name;
-		token = &( omm_provider_->generateItemToken() );
-		assert (nullptr != token);
+		*token = &( omm_provider_->generateItemToken() );
+		assert (nullptr != *token);
 		cumulative_stats_[SESSION_PC_TOKENS_GENERATED]++;
 		last_activity_ = boost::posix_time::microsec_clock::universal_time();
 	} else {
 		DVLOG(4) << prefix_ << "Not generating token for " << name << " as provider is muted.";
-		assert (nullptr == token);
+		assert (nullptr == *token);
 	}
 	return true;
 }
