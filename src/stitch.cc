@@ -50,6 +50,7 @@ static const char* kHiloFlexRecordName = "Hilo";
 /* Tcl exported API. */
 static const char* kBasicFunctionName = "hilo_query";
 static const char* kFeedLogFunctionName = "hilo_feedlog";
+static const char* kRepublishFunctionName = "hilo_republish";
 
 /* Default FlexRecord fields. */
 static const char* kDefaultBidField = "BidPrice";
@@ -230,7 +231,7 @@ hilo::stitch_t::init (
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
 		", instance: " << instance_ <<
-		", version: \"2.0.39\""
+		", version: \"2.1.40\""
 		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
@@ -370,6 +371,8 @@ hilo::stitch_t::init (
 	LOG(INFO) << "Registered Tcl API \"" << kBasicFunctionName << "\"";
 	registerCommand (getId(), kFeedLogFunctionName);
 	LOG(INFO) << "Registered Tcl API \"" << kFeedLogFunctionName << "\"";
+	registerCommand (getId(), kRepublishFunctionName);
+	LOG(INFO) << "Registered Tcl API \"" << kRepublishFunctionName << "\"";
 
 /* Timer for periodic publishing.
  */
@@ -460,6 +463,8 @@ hilo::stitch_t::destroy()
 {
 	LOG(INFO) << "Closing instance.";
 /* Unregister Tcl API. */
+	deregisterCommand (getId(), kRepublishFunctionName);
+	LOG(INFO) << "Unregistered Tcl API \"" << kRepublishFunctionName << "\"";
 	deregisterCommand (getId(), kFeedLogFunctionName);
 	LOG(INFO) << "Unregistered Tcl API \"" << kFeedLogFunctionName << "\"";
 	deregisterCommand (getId(), kBasicFunctionName);
@@ -519,6 +524,8 @@ hilo::stitch_t::execute (
 			retval = tclHiloQuery (cmdInfo, cmdData);
 		else if (0 == strcmp (command, kFeedLogFunctionName))
 			retval = tclFeedLogQuery (cmdInfo, cmdData);
+		else if (0 == strcmp (command, kRepublishFunctionName))
+			retval = tclRepublishQuery (cmdInfo, cmdData);
 		else
 			Tcl_SetResult (interp, "unknown function", TCL_STATIC);
 	}
@@ -834,12 +841,52 @@ hilo::stitch_t::tclFeedLogQuery (
 	return TCL_OK;
 }
 
+/* hilo_republish
+ */
+int
+hilo::stitch_t::tclRepublishQuery (
+	const vpf::CommandInfo& cmdInfo,
+	vpf::TCLCommandData& cmdData
+	)
+{
+	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
+	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
+/* Refresh already running.  Note locking is handled outside query to enable
+ * feedback to Tcl interface.
+ */
+	boost::unique_lock<boost::shared_mutex> lock (query_mutex_, boost::try_to_lock_t());
+	if (!lock.owns_lock()) {
+		Tcl_SetResult (interp, "query already running", TCL_STATIC);
+		return TCL_ERROR;
+	}
+
+	try {
+		sendRefresh();
+	} catch (rfa::common::InvalidUsageException& e) {
+		LOG(ERROR) << "InvalidUsageException: { "
+			"Severity: \"" << severity_string (e.getSeverity()) << "\""
+			", Classification: \"" << classification_string (e.getClassification()) << "\""
+			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+	}
+	return TCL_OK;
+}
+
+/* callback from periodic timer.
+ */
 void
 hilo::stitch_t::processTimer (
 	void*	pClosure
 	)
 {
 	cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED]++;
+
+/* Prevent overlapped queries. */
+	boost::unique_lock<boost::shared_mutex> lock (query_mutex_, boost::try_to_lock_t());
+	if (!lock.owns_lock()) {
+		LOG(WARNING) << "Periodic refresh aborted due to running query.";
+		return;
+	}
+
 	try {
 		sendRefresh();
 	} catch (rfa::common::InvalidUsageException& e) {

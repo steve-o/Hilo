@@ -52,6 +52,8 @@ add_definitions(
 	-D_WIN32_WINNT=0x0600
 # Net-SNMP Autoconf overrides
 	-DHAVE_STDINT_H
+# production release
+	-DOFFICIAL_BUILD
 )
 
 # SEH Exceptions
@@ -174,8 +176,8 @@ set (CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
 set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
 set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
 set (CPACK_PACKAGE_VERSION_MAJOR "2")
-set (CPACK_PACKAGE_VERSION_MINOR "0")
-set (CPACK_PACKAGE_VERSION_PATCH "39")
+set (CPACK_PACKAGE_VERSION_MINOR "1")
+set (CPACK_PACKAGE_VERSION_PATCH "40")
 include (CPack)
 
 # end of file

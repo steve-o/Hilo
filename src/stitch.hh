@@ -133,6 +133,7 @@ namespace hilo
 
 		int tclHiloQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 		int tclFeedLogQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int tclRepublishQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 
 		void get_last_reset_time (__time32_t& t);
 		void get_next_interval (FILETIME& ft);
@@ -187,6 +188,7 @@ namespace hilo
 /* Publish instruments. */
 		std::vector<std::shared_ptr<hilo_t>> query_vector_;
 		std::vector<std::shared_ptr<broadcast_stream_t>> stream_vector_;
+		boost::shared_mutex query_mutex_;
 
 /* Event pump and thread. */
 		std::unique_ptr<event_pump_t> event_pump_;

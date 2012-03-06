@@ -257,6 +257,12 @@ inline bool InitLogging(const char* log_file,
 	#define LOG_ASSERT(condition)  \
 		LOG_IF(FATAL, !(condition)) << "Assert failed: " #condition ". "
 
+#ifdef OFFICIAL_BUILD
+#	define LOGGING_IS_OFFICIAL_BUILD	1
+#else
+#	define LOGGING_IS_OFFICIAL_BUILD	0
+#endif
+
 /* The actual stream used isn't important. */
 	#define EAT_STREAM_PARAMETERS \
 		true ? (void) 0 : ::logging::LogMessageVoidify() & LOG_STREAM(FATAL)
