@@ -220,10 +220,10 @@ hilo::provider_t::getServiceInformation (
 /* Vendor<AsciiString> (optional)
  * Vendor whom provides the data.
  */
-//	element.setName (rfa::rdm::ENAME_VENDOR);
-//	dataBuffer.setFromString (vendorName, rfa::data::DataBuffer::StringAsciiEnum);
-//	element.setData (dataBuffer);
-//	it.bind (element);
+	element.setName (rfa::rdm::ENAME_VENDOR);
+	dataBuffer.setFromString (vendorName, rfa::data::DataBuffer::StringAsciiEnum);
+	element.setData (dataBuffer);
+	it.bind (element);
 	
 /* Capabilities<Array of UInt>
  * Array of valid MessageModelTypes that the service can provide. The UInt
@@ -246,6 +246,14 @@ hilo::provider_t::getServiceInformation (
 	getServiceDictionaries (array_);
 	element.setData (static_cast<const rfa::common::Data&>(array_));
 	it.bind (element);
+
+/* src_dist requires a QoS */
+#if 1
+	element.setName (rfa::rdm::ENAME_QOS);
+	getDirectoryQoS (array_);
+	element.setData (static_cast<const rfa::common::Data&>(array_));
+	it.bind (element);
+#endif
 
 	it.complete();
 }
@@ -295,6 +303,41 @@ hilo::provider_t::getServiceDictionaries (
 
 	it.complete();
 }
+
+void
+hilo::provider_t::getDirectoryQoS (
+	rfa::data::Array& qos
+	)
+{
+	rfa::data::ArrayWriteIterator it;
+	rfa::data::ArrayEntry arrayEntry;
+	rfa::data::DataBuffer dataBuffer;
+	rfa::common::QualityOfService QoS;
+	rfa::common::QualityOfServiceInfo QoSInfo;
+
+	it.start (qos);
+
+/** Primary service QoS **/
+
+/* Timeliness: age of data, either real-time, unspecified delayed timeliness,
+ * unspecified timeliness, or any positive number representing the actual
+ * delay in seconds.
+ */
+	QoS.setTimeliness (rfa::common::QualityOfService::realTime);
+/* Rate: minimum period of change in data, either tick-by-tick, just-in-time
+ * filtered rate, unspecified rate, or any positive number representing the
+ * actual rate in milliseconds.
+ */
+	QoS.setRate (rfa::common::QualityOfService::tickByTick);
+
+	QoSInfo.setQualityOfService (QoS);
+	dataBuffer.setQualityOfServiceInfo (QoSInfo);
+	arrayEntry.setData (dataBuffer);
+	it.bind (arrayEntry);
+
+	it.complete();
+}
+
 
 /* SERVICE_STATE_ID
  * State of a service.

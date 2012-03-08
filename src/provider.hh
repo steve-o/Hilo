@@ -67,6 +67,9 @@ namespace hilo
 		void getServiceInformation (rfa::data::ElementList& elementList);
 		void getServiceCapabilities (rfa::data::Array& capabilities);
 		void getServiceDictionaries (rfa::data::Array& dictionaries);
+#if 1
+		void getDirectoryQoS (rfa::data::Array& qos);
+#endif
 		void getServiceState (rfa::data::ElementList& elementList);
 
 		const config_t& config_;

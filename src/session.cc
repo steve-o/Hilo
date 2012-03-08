@@ -510,6 +510,7 @@ hilo::session_t::processLoginClosed (
 	)
 {
 	cumulative_stats_[SESSION_PC_MMT_LOGIN_CLOSED_RECEIVED]++;
+	LOG(INFO) << prefix_ << "Muting provider.";
 	is_muted_ = true;
 }
 
