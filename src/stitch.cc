@@ -17,6 +17,7 @@
 #include "error.hh"
 #include "rfa_logging.hh"
 #include "rfaostream.hh"
+#include "version.hh"
 
 /* RDM Usage Guide: Section 6.5: Enterprise Platform
  * For future compatibility, the DictionaryId should be set to 1 by providers.
@@ -231,7 +232,12 @@ hilo::stitch_t::init (
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
 		", instance: " << instance_ <<
-		", version: \"2.1.42\""
+		", version: \"" << version_major << '.' << version_minor << '.' << version_build << "\""
+		", build: { date: \"" << build_date << "\""
+			", time: \"" << build_time << "\""
+			", system: \"" << build_system << "\""
+			", machine: \"" << build_machine << "\""
+			" }"
 		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
