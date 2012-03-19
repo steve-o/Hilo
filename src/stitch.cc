@@ -231,7 +231,7 @@ hilo::stitch_t::init (
 	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
 		", instance: " << instance_ <<
-		", version: \"2.1.41\""
+		", version: \"2.1.42\""
 		" }";
 
 	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
@@ -362,9 +362,11 @@ hilo::stitch_t::init (
 		goto cleanup;
 
 /* Spawn SNMP implant. */
-	snmp_agent_.reset (new snmp_agent_t (*this));
-	if (!(bool)snmp_agent_)
-		goto cleanup;
+	if (config_.is_snmp_enabled) {
+		snmp_agent_.reset (new snmp_agent_t (*this));
+		if (!(bool)snmp_agent_)
+			goto cleanup;
+	}
 
 /* Register Tcl API. */
 	registerCommand (getId(), kBasicFunctionName);
@@ -660,7 +662,7 @@ public:
 		stream_ << std::setfill ('0')
 /* 1: timeStamp : t_string : server receipt time, fixed format: YYYYMMDDhhmmss.ttt, e.g. 20120114060928.227 */
 			<< std::setw (4) << 1900 + tm_time.tm_year
-			<< std::setw (2) << tm_time.tm_mon
+			<< std::setw (2) << 1 + tm_time.tm_mon
 			<< std::setw (2) << tm_time.tm_mday
 			<< std::setw (2) << tm_time.tm_hour
 			<< std::setw (2) << tm_time.tm_min
@@ -1297,7 +1299,7 @@ hilo::stitch_t::sendRefresh()
 			}
 /* LONGNEXTLR */
 			link_field.setFieldID (kRdmNextLinkId);
-			if ((j + 1) < chain_index_max) {
+			if (j < chain_index_max) {
 				std::ostringstream ss;
 				ss << (j + 1)
 				   << '#'
