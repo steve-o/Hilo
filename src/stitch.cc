@@ -11,6 +11,8 @@
 /* Boost Posix Time */
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 
+#include <tchar.h>
+
 #include "chromium/logging.hh"
 #include "get_hilo.hh"
 #include "snmp_agent.hh"
@@ -387,10 +389,7 @@ hilo::stitch_t::init (
 	FILETIME due_time;
 	get_next_interval (due_time);
 	const DWORD timer_period = std::stoul (config_.interval) * 1000;
-#if 1
-	SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
-	LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
-#else
+#if _WIN32_WINNT >= _WIN32_WINNT_WIN7
 /* requires Platform SDK 7.1 */
 	typedef BOOL (WINAPI *SetWaitableTimerExProc)(
 		__in  HANDLE hTimer,
@@ -402,23 +401,36 @@ hilo::stitch_t::init (
 		__in  ULONG TolerableDelay
 	);
 	SetWaitableTimerExProc pFnSetWaitableTimerEx = nullptr;
-	ULONG tolerance = std::stoul (config_.tolerable_delay);
-	REASON_CONTEXT reasonContext = {0};
-	reasonContext.Version = 0;
-	reasonContext.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
-	reasonContext.Reason.SimpleReasonString = L"HiloTimer";
 	HMODULE hKernel32Module = GetModuleHandle (_T("kernel32.dll"));
-	BOOL timer_status = false;
 	if (nullptr != hKernel32Module)
 		pFnSetWaitableTimerEx = (SetWaitableTimerExProc) ::GetProcAddress (hKernel32Module, "SetWaitableTimerEx");
-	if (nullptr != pFnSetWaitableTimerEx)
-		timer_status = pFnSetWaitableTimerEx (timer_.get(), &due_time, timer_period, nullptr, nullptr, &reasonContext, tolerance);
-	if (timer_status) {
-		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms, tolerance " << tolerance << "ms";
-	} else {
-		SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
-		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
+	if (nullptr != pFnSetWaitableTimerEx) {
+		LARGE_INTEGER DueTime;
+		DueTime.LowPart = due_time.dwLowDateTime;
+		DueTime.HighPart = due_time.dwHighDateTime;
+		REASON_CONTEXT reasonContext = {0};
+		reasonContext.Version = 0;
+		reasonContext.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
+		reasonContext.Reason.SimpleReasonString = L"HiloTimer";
+		ULONG tolerance = std::stoul (config_.tolerable_delay);
+		BOOL timer_status = pFnSetWaitableTimerEx (timer_.get(), &DueTime, timer_period, nullptr, nullptr, &reasonContext, tolerance);
+		if (timer_status) {
+			LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms, tolerance " << tolerance << "ms"
+				", due time " << boost::posix_time::to_simple_string (boost::posix_time::from_ftime<boost::posix_time::ptime>(due_time));
+		} else {
+			LOG(ERROR) << "SetWaitableTimerEx failed, reverting to SetThreadpoolTimer.";
+			pFnSetWaitableTimerEx = nullptr;
+		}
 	}
+	if (nullptr != pFnSetWaitableTimerEx) {
+		SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
+		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms"
+			", due time " << boost::posix_time::to_simple_string (boost::posix_time::from_ftime<boost::posix_time::ptime>(due_time));
+	}
+#else
+	SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
+	LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms"
+		", due time " << boost::posix_time::to_simple_string (boost::posix_time::from_ftime<boost::posix_time::ptime>(due_time));
 #endif	
 	LOG(INFO) << "Init complete, awaiting queries.";
 
@@ -1060,7 +1072,11 @@ hilo::stitch_t::sendRefresh()
 	rfa::data::FieldListWriteIterator it;
 	rfa::data::FieldEntry timeact_field (false), activ_date_field (false), price_field (false);
 	rfa::data::DataBuffer timeact_data (false), activ_date_data (false), price_data (false);
-	rfa::data::Real64 real64;
+#ifdef CONFIG_32BIT_PRICE
+	rfa::data::Real32 real_value;
+#else
+	rfa::data::Real64 real_value;
+#endif /* CONFIG_32BIT_PRICE */
 	rfa::data::Time rfaTime;
 	rfa::data::Date rfaDate;
 	struct tm _tm;
@@ -1076,8 +1092,12 @@ hilo::stitch_t::sendRefresh()
 	timeact_field.setData (timeact_data);
 
 /* HIGH_1, LOW_1 as PRICE field type */
-	real64.setMagnitudeType (rfa::data::ExponentNeg6);
-	price_data.setReal64 (real64);
+	real_value.setMagnitudeType (rfa::data::ExponentNeg6);
+#ifdef CONFIG_32BIT_PRICE
+	price_data.setReal32 (real_value);
+#else
+	price_data.setReal64 (real_value);
+#endif /* CONFIG_32BIT_PRICE */
 	price_field.setData (price_data);
 
 /* ACTIV_DATE */
@@ -1112,12 +1132,12 @@ hilo::stitch_t::sendRefresh()
 /* HIGH_1 */
 		price_field.setFieldID (kRdmTodaysHighId);
 		const int64_t high_mantissa = bnymellon_mantissa (stream->hilo->high);
-		real64.setValue (high_mantissa);		
+		real_value.setValue (high_mantissa);		
 		it.bind (price_field);
 /* LOW_1 */
 		price_field.setFieldID (kRdmTodaysLowId);
 		const int64_t low_mantissa = bnymellon_mantissa (stream->hilo->low);
-		real64.setValue (low_mantissa);
+		real_value.setValue (low_mantissa);
 		it.bind (price_field);
 /* ACTIV_DATE */
 		it.bind (activ_date_field);
@@ -1193,12 +1213,12 @@ hilo::stitch_t::sendRefresh()
 /* HIGH_1 */
 			price_field.setFieldID (kRdmTodaysHighId);
 			const int64_t high_mantissa = bnymellon_mantissa (stream->hilo->high);
-			real64.setValue (high_mantissa);		
+			real_value.setValue (high_mantissa);		
 			it.bind (price_field);
 /* LOW_1 */
 			price_field.setFieldID (kRdmTodaysLowId);
 			const int64_t low_mantissa = bnymellon_mantissa (stream->hilo->low);
-			real64.setValue (low_mantissa);
+			real_value.setValue (low_mantissa);
 			it.bind (price_field);
 /* ACTIV_DATE */
 			it.bind (activ_date_field);

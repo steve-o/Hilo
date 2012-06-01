@@ -7,7 +7,7 @@ cmake_minimum_required (VERSION 2.8)
 project (Hilo)
 
 set(HILO_VERSION_MAJOR 2)
-set(HILO_VERSION_MINOR 1)
+set(HILO_VERSION_MINOR 2)
 set(HILO_VERSION_BUILD 43)
 
 # Net-SNMP SDK installed, tested 5.7.1.
@@ -54,6 +54,19 @@ set(RFA_LIBRARIES
         RFA7_Connections_OMM100_x64.lib
         RFA7_SessionLayer100_x64.lib
 )
+set(rfa_runtime_libraries
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Common100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Config100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Logger100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Data100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Cons_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Prov_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections_OMM100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer_OMM100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
+)
 
 # Boost headers plus built libraries
 set(BOOST_ROOT C:/boost_1_48_0)
@@ -62,6 +75,9 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package (Boost 1.44 COMPONENTS thread REQUIRED)
 
 find_package(PythonInterp REQUIRED)
+
+option(CONFIG_32BIT_PRICE
+	"Publish 32-bit prices instead of 64-bit." OFF)
 
 #-----------------------------------------------------------------------------
 # force off-tree build
@@ -95,13 +111,19 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_definitions(
 	-DWIN32
 	-DWIN32_LEAN_AND_MEAN
-# Windows Server 2008 (not-R2)
-	-D_WIN32_WINNT=0x0600
+# Windows Server 2008 R2
+	-D_WIN32_WINNT=0x0601
 # Net-SNMP Autoconf overrides
 	-DHAVE_STDINT_H
 # production release
 	-DOFFICIAL_BUILD
 )
+
+if(CONFIG_32BIT_PRICE)
+	add_definitions(
+		-DCONFIG_32BIT_PRICE
+	)
+endif(CONFIG_32BIT_PRICE)
 
 # SEH Exceptions
 set(CMAKE_CXX_FLAGS "/EHa")
@@ -179,9 +201,14 @@ link_directories(
 #-----------------------------------------------------------------------------
 # output
 
-add_library(Hilo SHARED ${cxx-sources} ${rc-sources})
+if(CONFIG_32BIT_PRICE)
+	set(HILO_TARGET Hilo32)
+else(CONFIG_32BIT_PRICE)
+	set(HILO_TARGET Hilo)
+endif(CONFIG_32BIT_PRICE)
 
-target_link_libraries(Hilo
+add_library(${HILO_TARGET} SHARED ${cxx-sources} ${rc-sources})
+target_link_libraries(${HILO_TARGET}
 	${NETSNMP_LIBRARIES}
 	${VHAYU_LIBRARIES}
 	${RFA_LIBRARIES}
@@ -189,49 +216,41 @@ target_link_libraries(Hilo
 	ws2_32.lib
 	dbghelp.lib
 )
-
-set(rfa_runtime_libraries
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Common100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Config100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Logger100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Data100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Cons_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Prov_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections_OMM100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer_OMM100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
-)
+install (TARGETS ${HILO_TARGET} DESTINATION bin)
 
 set(config
-	${CMAKE_CURRENT_SOURCE_DIR}/config/HiloAndStitch.xml
-	${CMAKE_CURRENT_SOURCE_DIR}/config/create-symbol-list.pl
-	${CMAKE_CURRENT_SOURCE_DIR}/config/example.reg
+	${CMAKE_SOURCE_DIR}/config/HiloAndStitch.xml
+	${CMAKE_SOURCE_DIR}/config/create-symbol-list.pl
+	${CMAKE_SOURCE_DIR}/config/example.reg
 )
-file(GLOB mibs "${CMAKE_CURRENT_SOURCE_DIR}/mibs/*.txt")
-
-install (TARGETS Hilo DESTINATION bin)
+file(GLOB mibs "${CMAKE_SOURCE_DIR}/mibs/*.txt")
 install (FILES ${rfa_runtime_libraries} DESTINATION bin)
 install (FILES ${config} DESTINATION config)
 install (FILES ${mibs} DESTINATION mibs)
 
+include (InstallRequiredSystemLibraries)
+
 set (CPACK_SOURCE_IGNORE_FILES "*.lib")
 
-include (InstallRequiredSystemLibraries)
-set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+set (CPACK_INSTALL_CMAKE_PROJECTS
+	"${CMAKE_SOURCE_DIR}/build;Hilo;ALL;/"
+	"${CMAKE_SOURCE_DIR}/build32;Hilo;ALL;/"
+)
+
+set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Velocity Analytics FX High-Low plugin")
 set (CPACK_PACKAGE_VENDOR "Thomson Reuters")
 set (CPACK_NSIS_CONTACT "Steven McCoy <Steven.McCoy@thomsonreuters.com>")
 # There is a bug in NSI that does not handle full unix paths properly. Make
 # sure there is at least one set of four (4) backlasshes.
-set (CPACK_NSIS_MUI_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
-set (CPACK_NSIS_MUI_UNIICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\installer.ico")
-set (CPACK_PACKAGE_ICON "${CMAKE_CURRENT_SOURCE_DIR}\\\\branding.bmp")
+set (CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}\\\\installer.ico")
+set (CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}\\\\installer.ico")
+set (CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}\\\\branding.bmp")
 set (CPACK_NSIS_COMPRESSOR "/SOLID lzma")
 set (CPACK_PACKAGE_VERSION_MAJOR "${HILO_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${HILO_VERSION_MINOR}")
 set (CPACK_PACKAGE_VERSION_PATCH "${HILO_VERSION_BUILD}")
+
 include (CPack)
 
 # end of file
