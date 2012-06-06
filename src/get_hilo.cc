@@ -24,10 +24,16 @@ static const uint32_t kQuoteId = 40002;
  * caller must reset high, low, is_null values if clean query is required,
  * existing values can be used to extended a previous query.
  */
-#if 0
+
+namespace hilo {
+
+/* Reference implementation walking through each symbol.
+ */
+
+namespace reference {
 void
-hilo::get_hilo (
-	std::vector<std::shared_ptr<hilo::hilo_t>>& query,
+get_hilo (
+	std::vector<std::shared_ptr<hilo_t>>& query,
 	__time32_t	from,		/* legacy from before 2003, yay. */
 	__time32_t	till
 	)
@@ -79,7 +85,19 @@ hilo::get_hilo (
 /* does this analytic update the query state */
 		bool is_updated = false;
 
-		fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */);
+		try {
+			char error_text[1024];
+			const int cursor_status = fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */, error_text);
+			if (1 != cursor_status) {
+				LOG(ERROR) << "FlexRecReader::Open failed { \"code\": " << cursor_status
+					<< ", \"text\": \"" << error_text << "\" }";
+				return;
+			}
+		} catch (std::exception& e) {
+			LOG(ERROR) << "FlexRecReader::Open raised exception " << e.what();
+			return;
+		}
+
 		if (it->is_synthetic)
 		{
 		LOG(INFO) << it->name << " 1st: bid=" << it->legs.first.bid_field
@@ -207,41 +225,41 @@ LOG(INFO) << fr.GetCurrentSymbolName() << " bid " << bid_price << " alt-bid " <<
 
 	DLOG(INFO) << "get_hilo() finished.";
 }
-#else
 
-namespace hilo {
+} // namespace reference
 
-	class symbol_t : boost::noncopyable
+/* Single iterator implementation.
+ */
+namespace single_iterator {
+class symbol_t : boost::noncopyable
+{
+public:
+	symbol_t() :
+		is_null (true)
 	{
-	public:
-		symbol_t() :
-			is_null (true)
-		{
-		}
+	}
 
-		symbol_t (bool is_null_) :
-			is_null (is_null_)
-		{
-		}
+	symbol_t (bool is_null_) :
+		is_null (is_null_)
+	{
+	}
 
-		void set_last_value (size_t idx_, double value_) {
-			if (idx_ >= last_value.size())
-				last_value.resize (1 + idx_);
-			last_value[idx_] = value_;
-		}
+	void set_last_value (size_t idx_, double value_) {
+		if (idx_ >= last_value.size())
+			last_value.resize (1 + idx_);
+		last_value[idx_] = value_;
+	}
 
-		std::forward_list<std::shared_ptr<hilo_t>> non_synthetic_list;
+	std::forward_list<std::shared_ptr<hilo_t>> non_synthetic_list;
 /* synthetic members */
-		std::vector<double> last_value;
-		bool is_null;
-		std::list<std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>>> as_first_leg_list, as_second_leg_list;
-	};
-
-} /* namespace hilo */
+	std::vector<double> last_value;
+	bool is_null;
+	std::list<std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>>> as_first_leg_list, as_second_leg_list;
+};
 
 void
-hilo::get_hilo (
-	std::vector<std::shared_ptr<hilo::hilo_t>>& query,
+get_hilo (
+	std::vector<std::shared_ptr<hilo_t>>& query,
 	__time32_t	from,		/* legacy from before 2003, yay. */
 	__time32_t	till
 	)
@@ -383,7 +401,19 @@ hilo::get_hilo (
 	};
 
 /* run one single big query */
-	fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */);
+	try {
+		char error_text[1024];
+		const int cursor_status =fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */, error_text);
+		if (1 != cursor_status) {
+			LOG(ERROR) << "FlexRecReader::Open failed { \"code\": " << cursor_status
+				<< ", \"text\": \"" << error_text << "\" }";
+			return;
+		}
+	} catch (std::exception& e) {
+		LOG(ERROR) << "FlexRecReader::Open raised exception " << e.what();
+		return;
+	}
+
 	while (fr.Next()) {
 		auto symbol = symbol_map[fr.GetCurrentSymbolName()];
 /* non-synthetic */
@@ -429,6 +459,7 @@ hilo::get_hilo (
 
 	DLOG(INFO) << "get_hilo() finished.";
 }
-#endif
+} // namespace single_iterator
+} // namespace hilo
 
 /* eof */

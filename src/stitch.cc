@@ -643,7 +643,7 @@ hilo::stitch_t::tclHiloQuery (
 		}
 	}
 
-	get_hilo (query, startTime, endTime);
+	single_iterator::get_hilo (query, startTime, endTime);
 
 /* Convert STL container result set into a new Tcl list. */
 	Tcl_Obj* resultListPtr = Tcl_NewListObj (0, NULL);
@@ -828,7 +828,7 @@ hilo::stitch_t::tclFeedLogQuery (
 	while (++time_it <= end) {
 		__time32_t interval_end_time32 = (*time_it - ptime (kUnixEpoch)).total_seconds();
 
-		get_hilo (query, interval_start_time32, interval_end_time32);
+		single_iterator::get_hilo (query, interval_start_time32, interval_end_time32);
 		interval_start_time32 = interval_end_time32;
 		
 /* create flexrecord for each pair */
@@ -1029,7 +1029,7 @@ hilo::stitch_t::sendRefresh()
 	start_str[CTIME_LENGTH - 2] = end_str[CTIME_LENGTH - 2] = '\0';
 	LOG(INFO) << "refresh " << start_str << "-" << end_str;
 
-	get_hilo (query_vector_, start_time32, end_time32);
+	single_iterator::get_hilo (query_vector_, start_time32, end_time32);
 
 /* 7.5.9.1 Create a response message (4.2.2) */
 	rfa::message::RespMsg response (false);	/* reference */
@@ -1173,7 +1173,7 @@ hilo::stitch_t::sendRefresh()
 	{
 		__time32_t interval_end_time32 = (*time_it - ptime (kUnixEpoch)).total_seconds();
 
-		get_hilo (query_vector_, interval_start_time32, interval_end_time32);
+		single_iterator::get_hilo (query_vector_, interval_start_time32, interval_end_time32);
 		interval_start_time32 = interval_end_time32;
 		
 /* create flexrecord for each pair */

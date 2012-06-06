@@ -69,7 +69,12 @@ namespace hilo
 		bool is_synthetic;
 	};
 
-	void get_hilo (std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);
+	namespace reference {
+		void get_hilo (std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);
+	}
+	namespace single_iterator {
+		void get_hilo (std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);
+	}
 
 } /* namespace hilo */
 
