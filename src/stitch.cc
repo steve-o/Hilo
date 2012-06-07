@@ -78,8 +78,29 @@ round_half_up (double x)
 	return floor (x + 0.5);
 }
 
-/* mantissa of 10E6
+#ifdef CONFIG_32BIT_PRICE
+/* 32-bit: mantissa of 10E4, 4 decimal places
  */
+static const int kBnyMellonMagnitude = rfa::data::ExponentNeg4;
+
+static inline
+int32_t
+bnymellon_mantissa (double x)
+{
+	return (int32_t) round_half_up (x * 10000.0);
+}
+
+static inline
+double
+bnymellon_round (double x)
+{
+	return (double) bnymellon_mantissa (x) / 10000.0;
+}
+#else
+/* 64-bit: mantissa of 10E6, 6 decimal places
+ */
+static const int kBnyMellonMagnitude = rfa::data::ExponentNeg6;
+
 static inline
 int64_t
 bnymellon_mantissa (double x)
@@ -87,14 +108,13 @@ bnymellon_mantissa (double x)
 	return (int64_t) round_half_up (x * 1000000.0);
 }
 
-/* round a double value to 6 decimal places using round half up
- */
 static inline
 double
 bnymellon_round (double x)
 {
 	return (double) bnymellon_mantissa (x) / 1000000.0;
 }
+#endif
 
 static
 bool
@@ -422,7 +442,7 @@ hilo::stitch_t::init (
 			pFnSetWaitableTimerEx = nullptr;
 		}
 	}
-	if (nullptr != pFnSetWaitableTimerEx) {
+	if (nullptr == pFnSetWaitableTimerEx) {
 		SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
 		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms"
 			", due time " << boost::posix_time::to_simple_string (boost::posix_time::from_ftime<boost::posix_time::ptime>(due_time));
@@ -1092,7 +1112,7 @@ hilo::stitch_t::sendRefresh()
 	timeact_field.setData (timeact_data);
 
 /* HIGH_1, LOW_1 as PRICE field type */
-	real_value.setMagnitudeType (rfa::data::ExponentNeg6);
+	real_value.setMagnitudeType (kBnyMellonMagnitude);
 #ifdef CONFIG_32BIT_PRICE
 	price_data.setReal32 (real_value);
 #else
@@ -1131,12 +1151,12 @@ hilo::stitch_t::sendRefresh()
  */
 /* HIGH_1 */
 		price_field.setFieldID (kRdmTodaysHighId);
-		const int64_t high_mantissa = bnymellon_mantissa (stream->hilo->high);
+		const auto high_mantissa = bnymellon_mantissa (stream->hilo->high);
 		real_value.setValue (high_mantissa);		
 		it.bind (price_field);
 /* LOW_1 */
 		price_field.setFieldID (kRdmTodaysLowId);
-		const int64_t low_mantissa = bnymellon_mantissa (stream->hilo->low);
+		const auto low_mantissa = bnymellon_mantissa (stream->hilo->low);
 		real_value.setValue (low_mantissa);
 		it.bind (price_field);
 /* ACTIV_DATE */
@@ -1212,12 +1232,12 @@ hilo::stitch_t::sendRefresh()
  */
 /* HIGH_1 */
 			price_field.setFieldID (kRdmTodaysHighId);
-			const int64_t high_mantissa = bnymellon_mantissa (stream->hilo->high);
+			const auto high_mantissa = bnymellon_mantissa (stream->hilo->high);
 			real_value.setValue (high_mantissa);		
 			it.bind (price_field);
 /* LOW_1 */
 			price_field.setFieldID (kRdmTodaysLowId);
-			const int64_t low_mantissa = bnymellon_mantissa (stream->hilo->low);
+			const auto low_mantissa = bnymellon_mantissa (stream->hilo->low);
 			real_value.setValue (low_mantissa);
 			it.bind (price_field);
 /* ACTIV_DATE */
