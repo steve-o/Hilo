@@ -4,7 +4,6 @@
 
 #ifndef __STITCH_HH__
 #define __STITCH_HH__
-
 #pragma once
 
 #include <cstdint>
@@ -25,8 +24,7 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
-/* Microsoft wrappers */
-#include "microsoft/timer.hh"
+#include "chromium/logging.hh"
 
 #include "config.hh"
 #include "provider.hh"
@@ -98,7 +96,48 @@ namespace hilo
 		std::shared_ptr<rfa::common::EventQueue> event_queue_;
 	};
 
+/* Periodic timer event source */
+	class time_base_t
+	{
+	public:
+		virtual bool processTimer (boost::posix_time::ptime t) = 0;
+	};
+
+	class time_pump_t
+	{
+	public:
+		time_pump_t (boost::posix_time::ptime due_time, boost::posix_time::time_duration td, time_base_t* cb) :
+			due_time_ (due_time),
+			td_ (td),
+			cb_ (cb)
+		{
+			CHECK(nullptr != cb_);
+			if (due_time_.is_not_a_date_time())
+				due_time_ = boost::get_system_time() + td_;
+		}
+
+		void operator()()
+		{
+			try {
+				while (true) {
+					boost::this_thread::sleep (due_time_);
+					if (!cb_->processTimer (due_time_))
+						break;
+					due_time_ += td_;
+				}
+			} catch (boost::thread_interrupted const&) {
+				LOG(INFO) << "Timer thread interrupted.";
+			}
+		}
+
+	private:
+		boost::system_time due_time_;
+		boost::posix_time::time_duration td_;
+		time_base_t* cb_;
+	};
+
 	class stitch_t :
+		public time_base_t,
 		public vpf::AbstractUserPlugin,
 		public vpf::Command,
 		boost::noncopyable
@@ -108,19 +147,19 @@ namespace hilo
 		virtual ~stitch_t();
 
 /* Plugin entry point. */
-		virtual void init (const vpf::UserPluginConfig& config_);
+		virtual void init (const vpf::UserPluginConfig& config_) override;
 
 /* Reset state suitable for recalling init(). */
 		void clear();
 
 /* Plugin termination point. */
-		virtual void destroy();
+		virtual void destroy() override;
 
 /* Tcl entry point. */
-		virtual int execute (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		virtual int execute (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData) override;
 
 /* Configured period timer entry point. */
-		void processTimer (void* closure);
+		bool processTimer (boost::posix_time::ptime t) override;
 
 /* Global list of all plugin instances.  AE owns pointer. */
 		static std::list<stitch_t*> global_list_;
@@ -135,9 +174,9 @@ namespace hilo
 		int tclFeedLogQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 		int tclRepublishQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 
-		void get_last_reset_time (__time32_t& t);
-		void get_next_interval (FILETIME& ft);
-		void get_end_of_last_interval (__time32_t& t);
+		bool get_last_reset_time (__time32_t* t);
+		bool get_next_interval (boost::posix_time::ptime* t);
+		bool get_end_of_last_interval (__time32_t* t);
 
 /* Broadcast out message. */
 		bool sendRefresh() throw (rfa::common::InvalidUsageException);
@@ -192,13 +231,14 @@ namespace hilo
 
 /* Event pump and thread. */
 		std::unique_ptr<event_pump_t> event_pump_;
-		std::unique_ptr<boost::thread> thread_;
+		std::unique_ptr<boost::thread> event_thread_;
 
 /* Publish fields. */
 		rfa::data::FieldList fields_;
 
-/* Threadpool timer. */
-		ms::timer timer_;
+/* Thread timer. */
+		std::unique_ptr<time_pump_t> timer_;
+		std::unique_ptr<boost::thread> timer_thread_;
 
 /** Performance Counters. **/
 		boost::posix_time::ptime last_activity_;

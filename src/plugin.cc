@@ -4,6 +4,8 @@
 /* VA leaks a dependency upon _MAX_PATH */
 #include <cstdlib>
 
+#include <winsock2.h>
+
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 

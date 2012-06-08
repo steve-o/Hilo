@@ -11,9 +11,11 @@
 /* Boost Posix Time */
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 
+#include <windows.h>
 #include <tchar.h>
 
 #include "chromium/logging.hh"
+#include "microsoft/unique_handle.hh"
 #include "get_hilo.hh"
 #include "snmp_agent.hh"
 #include "error.hh"
@@ -196,18 +198,6 @@ parseRule (
 	return true;
 }
 
-static
-void
-on_timer (
-	PTP_CALLBACK_INSTANCE Instance,
-	PVOID Context,
-	PTP_TIMER Timer
-	)
-{
-	hilo::stitch_t* stitch = static_cast<hilo::stitch_t*>(Context);
-	stitch->processTimer (nullptr);
-}
-
 hilo::stitch_t::stitch_t() :
 	is_shutdown_ (false),
 	last_activity_ (boost::posix_time::microsec_clock::universal_time()),
@@ -359,11 +349,6 @@ hilo::stitch_t::init (
 			stream_vector_.push_back (std::move (stream));
 		}
 
-/* Microsoft threadpool timer. */
-		timer_.reset (CreateThreadpoolTimer (static_cast<PTP_TIMER_CALLBACK>(on_timer), this /* closure */, nullptr /* env */));
-		if (!(bool)timer_)
-			goto cleanup;
-
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
 			"Severity: \"" << severity_string (e.getSeverity()) << "\""
@@ -382,12 +367,16 @@ hilo::stitch_t::init (
 
 /* No main loop inside this thread, must spawn new thread for message pump. */
 	event_pump_.reset (new event_pump_t (event_queue_));
-	if (!(bool)event_pump_)
+	if (!(bool)event_pump_) {
+		LOG(ERROR) << "Cannot create event pump.";
 		goto cleanup;
+	}
 
-	thread_.reset (new boost::thread (*event_pump_.get()));
-	if (!(bool)thread_)
+	event_thread_.reset (new boost::thread (*event_pump_.get()));
+	if (!(bool)event_thread_) {
+		LOG(ERROR) << "Cannot spawn event thread.";
 		goto cleanup;
+	}
 
 /* Spawn SNMP implant. */
 	if (config_.is_snmp_enabled) {
@@ -404,56 +393,33 @@ hilo::stitch_t::init (
 	registerCommand (getId(), kRepublishFunctionName);
 	LOG(INFO) << "Registered Tcl API \"" << kRepublishFunctionName << "\"";
 
+{
 /* Timer for periodic publishing.
  */
-	FILETIME due_time;
-	get_next_interval (due_time);
-	const DWORD timer_period = std::stoul (config_.interval) * 1000;
-#if _WIN32_WINNT >= _WIN32_WINNT_WIN7
-/* requires Platform SDK 7.1 */
-	typedef BOOL (WINAPI *SetWaitableTimerExProc)(
-		__in  HANDLE hTimer,
-		__in  const LARGE_INTEGER *lpDueTime,
-		__in  LONG lPeriod,
-		__in  PTIMERAPCROUTINE pfnCompletionRoutine,
-		__in  LPVOID lpArgToCompletionRoutine,
-		__in  PREASON_CONTEXT WakeContext,
-		__in  ULONG TolerableDelay
-	);
-	SetWaitableTimerExProc pFnSetWaitableTimerEx = nullptr;
-	HMODULE hKernel32Module = GetModuleHandle (_T("kernel32.dll"));
-	if (nullptr != hKernel32Module)
-		pFnSetWaitableTimerEx = (SetWaitableTimerExProc) ::GetProcAddress (hKernel32Module, "SetWaitableTimerEx");
-	if (nullptr != pFnSetWaitableTimerEx) {
-		LARGE_INTEGER DueTime;
-		DueTime.LowPart = due_time.dwLowDateTime;
-		DueTime.HighPart = due_time.dwHighDateTime;
-		REASON_CONTEXT reasonContext = {0};
-		reasonContext.Version = 0;
-		reasonContext.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
-		reasonContext.Reason.SimpleReasonString = L"HiloTimer";
-		ULONG tolerance = std::stoul (config_.tolerable_delay);
-		BOOL timer_status = pFnSetWaitableTimerEx (timer_.get(), &DueTime, timer_period, nullptr, nullptr, &reasonContext, tolerance);
-		if (timer_status) {
-			LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms, tolerance " << tolerance << "ms"
-				", due time " << boost::posix_time::to_simple_string (boost::posix_time::from_ftime<boost::posix_time::ptime>(due_time));
-		} else {
-			LOG(ERROR) << "SetWaitableTimerEx failed, reverting to SetThreadpoolTimer.";
-			pFnSetWaitableTimerEx = nullptr;
-		}
-	}
-	if (nullptr == pFnSetWaitableTimerEx) {
-		SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
-		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms"
-			", due time " << boost::posix_time::to_simple_string (boost::posix_time::from_ftime<boost::posix_time::ptime>(due_time));
-	}
-#else
-	SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
-	LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms"
-		", due time " << boost::posix_time::to_simple_string (boost::posix_time::from_ftime<boost::posix_time::ptime>(due_time));
-#endif	
-	LOG(INFO) << "Init complete, awaiting queries.";
+	using namespace boost;
+	using namespace posix_time;
 
+	ptime due_time;
+	if (!get_next_interval (&due_time)) {
+		LOG(ERROR) << "Cannot calculate next interval.";
+		goto cleanup;
+	}
+	const time_duration td = seconds (std::stoul (config_.interval));
+	timer_.reset (new time_pump_t (due_time, td, this));
+	if (!(bool)timer_) {
+		LOG(ERROR) << "Cannot create time pump.";
+		goto cleanup;
+	}
+	timer_thread_.reset (new boost::thread (*timer_.get()));
+	if (!(bool)timer_thread_) {
+		LOG(ERROR) << "Cannot spawn timer thread.";
+		goto cleanup;
+	}
+	LOG(INFO) << "Added periodic timer, interval " << to_simple_string (td)
+			<< ", due time " << to_simple_string (due_time);
+}
+
+	LOG(INFO) << "Init complete, awaiting queries.";
 	return;
 cleanup:
 	LOG(INFO) << "Init failed, cleaning up.";
@@ -466,8 +432,11 @@ void
 hilo::stitch_t::clear()
 {
 /* Stop generating new events. */
-	if (timer_)
-		SetThreadpoolTimer (timer_.get(), nullptr, 0, 0);
+	if (timer_thread_) {
+		timer_thread_->interrupt();
+		timer_thread_->join();
+	}	
+	timer_thread_.reset();
 	timer_.reset();
 
 /* Close SNMP agent. */
@@ -477,11 +446,11 @@ hilo::stitch_t::clear()
 	if ((bool)event_queue_)
 		event_queue_->deactivate();
 /* Drain and close event queue. */
-	if ((bool)thread_)
-		thread_->join();
+	if ((bool)event_thread_)
+		event_thread_->join();
 
 /* Release everything with an RFA dependency. */
-	thread_.reset();
+	event_thread_.reset();
 	event_pump_.reset();
 	stream_vector_.clear();
 	query_vector_.clear();
@@ -913,18 +882,29 @@ hilo::stitch_t::tclRepublishQuery (
 
 /* callback from periodic timer.
  */
-void
+bool
 hilo::stitch_t::processTimer (
-	void*	pClosure
+	boost::posix_time::ptime t
 	)
 {
+/* calculate timer accuracy, typically 15-1ms with default timer resolution.
+ */
+	if (DLOG_IS_ON(INFO)) {
+		const boost::posix_time::ptime now (boost::posix_time::microsec_clock::universal_time());
+		const auto ms = (now - t).total_milliseconds();
+		if (0 == ms)
+			LOG(INFO) << "delta " << (now - t).total_microseconds() << "us";
+		else
+			LOG(INFO) << "delta " << ms << "ms";
+	}
+
 	cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED]++;
 
 /* Prevent overlapped queries. */
 	boost::unique_lock<boost::shared_mutex> lock (query_mutex_, boost::try_to_lock_t());
 	if (!lock.owns_lock()) {
 		LOG(WARNING) << "Periodic refresh aborted due to running query.";
-		return;
+		return true;
 	}
 
 	try {
@@ -935,13 +915,14 @@ hilo::stitch_t::processTimer (
 			", Classification: \"" << classification_string (e.getClassification()) << "\""
 			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
 	}
+	return true;
 }
 
 /* calculate the last reset time.
  */
-void
+bool
 hilo::stitch_t::get_last_reset_time (
-	__time32_t&	t
+	__time32_t*	t
 	)
 {
 	using namespace boost::posix_time;
@@ -956,17 +937,19 @@ hilo::stitch_t::get_last_reset_time (
 	if ((reset_tod + seconds (interval_seconds)) > now_tod)
 		reset_ptime -= boost::gregorian::days (1);
 
-	t = (reset_ptime - ptime (kUnixEpoch)).total_seconds();
+	*t = (reset_ptime - ptime (kUnixEpoch)).total_seconds();
+	return true;
 }
 
 /* Calculate start of next interval.
  */
-void
+bool
 hilo::stitch_t::get_next_interval (
-	FILETIME&	ft
+	boost::posix_time::ptime* t
 	)
 {
 	using namespace boost::posix_time;
+
 	const time_duration reset_tod = duration_from_string (config_.reset_time);
 	const int interval_seconds = std::stoi (config_.interval);
 	const ptime now_ptime (second_clock::universal_time());
@@ -986,26 +969,16 @@ hilo::stitch_t::get_next_interval (
 /* increment to next period */
 	const ptime next_ptime = end_ptime + seconds (interval_seconds);
 
-/* shift is difference between 1970-Jan-01 & 1601-Jan-01 in 100-nanosecond intervals.
- */
-	const uint64_t shift = 116444736000000000ULL; // (27111902 << 32) + 3577643008
-
-	union {
-		FILETIME as_file_time;
-		uint64_t as_integer; // 100-nanos since 1601-Jan-01
-	} caster;
-	caster.as_integer = (next_ptime - ptime (kUnixEpoch)).total_microseconds() * 10; // upconvert to 100-nanos
-	caster.as_integer += shift; // now 100-nanos since 1601-Jan-01
-
-	ft = caster.as_file_time;
+	*t = next_ptime;
+	return true;
 }
 
 /* Calculate the __time32_t of the end of the last interval, specified in
  * seconds.
  */
-void
+bool
 hilo::stitch_t::get_end_of_last_interval (
-	__time32_t&	t
+	__time32_t*	t
 	)
 {
 	using namespace boost::posix_time;
@@ -1025,7 +998,8 @@ hilo::stitch_t::get_end_of_last_interval (
 /* round down to multiple of interval */
 	const ptime end_ptime = reset_ptime + seconds ((offset.total_seconds() / interval_seconds) * interval_seconds);
 
-	t = (end_ptime - ptime (kUnixEpoch)).total_seconds();
+	*t = (end_ptime - ptime (kUnixEpoch)).total_seconds();
+	return true;
 }
 
 /* http://msdn.microsoft.com/en-us/library/4ey61ayt.aspx */
@@ -1040,8 +1014,8 @@ hilo::stitch_t::sendRefresh()
 
 /* Calculate time boundary for query */
 	__time32_t start_time32, end_time32;
-	get_last_reset_time (start_time32);
-	get_end_of_last_interval (end_time32);
+	get_last_reset_time (&start_time32);
+	get_end_of_last_interval (&end_time32);
 
 	char start_str[CTIME_LENGTH], end_str[CTIME_LENGTH];
 	_ctime32_s (start_str, _countof (start_str), &start_time32);
