@@ -71,12 +71,6 @@ namespace hilo
 		std::unordered_map<std::string, std::shared_ptr<item_stream_t>> chain;
 	};
 
-	struct flex_filter_t
-	{
-		double bid_price;
-		double ask_price;
-	};
-
 	class event_pump_t
 	{
 	public:
@@ -167,6 +161,11 @@ namespace hilo
 
 	private:
 
+		bool parseRule (const std::string& str, hilo::hilo_t& rule);
+
+		bool register_tcl_api (const char* id);
+		bool unregister_tcl_api (const char* id);
+
 /* Run core event loop. */
 		void mainLoop();
 
@@ -176,6 +175,7 @@ namespace hilo
 
 		bool get_last_reset_time (__time32_t* t);
 		bool get_next_interval (boost::posix_time::ptime* t);
+		bool get_start_of_last_interval (__time32_t* t);
 		bool get_end_of_last_interval (__time32_t* t);
 
 /* Broadcast out message. */

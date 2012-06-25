@@ -6,9 +6,9 @@ cmake_minimum_required (VERSION 2.8)
 
 project (Hilo)
 
-set(HILO_VERSION_MAJOR 2)
-set(HILO_VERSION_MINOR 2)
-set(HILO_VERSION_BUILD 47)
+set(HILO_VERSION_MAJOR 3)
+set(HILO_VERSION_MINOR 0)
+set(HILO_VERSION_BUILD 48)
 
 # Net-SNMP SDK installed, tested 5.7.1.
 set(NETSNMP_ROOT C:/usr)
@@ -39,7 +39,7 @@ set(VHAYU_LIBRARIES
 )
 
 # Thomson Reuters Robust Foundation API
-set(RFA_ROOT C:/rfa7.2.0.L1.win-shared.rrg)
+set(RFA_ROOT D:/rfa7.2.0.L1.win-shared.rrg)
 set(RFA_INCLUDE_DIRS
 	${RFA_ROOT}/Include
 	${RFA_ROOT}/Include/rwf
@@ -69,7 +69,7 @@ set(rfa_runtime_libraries
 )
 
 # Boost headers plus built libraries
-set(BOOST_ROOT C:/boost_1_48_0)
+set(BOOST_ROOT d:/boost_1_48_0)
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
 find_package (Boost 1.44 COMPONENTS thread REQUIRED)
@@ -159,6 +159,7 @@ set(cxx-sources
 	src/snmp_agent.cc
 	src/stitch.cc
 	src/stitchMIB.cc
+	src/tcl.cc
 	src/chromium/chromium_switches.cc
 	src/chromium/command_line.cc
 	src/chromium/debug/stack_trace.cc

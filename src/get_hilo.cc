@@ -100,11 +100,11 @@ get_hilo (
 
 		if (it->is_synthetic)
 		{
-		LOG(INFO) << it->name << " 1st: bid=" << it->legs.first.bid_field
-				      <<      " ask=" << it->legs.first.ask_field
-				      << " 2nd: bid=" << it->legs.second.bid_field
-				      <<      " ask=" << it->legs.second.ask_field;
-
+			DLOG(INFO) << it->name 
+				<< " 1st: bid=" << it->legs.first.bid_field
+				<<      " ask=" << it->legs.first.ask_field
+				<< " 2nd: bid=" << it->legs.second.bid_field
+				<<      " ask=" << it->legs.second.ask_field;
 
 			double first_leg_bid_price  = it->legs.first.last_bid,
 			       first_leg_ask_price  = it->legs.first.last_ask,
@@ -130,15 +130,15 @@ get_hilo (
 						second_leg_ask_price = have_alt_ask_price ? alt_ask_price : ask_price;
 						it->low  = math_func (first_leg_bid_price, second_leg_bid_price);
 						it->high = math_func (first_leg_ask_price, second_leg_ask_price);
-						LOG(INFO) << it->name << " start low=" << it->low << " high=" << it->high;
-LOG(INFO) << fr.GetCurrentSymbolName() << " bid " << bid_price << " alt-bid " << alt_bid_price << " ask " << ask_price << " alt-ask " << alt_ask_price;
+						DLOG(INFO) << it->name << " start low=" << it->low << " high=" << it->high;
+						DLOG(INFO) << fr.GetCurrentSymbolName() << " bid " << bid_price << " alt-bid " << alt_bid_price << " ask " << ask_price << " alt-ask " << alt_ask_price;
 					}
 				}
 				else
 				{
 					it->legs.second.is_null = false;
 					do {
-LOG(INFO) << fr.GetCurrentSymbolName() << " bid " << bid_price << " alt-bid " << alt_bid_price << " ask " << ask_price << " alt-ask " << alt_ask_price;
+						DLOG(INFO) << fr.GetCurrentSymbolName() << " bid " << bid_price << " alt-bid " << alt_bid_price << " ask " << ask_price << " alt-ask " << alt_ask_price;
 						second_leg_bid_price = have_alt_bid_price ? alt_bid_price : bid_price;
 						second_leg_ask_price = have_alt_ask_price ? alt_ask_price : ask_price;
 					} while (fr.Next() && fr.GetCurrentSymbolName() == it->legs.second.symbol_name);
@@ -149,7 +149,7 @@ LOG(INFO) << fr.GetCurrentSymbolName() << " bid " << bid_price << " alt-bid " <<
 						first_leg_ask_price = ask_price;
 						it->low  = math_func (first_leg_bid_price, second_leg_bid_price);
 						it->high = math_func (first_leg_ask_price, second_leg_ask_price);
-						LOG(INFO) << it->name << " start low=" << it->low << " high=" << it->high;
+						DLOG(INFO) << it->name << " start low=" << it->low << " high=" << it->high;
 					}
 				}
 			}
@@ -400,7 +400,10 @@ get_hilo (
 		}
 	};
 
-/* run one single big query */
+/* run one single big query:
+ *
+ * HUGE WARNING: if the first symbol has no trades then the cursor will not open.
+ */
 	try {
 		char error_text[1024];
 		const int cursor_status =fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */, error_text);

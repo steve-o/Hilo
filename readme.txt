@@ -1,0 +1,1 @@
+Banky of New York Mellon FX high & low calculator plugin.

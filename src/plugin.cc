@@ -5,6 +5,9 @@
 #include <cstdlib>
 
 #include <winsock2.h>
+#include <mmsystem.h>
+
+#pragma comment (lib, "winmm")
 
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
@@ -80,14 +83,43 @@ namespace
 		}
 	};
 
+	class timecaps_t
+	{
+		UINT wTimerRes;
+	public:
+		timecaps_t (unsigned resolution_ms) :
+			wTimerRes (0)
+		{
+			TIMECAPS tc;
+			if (MMSYSERR_NOERROR == timeGetDevCaps (&tc, sizeof (TIMECAPS))) {
+				wTimerRes = min (max (tc.wPeriodMin, resolution_ms), tc.wPeriodMax);
+				if (TIMERR_NOCANDO == timeBeginPeriod (wTimerRes)) {
+					LOG(WARNING) << "Minimum timer resolution " << wTimerRes << "ms is out of range.";
+					wTimerRes = 0;
+				}
+			} else {
+				LOG(WARNING) << "Failed to query timer device resolution.";
+			}
+		}
+
+		~timecaps_t()
+		{
+			if (wTimerRes > 0)
+				timeEndPeriod (wTimerRes);
+		}
+	};
+
 	class factory_t : public vpf::ObjectFactory
 	{
 		env_t env;
 		winsock_t winsock;
+		timecaps_t timecaps_;
+
 	public:
 		factory_t() :
 			env ("TR_DEBUG"),
-			winsock (2, 2)
+			winsock (2, 2),
+			timecaps_ (1 /* ms */)
 		{
 			registerType (kPluginType);
 		}
@@ -97,7 +129,7 @@ namespace
 		virtual void* newInstance (const char* type)
 		{
 			assert (0 == strcmp (kPluginType, type));
-			return new hilo::stitch_t();
+			return static_cast<vpf::AbstractUserPlugin*> (new hilo::stitch_t());
 		}
 	};
 
