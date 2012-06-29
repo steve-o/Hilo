@@ -386,17 +386,17 @@ get_hilo (
 			query_item.is_null = false;
 			query_item.low  = synthetic_bid_price;
 			query_item.high = synthetic_ask_price;
-			DLOG(INFO) << "Start low=" << synthetic_bid_price << " high=" << synthetic_ask_price;
+			DLOG(INFO) << query_item.name << "start low=" << synthetic_bid_price << " high=" << synthetic_ask_price;
 			return;
 		}
 
 		if (synthetic_bid_price < query_item.low) {
 			query_item.low  = synthetic_bid_price;
-			DLOG(INFO) << "New low=" << query_item.low;
+			DLOG(INFO) << query_item.name << "new low=" << query_item.low;
 		}
 		if (synthetic_ask_price > query_item.high) {
 			query_item.high = synthetic_ask_price;
-			DLOG(INFO) << "New high=" << query_item.high;
+			DLOG(INFO) << query_item.name << "new high=" << query_item.high;
 		}
 	};
 

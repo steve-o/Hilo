@@ -345,7 +345,7 @@ inline bool InitLogging(const char* log_file,
 /* Otherwise, if we're a release build, remove DLOGs but not DCHECKs
  * (since those can still be turned on via a command-line flag).
  */
-	#	define ENABLE_DLOG 0
+	#	define ENABLE_DLOG 1
 	#	define ENABLE_DCHECK 1
 
 	#else

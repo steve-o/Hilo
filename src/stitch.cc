@@ -198,14 +198,16 @@ hilo::stitch_t::init (
 /* Save copies of provided identifiers. */
 	plugin_id_.assign (vpf_config.getPluginId());
 	plugin_type_.assign (vpf_config.getPluginType());
-	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
-		", pluginId: \"" << plugin_id_ << "\""
-		", instance: " << instance_ <<
-		", version: \"" << version_major << '.' << version_minor << '.' << version_build << "\""
-		", build: { date: \"" << build_date << "\""
-			", time: \"" << build_time << "\""
-			", system: \"" << build_system << "\""
-			", machine: \"" << build_machine << "\""
+	LOG(INFO) << "{ "
+		  "\"pluginType\": \"" << plugin_type_ << "\""
+		", \"pluginId\": \"" << plugin_id_ << "\""
+		", \"instance\": " << instance_ <<
+		", \"version\": \"" << version_major << '.' << version_minor << '.' << version_build << "\""
+		", \"build\": { "
+			  "\"date\": \"" << build_date << "\""
+			", \"time\": \"" << build_time << "\""
+			", \"system\": \"" << build_system << "\""
+			", \"machine\": \"" << build_machine << "\""
 			" }"
 		" }";
 
@@ -308,17 +310,17 @@ hilo::stitch_t::init (
 
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			"Severity: \"" << severity_string (e.getSeverity()) << "\""
-			", Classification: \"" << classification_string (e.getClassification()) << "\""
-			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 		goto cleanup;
 	} catch (rfa::common::InvalidConfigurationException& e) {
 		LOG(ERROR) << "InvalidConfigurationException: { "
-			"Severity: \"" << severity_string (e.getSeverity()) << "\""
-			", Classification: \"" << classification_string (e.getClassification()) << "\""
-			", StatusText: \"" << e.getStatus().getStatusText() << "\""
-			", ParameterName: \"" << e.getParameterName() << "\""
-			", ParameterValue: \"" << e.getParameterValue() << "\" }";
+			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+			", \"ParameterName\": \"" << e.getParameterName() << "\""
+			", \"ParameterValue\": \"" << e.getParameterValue() << "\" }";
 		goto cleanup;
 	}
 
@@ -428,8 +430,8 @@ hilo::stitch_t::destroy()
 	unregister_tcl_api (getId());
 	clear();
 	LOG(INFO) << "Runtime summary: {"
-		    " tclQueryReceived: " << cumulative_stats_[STITCH_PC_TCL_QUERY_RECEIVED] <<
-		   ", timerQueryReceived: " << cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED] <<
+		    " \"tclQueryReceived\": " << cumulative_stats_[STITCH_PC_TCL_QUERY_RECEIVED] <<
+		   ", \"timerQueryReceived\": " << cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED] <<
 		" }";
 	LOG(INFO) << "Instance closed.";
 	vpf::AbstractUserPlugin::destroy();
@@ -466,9 +468,9 @@ hilo::stitch_t::processTimer (
 		sendRefresh();
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			"Severity: \"" << severity_string (e.getSeverity()) << "\""
-			", Classification: \"" << classification_string (e.getClassification()) << "\""
-			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 	}
 	return true;
 }
@@ -603,7 +605,7 @@ hilo::stitch_t::sendRefresh()
 	});
 
 	DLOG(INFO) << "get_hilo /" << to_simple_string (ptime (kUnixEpoch, seconds (from))) << "/ /" << to_simple_string (ptime (kUnixEpoch, seconds (till))) << "/";
-	reference::get_hilo (query_vector_, from, till);
+	single_iterator::get_hilo (query_vector_, from, till);
 
 /* 7.5.9.1 Create a response message (4.2.2) */
 	rfa::message::RespMsg response (false);	/* reference */
@@ -725,13 +727,13 @@ hilo::stitch_t::sendRefresh()
 		RFA_String warningText;
 		const uint8_t validation_status = response.validateMsg (&warningText);
 		if (rfa::message::MsgValidationWarning == validation_status) {
-			LOG(ERROR) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+			LOG(ERROR) << "respMsg::validateMsg: { \"warningText\": \"" << warningText << "\" }";
 		} else {
 			assert (rfa::message::MsgValidationOk == validation_status);
 		}
 #endif
 		provider_->send (*stream.get(), static_cast<rfa::common::Msg&> (response));
-		DLOG(INFO) << stream->rfa_name << " high=" << stream->hilo->high << " low=" << stream->hilo->low;
+		VLOG(1) << stream->rfa_name << " hi:" << stream->hilo->high << " lo:" << stream->hilo->low;
 	});
 
 /* create time period for bar and shift x-minutes for the specified range */
@@ -753,7 +755,7 @@ hilo::stitch_t::sendRefresh()
 		});
 
 		DLOG(INFO) << "get_hilo /" << to_simple_string (ptime (kUnixEpoch, seconds (from))) << "/ /" << to_simple_string (ptime (kUnixEpoch, seconds (till))) << "/";
-		reference::get_hilo (query_vector_, from, till);
+		single_iterator::get_hilo (query_vector_, from, till);
 		
 /* create flexrecord for each pair */
 		std::ostringstream ss;
@@ -810,14 +812,14 @@ hilo::stitch_t::sendRefresh()
 			RFA_String warningText;
 			const uint8_t validation_status = response.validateMsg (&warningText);
 			if (rfa::message::MsgValidationWarning == validation_status) {
-				LOG(ERROR) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+				LOG(ERROR) << "respMsg::validateMsg: { \"warningText\": \"" << warningText << "\" }";
 			} else {
 				assert (rfa::message::MsgValidationOk == validation_status);
 			}
 #endif
 			const std::string key (rfa_name.c_str());
 			provider_->send (*stream->historical[key].get(), static_cast<rfa::common::Msg&> (response));
-			DLOG(INFO) << rfa_name << " high=" << stream->hilo->high << " low=" << stream->hilo->low;
+			DVLOG(1) << rfa_name << " hi:" << stream->hilo->high << " lo:" << stream->hilo->low;
 
 /* do not reset analytic result set so next query extends previous result set */
 

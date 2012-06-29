@@ -219,7 +219,7 @@ hilo::stitch_t::tclHiloQuery (
 		}
 	}
 
-	reference::get_hilo (query, startTime, endTime);
+	single_iterator::get_hilo (query, startTime, endTime);
 
 /* Convert STL container result set into a new Tcl list. */
 	Tcl_Obj* resultListPtr = Tcl_NewListObj (0, NULL);
@@ -413,7 +413,7 @@ hilo::stitch_t::tclFeedLogQuery (
 			hilo->clear();
 		});
 
-		reference::get_hilo (query, from, till);
+		single_iterator::get_hilo (query, from, till);
 		
 /* create flexrecord for each pair */
 		std::for_each (query.begin(), query.end(),

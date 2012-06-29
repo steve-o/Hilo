@@ -8,7 +8,7 @@ project (Hilo)
 
 set(HILO_VERSION_MAJOR 3)
 set(HILO_VERSION_MINOR 0)
-set(HILO_VERSION_BUILD 48)
+set(HILO_VERSION_BUILD 49)
 
 # Net-SNMP SDK installed, tested 5.7.1.
 set(NETSNMP_ROOT C:/usr)
@@ -69,7 +69,7 @@ set(rfa_runtime_libraries
 )
 
 # Boost headers plus built libraries
-set(BOOST_ROOT d:/boost_1_48_0)
+set(BOOST_ROOT d:/boost_1_50_0)
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
 find_package (Boost 1.44 COMPONENTS thread REQUIRED)
