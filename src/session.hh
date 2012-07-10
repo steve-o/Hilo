@@ -3,7 +3,6 @@
 
 #ifndef __SESSION_HH__
 #define __SESSION_HH__
-
 #pragma once
 
 #include <cstdint>
@@ -16,7 +15,7 @@
 #include <boost/utility.hpp>
 
 /* RFA 7.2 */
-#include <rfa.hh>
+#include <rfa/rfa.hh>
 
 #include "rfa.hh"
 #include "config.hh"

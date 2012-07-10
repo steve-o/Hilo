@@ -3,7 +3,6 @@
 
 #ifndef __GET_HILO_HH__
 #define __GET_HILO_HH__
-
 #pragma once
 
 #include <unordered_map>

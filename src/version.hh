@@ -3,7 +3,6 @@
 
 #ifndef __HILO_VERSION_HH__
 #define __HILO_VERSION_HH__
-
 #pragma once
 
 namespace hilo

@@ -5,7 +5,6 @@
 
 #ifndef __CONFIG_HH__
 #define __CONFIG_HH__
-
 #pragma once
 
 #include <string>

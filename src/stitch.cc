@@ -9,7 +9,7 @@
 #include <inttypes.h>
 
 /* Boost Posix Time */
-#include "boost/date_time/gregorian/gregorian_types.hpp"
+#include <boost/date_time/gregorian/gregorian_types.hpp>
 
 #include <windows.h>
 #include <tchar.h>

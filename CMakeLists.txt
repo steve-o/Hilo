@@ -2,13 +2,13 @@
 # x64 Windows Server-only
 # 2011/12/21 -- Steven.McCoy@thomsonreuters.com
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 2.8.8)
 
 project (Hilo)
 
 set(HILO_VERSION_MAJOR 3)
 set(HILO_VERSION_MINOR 0)
-set(HILO_VERSION_BUILD 49)
+set(HILO_VERSION_BUILD 50)
 
 # Net-SNMP SDK installed, tested 5.7.1.
 set(NETSNMP_ROOT C:/usr)
@@ -39,7 +39,7 @@ set(VHAYU_LIBRARIES
 )
 
 # Thomson Reuters Robust Foundation API
-set(RFA_ROOT D:/rfa7.2.0.L1.win-shared.rrg)
+set(RFA_ROOT D:/rfa7.2.1.L1.win-shared.rrg)
 set(RFA_INCLUDE_DIRS
 	${RFA_ROOT}/Include
 	${RFA_ROOT}/Include/rwf
@@ -72,7 +72,7 @@ set(rfa_runtime_libraries
 set(BOOST_ROOT d:/boost_1_50_0)
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
-find_package (Boost 1.44 COMPONENTS thread REQUIRED)
+find_package (Boost 1.50 COMPONENTS thread REQUIRED)
 
 find_package(PythonInterp REQUIRED)
 
@@ -115,6 +115,8 @@ add_definitions(
 	-D_WIN32_WINNT=0x0601
 # Net-SNMP Autoconf overrides
 	-DHAVE_STDINT_H
+# RFA version
+        -DRFA_LIBRARY_VERSION="7.2.1."
 # production release
 	-DOFFICIAL_BUILD
 )
