@@ -5,6 +5,8 @@
 #define __RFA_HH__
 #pragma once
 
+#include <memory>
+
 /* Boost noncopyable base class */
 #include <boost/utility.hpp>
 
@@ -25,6 +27,7 @@ namespace hilo
 		~rfa_t();
 
 		bool init() throw (rfa::common::InvalidUsageException);
+		bool VerifyVersion();
 
 	private:
 

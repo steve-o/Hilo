@@ -136,10 +136,10 @@ namespace hilo
 	inline
 	std::ostream& operator<< (std::ostream& o, const session_config_t& session) {
 		o << "{ "
-			  "session_name: \"" << session.session_name << "\""
-			", connection_name: \"" << session.connection_name << "\""
-			", publisher_name: \"" << session.publisher_name << "\""
-			", rssl_servers: [ ";
+			  "\"session_name\": \"" << session.session_name << "\""
+			", \"connection_name\": \"" << session.connection_name << "\""
+			", \"publisher_name\": \"" << session.publisher_name << "\""
+			", \"rssl_servers\": [ ";
 		for (auto it = session.rssl_servers.begin();
 			it != session.rssl_servers.end();
 			++it)
@@ -149,11 +149,11 @@ namespace hilo
 			o << '"' << *it << '"';
 		}
 		o << " ]"
-			", rssl_default_port: \"" << session.rssl_default_port << "\""
-			", application_id: \"" << session.application_id << "\""
-			", instance_id: \"" << session.instance_id << "\""
-			", user_name: \"" << session.user_name << "\""
-			", position: \"" << session.position << "\""
+			", \"rssl_default_port\": \"" << session.rssl_default_port << "\""
+			", \"application_id\": \"" << session.application_id << "\""
+			", \"instance_id\": \"" << session.instance_id << "\""
+			", \"user_name\": \"" << session.user_name << "\""
+			", \"position\": \"" << session.position << "\""
 			" }";
 		return o;
 	}
@@ -161,12 +161,12 @@ namespace hilo
 	inline
 	std::ostream& operator<< (std::ostream& o, const config_t& config) {
 		o << "config_t: { "
-			  "is_snmp_enabled: \"" << config.is_snmp_enabled << "\""
-			", is_agentx_subagent: \"" << config.is_agentx_subagent << "\""
-			", agentx_socket: \"" << config.agentx_socket << "\""
-			", key: \"" << config.key << "\""
-			", service_name: \"" << config.service_name << "\""
-			", sessions: [";
+			  "\"is_snmp_enabled\": " << (0 == config.is_snmp_enabled ? "false" : "true") << ""
+			", \"is_agentx_subagent\": " << (0 == config.is_agentx_subagent ? "false" : "true") << ""
+			", \"agentx_socket\": \"" << config.agentx_socket << "\""
+			", \"key\": \"" << config.key << "\""
+			", \"service_name:\" \"" << config.service_name << "\""
+			", \"sessions\": [";
 		for (auto it = config.sessions.begin();
 			it != config.sessions.end();
 			++it)
@@ -176,14 +176,14 @@ namespace hilo
 			o << *it;
 		}
 		o << " ]"
-			", monitor_name: \"" << config.monitor_name << "\""
-			", event_queue_name: \"" << config.event_queue_name << "\""
-			", vendor_name: \"" << config.vendor_name << "\""
-			", interval: \"" << config.interval << "\""
-			", tolerable_delay: \"" << config.tolerable_delay << "\""
-			", reset_time: \"" << config.reset_time << "\""
-			", suffix: \"" << config.suffix << "\""
-			", rules: [ ";
+			", \"monitor_name\": \"" << config.monitor_name << "\""
+			", \"event_queue_name\": \"" << config.event_queue_name << "\""
+			", \"vendor_name\": \"" << config.vendor_name << "\""
+			", \"interval\": \"" << config.interval << "\""
+			", \"tolerable_delay\": \"" << config.tolerable_delay << "\""
+			", \"reset_time\": \"" << config.reset_time << "\""
+			", \"suffix\": \"" << config.suffix << "\""
+			", \"rules\": [ ";
 		for (auto it = config.rules.begin();
 			it != config.rules.end();
 			++it)

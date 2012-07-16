@@ -646,43 +646,37 @@ hilo::stitch_t::sendRefresh()
 
 /* DataBuffer based fields must be pre-encoded and post-bound. */
 	rfa::data::FieldListWriteIterator it;
-	rfa::data::FieldEntry timeact_field (false), activ_date_field (false), price_field (false);
-	rfa::data::DataBuffer timeact_data (false), activ_date_data (false), price_data (false);
+	rfa::data::FieldEntry field (false);
+	rfa::data::DataBuffer data (false);
 #ifdef CONFIG_32BIT_PRICE
 	rfa::data::Real32 real_value;
+	auto SetReal = [](rfa::data::DataBuffer* data, const rfa::data::Real32& value) {
+		data->setReal32 (value);
+	};
 #else
 	rfa::data::Real64 real_value;
+	auto SetReal = [](rfa::data::DataBuffer* data, const rfa::data::Real64& value) {
+		data->setReal64 (value);
+	};
 #endif /* CONFIG_32BIT_PRICE */
 	rfa::data::Time rfaTime;
 	rfa::data::Date rfaDate;
 	struct tm _tm;
 
 /* TIMEACT */
-	timeact_field.setFieldID (kRdmTimeOfUpdateId);
 	_gmtime32_s (&_tm, &till);
 	rfaTime.setHour   (_tm.tm_hour);
 	rfaTime.setMinute (_tm.tm_min);
 	rfaTime.setSecond (_tm.tm_sec);
 	rfaTime.setMillisecond (0);
-	timeact_data.setTime (rfaTime);
-	timeact_field.setData (timeact_data);
 
 /* HIGH_1, LOW_1 as PRICE field type */
 	real_value.setMagnitudeType (bnymellon::kMagnitude);
-#ifdef CONFIG_32BIT_PRICE
-	price_data.setReal32 (real_value);
-#else
-	price_data.setReal64 (real_value);
-#endif /* CONFIG_32BIT_PRICE */
-	price_field.setData (price_data);
 
 /* ACTIV_DATE */
-	activ_date_field.setFieldID (kRdmActiveDateId);
 	rfaDate.setDay   (/* rfa(1-31) */ _tm.tm_mday        /* tm(1-31) */);
 	rfaDate.setMonth (/* rfa(1-12) */ 1 + _tm.tm_mon     /* tm(0-11) */);
 	rfaDate.setYear  (/* rfa(yyyy) */ 1900 + _tm.tm_year /* tm(yyyy-1900 */);
-	activ_date_data.setDate (rfaDate);
-	activ_date_field.setData (activ_date_data);
 
 	rfa::common::RespStatus status;
 /* Item interaction state: Open, Closed, ClosedRecover, Redirected, NonStreaming, or Unspecified. */
@@ -698,24 +692,29 @@ hilo::stitch_t::sendRefresh()
 		attribInfo.setName (stream->rfa_name);
 		it.start (fields_);
 /* TIMACT */
-		it.bind (timeact_field);
+		field.setFieldID (kRdmTimeOfUpdateId);
+		data.setTime (rfaTime);
+		field.setData (data), it.bind (field);
 
 /* PRICE field is a rfa::Real64 value specified as <mantissa> × 10?.
  * Rfa deprecates setting via <double> data types so we create a mantissa from
  * source value and consider that we publish to 6 decimal places.
  */
 /* HIGH_1 */
-		price_field.setFieldID (kRdmTodaysHighId);
-		const auto high_mantissa = bnymellon::mantissa (stream->hilo->high);
-		real_value.setValue (high_mantissa);		
-		it.bind (price_field);
+		field.setFieldID (kRdmTodaysHighId);
+		real_value.setValue (bnymellon::mantissa (stream->hilo->high));
+		SetReal (&data, real_value);
+		field.setData (data), it.bind (field);
 /* LOW_1 */
-		price_field.setFieldID (kRdmTodaysLowId);
-		const auto low_mantissa = bnymellon::mantissa (stream->hilo->low);
-		real_value.setValue (low_mantissa);
-		it.bind (price_field);
+		field.setFieldID (kRdmTodaysLowId);
+		real_value.setValue (bnymellon::mantissa (stream->hilo->low));
+		SetReal (&data, real_value);
+		field.setData (data), it.bind (field);
 /* ACTIV_DATE */
-		it.bind (activ_date_field);
+		field.setFieldID (kRdmActiveDateId);
+		data.setDate (rfaDate);
+		field.setData (data), it.bind (field);
+
 		it.complete();
 		response.setPayload (fields_);
 
@@ -783,24 +782,29 @@ hilo::stitch_t::sendRefresh()
 			attribInfo.setName (rfa_name);
 			it.start (fields_);
 /* TIMACT */
-			it.bind (timeact_field);
+			field.setFieldID (kRdmTimeOfUpdateId);
+			data.setTime (rfaTime);
+			field.setData (data), it.bind (field);
 
 /* PRICE field is a rfa::Real64 value specified as <mantissa> × 10?.
  * Rfa deprecates setting via <double> data types so we create a mantissa from
  * source value and consider that we publish to 6 decimal places.
  */
 /* HIGH_1 */
-			price_field.setFieldID (kRdmTodaysHighId);
-			const auto high_mantissa = bnymellon::mantissa (stream->hilo->high);
-			real_value.setValue (high_mantissa);		
-			it.bind (price_field);
+			field.setFieldID (kRdmTodaysHighId);
+			real_value.setValue (bnymellon::mantissa (stream->hilo->high));
+			SetReal (&data, real_value);
+			field.setData (data), it.bind (field);
 /* LOW_1 */
-			price_field.setFieldID (kRdmTodaysLowId);
-			const auto low_mantissa = bnymellon::mantissa (stream->hilo->low);
-			real_value.setValue (low_mantissa);
-			it.bind (price_field);
+			field.setFieldID (kRdmTodaysLowId);
+			real_value.setValue (bnymellon::mantissa (stream->hilo->low));
+			SetReal (&data, real_value);
+			field.setData (data), it.bind (field);
 /* ACTIV_DATE */
-			it.bind (activ_date_field);
+			field.setFieldID (kRdmActiveDateId);
+			data.setDate (rfaDate);
+			field.setData (data), it.bind (field);
+
 			it.complete();
 			response.setPayload (fields_);
 
@@ -842,17 +846,9 @@ hilo::stitch_t::sendRefresh()
 		   << std::setw (2) << time_it->time_of_day().minutes();
 		link_times.push_back (ss.str());
 	}
-
 	assert (link_times.size() > 0);
 
-	rfa::data::FieldEntry ref_count_field (false), link_field (false);
-	rfa::data::DataBuffer ref_count_data (false), link_data (false);
 	const size_t chain_index_max = link_times.size() / _countof (kRdmLinkId);
-
-	ref_count_field.setFieldID (kRdmReferenceCountId);
-	ref_count_field.setData (ref_count_data);
-	link_field.setData (link_data);
-
 	std::for_each (stream_vector_.begin(), stream_vector_.end(), [&](std::shared_ptr<broadcast_stream_t>& stream)
 	{
 /* e.g. 0#.DJI .. 3#.DJI */
@@ -869,55 +865,56 @@ hilo::stitch_t::sendRefresh()
 			it.start (fields_);
 
 /* REF_COUNT */
+			field.setFieldID (kRdmReferenceCountId);
 			const uint32_t ref_count = min (_countof (kRdmLinkId), (uint32_t)(link_times.size() - i));
-			ref_count_data.setUInt32 (ref_count);
-			it.bind (ref_count_field);
+			data.setUInt32 (ref_count);
+			field.setData (data), it.bind (field);
 /* LONGLINKx */
 			for (unsigned k = 0;
 			     k < _countof (kRdmLinkId);
 			     k++, i++)
 			{
-				link_field.setFieldID (kRdmLinkId[k]);
+				field.setFieldID (kRdmLinkId[k]);
 				if (i < link_times.size()) {
 					RFA_String link_name (stream->rfa_name);
 					link_name.append (link_times[i].c_str());
-					link_data.setFromString (link_name, rfa::data::DataBuffer::StringRMTESEnum);
-					it.bind (link_field);
+					data.setFromString (link_name, rfa::data::DataBuffer::StringRMTESEnum);
+					field.setData (data), it.bind (field);
 				} else {
-					RFA_String null ("", 0, false);
-					link_data.setFromString (null, rfa::data::DataBuffer::StringRMTESEnum);
-					it.bind (link_field);
-				}
+					RFA_String empty_string ("", 0, false);
+					data.setFromString (empty_string, rfa::data::DataBuffer::StringRMTESEnum);
+					field.setData (data), it.bind (field);
+				}				
 			} 
 /* LONGPREVLR */
-			link_field.setFieldID (kRdmPreviousLinkId);
+			field.setFieldID (kRdmPreviousLinkId);
 			if (j > 0) {
 				std::ostringstream ss;
 				ss << (j - 1)
 				   << '#'
 				   << stream->rfa_name.c_str();
 				RFA_String previous_name (ss.str().c_str(), (int)ss.str().length(), true);
-				link_data.setFromString (previous_name, rfa::data::DataBuffer::StringRMTESEnum);
-				it.bind (link_field);
+				data.setFromString (previous_name, rfa::data::DataBuffer::StringRMTESEnum);
+				field.setData (data), it.bind (field);
 			} else {
-				RFA_String null ("", 0, false);
-				link_data.setFromString (null, rfa::data::DataBuffer::StringRMTESEnum);
-				it.bind (link_field);
+				RFA_String empty_string ("", 0, false);
+				data.setFromString (empty_string, rfa::data::DataBuffer::StringRMTESEnum);
+				field.setData (data), it.bind (field);
 			}
 /* LONGNEXTLR */
-			link_field.setFieldID (kRdmNextLinkId);
+			field.setFieldID (kRdmNextLinkId);
 			if (j < chain_index_max) {
 				std::ostringstream ss;
 				ss << (j + 1)
 				   << '#'
 				   << stream->rfa_name.c_str();
 				RFA_String next_name (ss.str().c_str(), (int)ss.str().length(), true);
-				link_data.setFromString (next_name, rfa::data::DataBuffer::StringRMTESEnum);
-				it.bind (link_field);
+				data.setFromString (next_name, rfa::data::DataBuffer::StringRMTESEnum);
+				field.setData (data), it.bind (field);
 			} else {
-				RFA_String null ("", 0, false);
-				link_data.setFromString (null, rfa::data::DataBuffer::StringRMTESEnum);
-				it.bind (link_field);
+				RFA_String empty_string ("", 0, false);
+				data.setFromString (empty_string, rfa::data::DataBuffer::StringRMTESEnum);
+				field.setData (data), it.bind (field);
 			}
 
 			it.complete();
@@ -931,7 +928,7 @@ hilo::stitch_t::sendRefresh()
 			RFA_String warningText;
 			const uint8_t validation_status = response.validateMsg (&warningText);
 			if (rfa::message::MsgValidationWarning == validation_status) {
-				LOG(ERROR) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+				LOG(ERROR) << "respMsg::validateMsg: { \"warningText\": \"" << warningText << "\" }";
 			} else {
 				assert (rfa::message::MsgValidationOk == validation_status);
 			}

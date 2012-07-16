@@ -470,9 +470,9 @@ hilo::stitch_t::tclRepublishQuery (
 		sendRefresh();
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			"Severity: \"" << severity_string (e.getSeverity()) << "\""
-			", Classification: \"" << classification_string (e.getClassification()) << "\""
-			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 	}
 	return TCL_OK;
 }

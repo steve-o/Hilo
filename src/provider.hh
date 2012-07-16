@@ -66,12 +66,15 @@ namespace hilo
 		void getServiceInformation (rfa::data::ElementList& elementList);
 		void getServiceCapabilities (rfa::data::Array& capabilities);
 		void getServiceDictionaries (rfa::data::Array& dictionaries);
-#if 1
+#ifndef SRC_DIST_REQUIRES_QOS_FIXED
 		void getDirectoryQoS (rfa::data::Array& qos);
 #endif
 		void getServiceState (rfa::data::ElementList& elementList);
 
 		const config_t& config_;
+
+/* Copy of RFA context */
+		std::shared_ptr<rfa_t> rfa_;
 
 /* Reuters Wire Format versions. */
 		uint8_t min_rwf_major_version_;

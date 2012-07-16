@@ -63,8 +63,16 @@ hilo::session_t::init()
 	VLOG(3) << prefix_<< "Acquiring RFA session.";
 	const RFA_String sessionName (config_.session_name.c_str(), 0, false);
 	session_.reset (rfa::sessionLayer::Session::acquire (sessionName));
-	if (!(bool)session_)
-		return false;
+	return (bool)session_;
+}
+
+/* Once RFA version is acquired and determined to be compatible initialisation
+ * of the RFA session can continue.
+ */
+bool
+hilo::session_t::createOMMProvider()
+{
+	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 
 /* 7.5.6 Initializing an OMM Non-Interactive Provider. */
 	VLOG(3) << prefix_<< "Creating OMM provider.";
@@ -151,8 +159,9 @@ hilo::session_t::sendLoginRequest()
 	RFA_String warningText;
 	const uint8_t validation_status = request.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
-		LOG(WARNING) << prefix_ << "MMT_LOGIN::validateMsg: { warningText: \"" << warningText << "\" }";
-		cumulative_stats_[SESSION_PC_MMT_LOGIN_MALFORMED]++;
+		LOG(WARNING) << prefix_ << "MMT_LOGIN::validateMsg: { "
+			"\"warningText\": \"" << warningText << "\""
+			" }";		cumulative_stats_[SESSION_PC_MMT_LOGIN_MALFORMED]++;
 	} else {
 		assert (rfa::message::MsgValidationOk == validation_status);
 		cumulative_stats_[SESSION_PC_MMT_LOGIN_VALIDATED]++;
@@ -182,16 +191,20 @@ hilo::session_t::sendLoginRequest()
 	if (provider_.min_rwf_major_version_ == 0 &&
 	    provider_.min_rwf_minor_version_ == 0)
 	{
-		LOG(INFO) << prefix_ << "RWF: { MajorVersion: " << (unsigned)rwf_major_version_ <<
-					     ", MinorVersion: " << (unsigned)rwf_minor_version_ << " }";
+		LOG(INFO) << prefix_ << "RWF: { "
+					  "\"MajorVersion\": " << (unsigned)rwf_major_version_ <<
+					", \"MinorVersion\": " << (unsigned)rwf_minor_version_ <<
+					" }";
 		provider_.min_rwf_major_version_ = rwf_major_version_;
 		provider_.min_rwf_minor_version_ = rwf_minor_version_;
 	}
 	if (((provider_.min_rwf_major_version_ == rwf_major_version_ && provider_.min_rwf_minor_version_ > rwf_minor_version_) ||
 	     (provider_.min_rwf_major_version_ > rwf_major_version_)))
 	{
-		LOG(INFO) << prefix_ << "Degrading RWF: { MajorVersion: " << (unsigned)rwf_major_version_ <<
-						       ", MinorVersion: " << (unsigned)rwf_minor_version_ << " }";
+		LOG(INFO) << prefix_ << "Degrading RWF: { "
+					  "\"MajorVersion\": " << (unsigned)rwf_major_version_ <<
+					", \"MinorVersion\": " << (unsigned)rwf_minor_version_ <<
+					" }";
 		provider_.min_rwf_major_version_ = rwf_major_version_;
 		provider_.min_rwf_minor_version_ = rwf_minor_version_;
 	}
@@ -371,7 +384,9 @@ hilo::session_t::processLoginSuccess (
 
 /* ignore any error */
 	} catch (rfa::common::InvalidUsageException& e) {
-		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::InvalidUsageException: { StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::InvalidUsageException: { "
+					"\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+					" }";
 /* cannot publish until directory is sent. */
 		return;
 	}
@@ -450,7 +465,9 @@ hilo::session_t::sendDirectoryResponse()
 	uint8_t validation_status = response.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_VALIDATED]++;
-		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::validateMsg: { warningText: \"" << warningText << "\" }";
+		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::validateMsg: { "
+					"\"warningText\": \"" << warningText << "\""
+					" }";
 	} else {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_MALFORMED]++;
 		assert (rfa::message::MsgValidationOk == validation_status);
@@ -527,10 +544,11 @@ hilo::session_t::processOMMCmdErrorEvent (
 {
 	cumulative_stats_[SESSION_PC_OMM_CMD_ERRORS]++;
 	LOG(ERROR) << prefix_ << "OMMCmdErrorEvent: { "
-		"CmdId: " << error.getCmdID() <<
-		", State: " << error.getStatus().getState() <<
-		", StatusCode: " << error.getStatus().getStatusCode() <<
-		", StatusText: \"" << error.getStatus().getStatusText() << "\" }";
+		  "\"CmdId\": " << error.getCmdID() <<
+		", \"State\": " << error.getStatus().getState() <<
+		", \"StatusCode\": " << error.getStatus().getStatusCode() <<
+		", \"StatusText\": \"" << error.getStatus().getStatusText() << "\""
+		" }";
 }
 
 /* eof */
