@@ -12,6 +12,7 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
+#include "chromium/chromium_switches.hh"
 #include "chromium/command_line.hh"
 #include "chromium/logging.hh"
 #include "stitch.hh"
@@ -38,20 +39,41 @@ namespace
 				command_line.append (buffer);
 				free (buffer);
 			}
+			std::string log_path = GetLogFileName();
 /* update command line */
 			CommandLine::ForCurrentProcess()->ParseFromString (command_line);
 /* forward onto logging */
 			logging::InitLogging(
-				"/Hilo.log",
-#if 0
-				logging::LOG_ONLY_TO_FILE,
-#else
-				logging::LOG_ONLY_TO_VHAYU_LOG,
-#endif
+				
+				log_path.c_str(),
+				DetermineLogMode (*CommandLine::ForCurrentProcess()),
 				logging::DONT_LOCK_LOG_FILE,
 				logging::APPEND_TO_OLD_LOG_FILE,
 				logging::ENABLE_DCHECK_FOR_NON_OFFICIAL_RELEASE_BUILDS
 				);
+		}
+
+	protected:
+		std::string GetLogFileName() {
+			const std::string log_filename ("/Hilo.log");
+			return log_filename;
+		}
+
+		logging::LoggingDestination DetermineLogMode (const CommandLine& command_line) {
+#ifdef NDEBUG
+			const logging::LoggingDestination kDefaultLoggingMode = logging::LOG_ONLY_TO_VHAYU_LOG;
+#else
+			const logging::LoggingDestination kDefaultLoggingMode = logging::LOG_ONLY_TO_FILE;
+#endif
+
+			logging::LoggingDestination log_mode;
+// Let --enable-logging=both force Vhayu and file logging, particularly useful for
+// non-debug builds where otherwise you can't get logs on fault at all.
+			if (command_line.GetSwitchValueASCII (switches::kEnableLogging) == "both")
+				log_mode = logging::LOG_TO_BOTH_FILE_AND_VHAYU_LOG;
+			else
+				log_mode = kDefaultLoggingMode;
+			return log_mode;
 		}
 	};
 

@@ -8,7 +8,7 @@ project (Hilo)
 
 set(HILO_VERSION_MAJOR 3)
 set(HILO_VERSION_MINOR 0)
-set(HILO_VERSION_BUILD 52)
+set(HILO_VERSION_BUILD 53)
 
 # Net-SNMP SDK installed, tested 5.7.1.
 set(NETSNMP_ROOT C:/usr)
