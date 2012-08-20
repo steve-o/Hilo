@@ -14,7 +14,7 @@
 using rfa::common::RFA_String;
 
 hilo::session_t::session_t (
-	hilo::provider_t& provider,
+	std::shared_ptr<hilo::provider_t> provider,
 	const unsigned instance_id,
 	const hilo::session_config_t& config,
 	std::shared_ptr<hilo::rfa_t> rfa,
@@ -54,7 +54,7 @@ hilo::session_t::~session_t()
 }
 	
 bool
-hilo::session_t::init()
+hilo::session_t::Init()
 {
 	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 
@@ -70,7 +70,7 @@ hilo::session_t::init()
  * of the RFA session can continue.
  */
 bool
-hilo::session_t::createOMMProvider()
+hilo::session_t::CreateOMMProvider()
 {
 	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 
@@ -89,7 +89,7 @@ hilo::session_t::createOMMProvider()
 	if (nullptr == error_item_handle_)
 		return false;
 
-	return sendLoginRequest();
+	return SendLoginRequest();
 }
 
 /* 7.3.5.3 Making a Login Request	
@@ -97,7 +97,7 @@ hilo::session_t::createOMMProvider()
  * interactive provider applications.
  */
 bool
-hilo::session_t::sendLoginRequest()
+hilo::session_t::SendLoginRequest()
 {
 	VLOG(2) << prefix_<< "Sending login request.";
 	rfa::message::ReqMsg request;
@@ -188,31 +188,31 @@ hilo::session_t::sendLoginRequest()
 	rwf_major_version_ = map.getMajorVersion();
 	rwf_minor_version_ = map.getMinorVersion();
 /* First session. */
-	if (provider_.min_rwf_major_version_ == 0 &&
-	    provider_.min_rwf_minor_version_ == 0)
+	if (provider_->min_rwf_major_version_ == 0 &&
+	    provider_->min_rwf_minor_version_ == 0)
 	{
 		LOG(INFO) << prefix_ << "RWF: { "
-					  "\"MajorVersion\": " << (unsigned)rwf_major_version_ <<
-					", \"MinorVersion\": " << (unsigned)rwf_minor_version_ <<
+					  "\"MajorVersion\": " << (unsigned)GetRwfMajorVersion() <<
+					", \"MinorVersion\": " << (unsigned)GetRwfMinorVersion() <<
 					" }";
-		provider_.min_rwf_major_version_ = rwf_major_version_;
-		provider_.min_rwf_minor_version_ = rwf_minor_version_;
+		provider_->min_rwf_major_version_ = rwf_major_version_;
+		provider_->min_rwf_minor_version_ = rwf_minor_version_;
 	}
-	if (((provider_.min_rwf_major_version_ == rwf_major_version_ && provider_.min_rwf_minor_version_ > rwf_minor_version_) ||
-	     (provider_.min_rwf_major_version_ > rwf_major_version_)))
+	if (((provider_->min_rwf_major_version_ == rwf_major_version_ && provider_->min_rwf_minor_version_ > rwf_minor_version_) ||
+	     (provider_->min_rwf_major_version_ > rwf_major_version_)))
 	{
 		LOG(INFO) << prefix_ << "Degrading RWF: { "
-					  "\"MajorVersion\": " << (unsigned)rwf_major_version_ <<
-					", \"MinorVersion\": " << (unsigned)rwf_minor_version_ <<
+					  "\"MajorVersion\": " << (unsigned)GetRwfMajorVersion() <<
+					", \"MinorVersion\": " << (unsigned)GetRwfMinorVersion() <<
 					" }";
-		provider_.min_rwf_major_version_ = rwf_major_version_;
-		provider_.min_rwf_minor_version_ = rwf_minor_version_;
+		provider_->min_rwf_major_version_ = rwf_major_version_;
+		provider_->min_rwf_minor_version_ = rwf_minor_version_;
 	}
 	return true;
 }
 
 bool
-hilo::session_t::createItemStream (
+hilo::session_t::CreateItemStream (
 	const char* name,
 	rfa::sessionLayer::ItemToken** token
 	)
@@ -237,29 +237,29 @@ hilo::session_t::createItemStream (
  * The Cmd may be created on the heap or the stack.
  */
 uint32_t
-hilo::session_t::send (
-	rfa::common::Msg& msg,
-	rfa::sessionLayer::ItemToken& token,
+hilo::session_t::Send (
+	rfa::message::RespMsg*const msg,
+	rfa::sessionLayer::ItemToken*const token,
 	void* closure
 	)
 {
 	if (is_muted_)
 		return false;
 
-	return submit (msg, token, closure);
+	return Submit (msg, token, closure);
 }
 
 uint32_t
-hilo::session_t::submit (
-	rfa::common::Msg& msg,
-	rfa::sessionLayer::ItemToken& token,
+hilo::session_t::Submit (
+	rfa::message::RespMsg*const msg,
+	rfa::sessionLayer::ItemToken*const token,
 	void* closure
 	)
 {
 	rfa::sessionLayer::OMMItemCmd itemCmd;
-	itemCmd.setMsg (msg);
+	itemCmd.setMsg (*msg);
 /* 7.5.9.7 Set the unique item identifier. */
-	itemCmd.setItemToken (&token);
+	itemCmd.setItemToken (token);
 /* 7.5.9.8 Write the response message directly out to the network through the
  * connection.
  */
@@ -270,6 +270,8 @@ hilo::session_t::submit (
 	return submit_status;
 }
 
+/* RFA client entry point.
+ */
 void
 hilo::session_t::processEvent (
 	const rfa::common::Event& event_
@@ -280,11 +282,11 @@ hilo::session_t::processEvent (
 	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 	switch (event_.getType()) {
 	case rfa::sessionLayer::OMMItemEventEnum:
-		processOMMItemEvent (static_cast<const rfa::sessionLayer::OMMItemEvent&>(event_));
+		OnOMMItemEvent (static_cast<const rfa::sessionLayer::OMMItemEvent&>(event_));
 		break;
 
         case rfa::sessionLayer::OMMCmdErrorEventEnum:
-                processOMMCmdErrorEvent (static_cast<const rfa::sessionLayer::OMMCmdErrorEvent&>(event_));
+                OnOMMCmdErrorEvent (static_cast<const rfa::sessionLayer::OMMCmdErrorEvent&>(event_));
                 break;
 
         default:
@@ -297,7 +299,7 @@ hilo::session_t::processEvent (
 /* 7.5.8.1 Handling Item Events (Login Events).
  */
 void
-hilo::session_t::processOMMItemEvent (
+hilo::session_t::OnOMMItemEvent (
 	const rfa::sessionLayer::OMMItemEvent&	item_event
 	)
 {
@@ -312,11 +314,11 @@ hilo::session_t::processOMMItemEvent (
 		return;
 	}
 
-	processRespMsg (static_cast<const rfa::message::RespMsg&>(msg));
+	OnRespMsg (static_cast<const rfa::message::RespMsg&>(msg));
 }
 
 void
-hilo::session_t::processRespMsg (
+hilo::session_t::OnRespMsg (
 	const rfa::message::RespMsg&	reply_msg
 	)
 {
@@ -339,11 +341,11 @@ hilo::session_t::processRespMsg (
 	case rfa::common::RespStatus::OpenEnum:
 		switch (data_state_) {
 		case rfa::common::RespStatus::OkEnum:
-			processLoginSuccess (reply_msg);
+			OnLoginSuccess (reply_msg);
 			break;
 
 		case rfa::common::RespStatus::SuspectEnum:
-			processLoginSuspect (reply_msg);
+			OnLoginSuspect (reply_msg);
 			break;
 
 		default:
@@ -354,7 +356,7 @@ hilo::session_t::processRespMsg (
 		break;
 
 	case rfa::common::RespStatus::ClosedEnum:
-		processLoginClosed (reply_msg);
+		OnLoginClosed (reply_msg);
 		break;
 
 	default:
@@ -371,14 +373,14 @@ hilo::session_t::processRespMsg (
  * response messages of different message model types.
  */
 void
-hilo::session_t::processLoginSuccess (
+hilo::session_t::OnLoginSuccess (
 	const rfa::message::RespMsg&			login_msg
 	)
 {
 	cumulative_stats_[SESSION_PC_MMT_LOGIN_SUCCESS_RECEIVED]++;
 	try {
-		sendDirectoryResponse();
-		resetTokens();
+		SendDirectoryResponse();
+		ResetTokens();
 		LOG(INFO) << prefix_ << "Unmuting provider.";
 		is_muted_ = false;
 
@@ -401,7 +403,7 @@ hilo::session_t::processLoginSuccess (
  * and any item group information associated with the service.
  */
 bool
-hilo::session_t::sendDirectoryResponse()
+hilo::session_t::SendDirectoryResponse()
 {
 	VLOG(2) << prefix_ << "Sending directory response.";
 
@@ -445,7 +447,7 @@ hilo::session_t::sendDirectoryResponse()
  */
 // not std::map :(  derived from rfa::common::Data
 	rfa::data::Map map;
-	provider_.getServiceDirectory (map);
+	provider_->GetServiceDirectory (&map);
 	response.setPayload (map);
 
 	rfa::common::RespStatus status;
@@ -474,7 +476,7 @@ hilo::session_t::sendDirectoryResponse()
 	}
 
 /* Create and throw away first token for MMT_DIRECTORY. */
-	submit (static_cast<rfa::common::Msg&> (response), omm_provider_->generateItemToken(), nullptr);
+	Submit (&response, &(omm_provider_->generateItemToken()), nullptr);
 	cumulative_stats_[SESSION_PC_MMT_DIRECTORY_SENT]++;
 	return true;
 }
@@ -482,21 +484,20 @@ hilo::session_t::sendDirectoryResponse()
 /* Iterate through entire item dictionary and re-generate tokens.
  */
 bool
-hilo::session_t::resetTokens()
+hilo::session_t::ResetTokens()
 {
 	if (!(bool)omm_provider_) {
 		LOG(WARNING) << prefix_ << "Reset tokens whilst invalid provider.";
 		return false;
 	}
 
-	LOG(INFO) << prefix_ << "Resetting " << provider_.directory_.size() << " provider tokens";
+	LOG(INFO) << prefix_ << "Resetting " << provider_->directory_.size() << " provider tokens";
 /* Cannot use std::for_each (auto λ) due to language limitations. */
-	std::for_each (provider_.directory_.begin(), provider_.directory_.end(),
-		[&](std::pair<std::string, std::weak_ptr<item_stream_t>> it)
+	std::for_each (provider_->directory_.begin(), provider_->directory_.end(), [&](const std::pair<std::string, std::weak_ptr<item_stream_t>>& it)
 	{
 		if (auto sp = it.second.lock()) {
 			sp->token[instance_id_] = &( omm_provider_->generateItemToken() );
-			assert (nullptr != sp->token[instance_id_]);
+			CHECK (nullptr != sp->token[instance_id_]);
 			cumulative_stats_[SESSION_PC_TOKENS_GENERATED]++;
 		}
 	});
@@ -508,7 +509,7 @@ hilo::session_t::resetTokens()
  * resume once the data state becomes OkEnum.
  */
 void
-hilo::session_t::processLoginSuspect (
+hilo::session_t::OnLoginSuspect (
 	const rfa::message::RespMsg&	suspect_msg
 	)
 {
@@ -522,7 +523,7 @@ hilo::session_t::processLoginSuspect (
  * cannot start to publish data.
  */
 void
-hilo::session_t::processLoginClosed (
+hilo::session_t::OnLoginClosed (
 	const rfa::message::RespMsg&	logout_msg
 	)
 {
@@ -538,7 +539,7 @@ hilo::session_t::processLoginClosed (
  * failed.
  */
 void
-hilo::session_t::processOMMCmdErrorEvent (
+hilo::session_t::OnOMMCmdErrorEvent (
 	const rfa::sessionLayer::OMMCmdErrorEvent& error
 	)
 {

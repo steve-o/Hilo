@@ -79,7 +79,7 @@ namespace hilo
 		{
 		}
 
-		void operator()()
+		void Run()
 		{
 			while (event_queue_->isActive()) {
 				event_queue_->dispatch (rfa::common::Dispatchable::InfiniteWait);
@@ -94,7 +94,7 @@ namespace hilo
 	class time_base_t
 	{
 	public:
-		virtual bool processTimer (boost::posix_time::ptime t) = 0;
+		virtual bool OnTimer (boost::posix_time::ptime t) = 0;
 	};
 
 	class time_pump_t
@@ -110,12 +110,12 @@ namespace hilo
 				due_time_ = boost::get_system_time() + td_;
 		}
 
-		void operator()()
+		void Run()
 		{
 			try {
 				while (true) {
 					boost::this_thread::sleep (due_time_);
-					if (!cb_->processTimer (due_time_))
+					if (!cb_->OnTimer (due_time_))
 						break;
 					due_time_ += td_;
 				}
@@ -144,7 +144,7 @@ namespace hilo
 		virtual void init (const vpf::UserPluginConfig& config_) override;
 
 /* Reset state suitable for recalling init(). */
-		void clear();
+		void Clear();
 
 /* Plugin termination point. */
 		virtual void destroy() override;
@@ -153,7 +153,7 @@ namespace hilo
 		virtual int execute (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData) override;
 
 /* Configured period timer entry point. */
-		bool processTimer (boost::posix_time::ptime t) override;
+		bool OnTimer (boost::posix_time::ptime t) override;
 
 /* Global list of all plugin instances.  AE owns pointer. */
 		static std::list<stitch_t*> global_list_;
@@ -161,25 +161,26 @@ namespace hilo
 
 	private:
 
-		bool parseRule (const std::string& str, hilo::hilo_t& rule);
+		bool Init();
+		bool ParseRule (const std::string& str, hilo::hilo_t& rule);
 
-		bool register_tcl_api (const char* id);
-		bool unregister_tcl_api (const char* id);
+		bool RegisterTclApi (const char* id);
+		bool UnregisterTclApi (const char* id);
 
 /* Run core event loop. */
-		void mainLoop();
+		void MainLoop();
 
-		int tclHiloQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
-		int tclFeedLogQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
-		int tclRepublishQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int TclHiloQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int TclFeedLogQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int TclRepublishQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 
-		bool get_last_reset_time (__time32_t* t);
-		bool get_next_interval (boost::posix_time::ptime* t);
-		bool get_start_of_last_interval (__time32_t* t);
-		bool get_end_of_last_interval (__time32_t* t);
+		bool GetLastResetTime (__time32_t* t);
+		bool GetNextInterval (boost::posix_time::ptime* t);
+		bool GetStartOfLastInterval (__time32_t* t);
+		bool GetEndOfLastInterval (__time32_t* t);
 
 /* Broadcast out message. */
-		bool sendRefresh() throw (rfa::common::InvalidUsageException);
+		bool SendRefresh() throw (rfa::common::InvalidUsageException);
 
 /* Unique instance number per process. */
 		LONG instance_;

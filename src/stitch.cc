@@ -77,7 +77,7 @@ to_unix_epoch (
 }
 
 bool
-hilo::stitch_t::parseRule (
+hilo::stitch_t::ParseRule (
 	const std::string&	str,
 	hilo::hilo_t&	rule
 	)
@@ -181,7 +181,7 @@ hilo::stitch_t::~stitch_t()
 	boost::unique_lock<boost::shared_mutex> (global_list_lock_);
 	global_list_.remove (this);
 
-	clear();
+	Clear();
 }
 
 /* Plugin entry point from the Velocity Analytics Engine.
@@ -211,53 +211,62 @@ hilo::stitch_t::init (
 			" }"
 		" }";
 
-	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
-		goto cleanup;
+	if (!config_.ParseDomElement (vpf_config.getXmlConfigData())) {
+		is_shutdown_ = true;
+		throw vpf::UserPluginException ("Invalid configuration, aborting.");
+	}
+	if (!Init()) {
+		Clear();
+		is_shutdown_ = true;
+		throw vpf::UserPluginException ("Initialization failed, aborting.");
+	}
+}
 
+bool
+hilo::stitch_t::Init()
+{
 	LOG(INFO) << config_;
 
 /** RFA initialisation. **/
 	try {
 /* RFA context. */
 		rfa_.reset (new rfa_t (config_));
-		if (!(bool)rfa_ || !rfa_->init())
-			goto cleanup;
+		if (!(bool)rfa_ || !rfa_->Init())
+			return false;
 
 /* RFA asynchronous event queue. */
 		const RFA_String eventQueueName (config_.event_queue_name.c_str(), 0, false);
 		event_queue_.reset (rfa::common::EventQueue::create (eventQueueName), std::mem_fun (&rfa::common::EventQueue::destroy));
 		if (!(bool)event_queue_)
-			goto cleanup;
+			return false;
 
 /* RFA logging. */
 		log_.reset (new logging::LogEventProvider (config_, event_queue_));
 		if (!(bool)log_ || !log_->Register())
-			goto cleanup;
+			return false;
 
 /* RFA provider. */
 		provider_.reset (new provider_t (config_, rfa_, event_queue_));
-		if (!(bool)provider_ || !provider_->init())
-			goto cleanup;
+		if (!(bool)provider_ || !provider_->Init())
+			return false;
 
 /* Create state for published instruments. */
-		for (auto it = config_.rules.begin();
-			it != config_.rules.end();
-			++it)
+		for (auto it = config_.rules.begin(); it != config_.rules.end(); ++it)
 		{
 /* rule */
 			VLOG(3) << "Parsing rule \"" << *it << "\"";
 			auto rule = std::make_shared<hilo_t> ();
 			assert ((bool)rule);
-			if (!parseRule (*it, *rule.get()))
-				goto cleanup;
+			if (!ParseRule (*it, *rule.get()))
+				return false;
 			query_vector_.push_back (rule);
 
 /* analytic publish stream */
 			std::string symbol_name = rule->name + config_.suffix;
 			auto stream = std::make_shared<broadcast_stream_t> (rule);
 			assert ((bool)stream);
-			if (!provider_->createItemStream (symbol_name.c_str(), stream))
-				goto cleanup;
+			if (!provider_->CreateItemStream (symbol_name.c_str(), stream))
+				return false;
 
 /* streams for historical analytics */
 			using namespace boost::posix_time;
@@ -279,8 +288,8 @@ hilo::stitch_t::init (
 				   << std::setw (2) << interval_end_tod.minutes();
 				auto historical_stream = std::make_shared<item_stream_t> ();
 				assert ((bool)historical_stream);
-				if (!provider_->createItemStream (ss.str().c_str(), historical_stream))
-					goto cleanup;
+				if (!provider_->CreateItemStream (ss.str().c_str(), historical_stream))
+					return false;
 				auto status = stream->historical.insert (std::make_pair (ss.str(), std::move (historical_stream)));
 				assert (true == status.second);
 
@@ -299,8 +308,8 @@ hilo::stitch_t::init (
 					   << symbol_name;
 				auto chain_stream = std::make_shared<item_stream_t> ();
 				assert ((bool)chain_stream);
-				if (!provider_->createItemStream (chain_name.str().c_str(), chain_stream))
-					goto cleanup;
+				if (!provider_->CreateItemStream (chain_name.str().c_str(), chain_stream))
+					return false;
 				auto status = stream->chain.insert (std::make_pair (chain_name.str(), std::move (chain_stream)));
 				assert (true == status.second);
 			}
@@ -308,83 +317,103 @@ hilo::stitch_t::init (
 			stream_vector_.push_back (std::move (stream));
 		}
 
-	} catch (rfa::common::InvalidUsageException& e) {
+	} catch (const rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
-		goto cleanup;
-	} catch (rfa::common::InvalidConfigurationException& e) {
+		return false;
+	} catch (const rfa::common::InvalidConfigurationException& e) {
 		LOG(ERROR) << "InvalidConfigurationException: { "
-			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 			", \"ParameterName\": \"" << e.getParameterName() << "\""
 			", \"ParameterValue\": \"" << e.getParameterValue() << "\" }";
-		goto cleanup;
+		return false;
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "Rfa::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
 	}
 
+	try {
 /* No main loop inside this thread, must spawn new thread for message pump. */
-	event_pump_.reset (new event_pump_t (event_queue_));
-	if (!(bool)event_pump_) {
-		LOG(ERROR) << "Cannot create event pump.";
-		goto cleanup;
+		event_pump_.reset (new event_pump_t (event_queue_));
+		if (!(bool)event_pump_) {
+			LOG(ERROR) << "Cannot create event pump.";
+			return false;
+		}
+
+		event_thread_.reset (new boost::thread ([this]() { event_pump_->Run(); }));
+		if (!(bool)event_thread_) {
+			LOG(ERROR) << "Cannot spawn event thread.";
+			return false;
+		}
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "EventPump::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
 	}
 
-	event_thread_.reset (new boost::thread (*event_pump_.get()));
-	if (!(bool)event_thread_) {
-		LOG(ERROR) << "Cannot spawn event thread.";
-		goto cleanup;
-	}
-
+	try {
 /* Spawn SNMP implant. */
-	if (config_.is_snmp_enabled) {
-		snmp_agent_.reset (new snmp_agent_t (*this));
-		if (!(bool)snmp_agent_)
-			goto cleanup;
+		if (config_.is_snmp_enabled) {
+			snmp_agent_.reset (new snmp_agent_t (*this));
+			if (!(bool)snmp_agent_) {
+				LOG(ERROR) << "Cannot spawn SNMP agent.";
+				return false;
+			}
+		}
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "SnmpAgent::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
 	}
 
+	try {
 /* Register Tcl API. */
-	if (!register_tcl_api (getId()))
-		goto cleanup;
+		if (!RegisterTclApi (getId()))
+			return false;
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "TclApi::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
+	}
 
-	{
+	try {
 /* Timer for periodic publishing.
  */
-		using namespace boost;
-		using namespace posix_time;
-
-		ptime due_time;
-		if (!get_next_interval (&due_time)) {
+		boost::posix_time::ptime due_time;
+		if (!GetNextInterval (&due_time)) {
 			LOG(ERROR) << "Cannot calculate next interval.";
-			goto cleanup;
+			return false;
 		}
-		const time_duration td = seconds (std::stoul (config_.interval));
+		const boost::posix_time::time_duration td = boost::posix_time::seconds (std::stoul (config_.interval));
 		timer_.reset (new time_pump_t (due_time, td, this));
 		if (!(bool)timer_) {
 			LOG(ERROR) << "Cannot create time pump.";
-			goto cleanup;
+			return false;
 		}
-		timer_thread_.reset (new boost::thread (*timer_.get()));
+		timer_thread_.reset (new boost::thread ([this](){ timer_->Run(); }));
 		if (!(bool)timer_thread_) {
 			LOG(ERROR) << "Cannot spawn timer thread.";
-			goto cleanup;
+			return false;
 		}
 		LOG(INFO) << "Added periodic timer, interval " << to_simple_string (td)
 			<< ", due time " << to_simple_string (due_time);
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "TimerPump::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
 	}
 
 	LOG(INFO) << "Init complete, awaiting queries.";
-	return;
-cleanup:
-	LOG(INFO) << "Init failed, cleaning up.";
-	clear();
-	is_shutdown_ = true;
-	throw vpf::UserPluginException ("Init failed.");
+	return true;
 }
 
 void
-hilo::stitch_t::clear()
+hilo::stitch_t::Clear()
 {
 /* Stop generating new events. */
 	if (timer_thread_) {
@@ -427,8 +456,8 @@ hilo::stitch_t::destroy()
 {
 	LOG(INFO) << "Closing instance.";
 /* Unregister Tcl API. */
-	unregister_tcl_api (getId());
-	clear();
+	UnregisterTclApi (getId());
+	Clear();
 	LOG(INFO) << "Runtime summary: {"
 		    " \"tclQueryReceived\": " << cumulative_stats_[STITCH_PC_TCL_QUERY_RECEIVED] <<
 		   ", \"timerQueryReceived\": " << cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED] <<
@@ -440,7 +469,7 @@ hilo::stitch_t::destroy()
 /* callback from periodic timer.
  */
 bool
-hilo::stitch_t::processTimer (
+hilo::stitch_t::OnTimer (
 	boost::posix_time::ptime t
 	)
 {
@@ -465,11 +494,11 @@ hilo::stitch_t::processTimer (
 	}
 
 	try {
-		sendRefresh();
+		SendRefresh();
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 	}
 	return true;
@@ -478,7 +507,7 @@ hilo::stitch_t::processTimer (
 /* calculate the last reset time.
  */
 bool
-hilo::stitch_t::get_last_reset_time (
+hilo::stitch_t::GetLastResetTime (
 	__time32_t*	t
 	)
 {
@@ -501,7 +530,7 @@ hilo::stitch_t::get_last_reset_time (
 /* Calculate start of next interval.
  */
 bool
-hilo::stitch_t::get_next_interval (
+hilo::stitch_t::GetNextInterval (
 	boost::posix_time::ptime* t
 	)
 {
@@ -534,7 +563,7 @@ hilo::stitch_t::get_next_interval (
  * seconds.
  */
 bool
-hilo::stitch_t::get_end_of_last_interval (
+hilo::stitch_t::GetEndOfLastInterval (
 	__time32_t*	t
 	)
 {
@@ -563,12 +592,12 @@ hilo::stitch_t::get_end_of_last_interval (
  * seconds.
  */
 bool
-hilo::stitch_t::get_start_of_last_interval (
+hilo::stitch_t::GetStartOfLastInterval (
 	__time32_t*	t
 	)
 {
 	__time32_t end_time;
-	if (!get_end_of_last_interval (&end_time))
+	if (!GetEndOfLastInterval (&end_time))
 		return false;
 	const int interval_seconds = std::stoi (config_.interval);
 	*t = end_time - interval_seconds;
@@ -579,7 +608,7 @@ hilo::stitch_t::get_start_of_last_interval (
 #define CTIME_LENGTH	26
 
 bool
-hilo::stitch_t::sendRefresh()
+hilo::stitch_t::SendRefresh()
 {
 	using namespace boost::posix_time;
 	const ptime t0 (microsec_clock::universal_time());
@@ -587,9 +616,9 @@ hilo::stitch_t::sendRefresh()
 
 /* Calculate time boundary for query */
 	__time32_t last_reset_time, from, till;
-	get_last_reset_time (&last_reset_time);
-	get_start_of_last_interval (&from);
-	get_end_of_last_interval (&till);
+	GetLastResetTime (&last_reset_time);
+	GetStartOfLastInterval (&from);
+	GetEndOfLastInterval (&till);
 
 	if (LOG_IS_ON(INFO)) {
 		char from_str[CTIME_LENGTH], till_str[CTIME_LENGTH];
@@ -600,8 +629,8 @@ hilo::stitch_t::sendRefresh()
 	}
 
 /* clear state for all items */
-	std::for_each (stream_vector_.begin(), stream_vector_.end(), [](std::shared_ptr<broadcast_stream_t>& stream) {
-		stream->hilo->clear();
+	std::for_each (stream_vector_.begin(), stream_vector_.end(), [](const std::shared_ptr<broadcast_stream_t>& stream) {
+		stream->hilo->Clear();
 	});
 
 	DLOG(INFO) << "get_hilo /" << to_simple_string (ptime (kUnixEpoch, seconds (from))) << "/ /" << to_simple_string (ptime (kUnixEpoch, seconds (till))) << "/";
@@ -641,7 +670,7 @@ hilo::stitch_t::sendRefresh()
 
 /* 4.3.1 RespMsg.Payload */
 // not std::map :(  derived from rfa::common::Data
-	fields_.setAssociatedMetaInfo (provider_->getRwfMajorVersion(), provider_->getRwfMinorVersion());
+	fields_.setAssociatedMetaInfo (provider_->GetRwfMajorVersion(), provider_->GetRwfMinorVersion());
 	fields_.setInfo (kDictionaryId, kFieldListId);
 
 /* DataBuffer based fields must be pre-encoded and post-bound. */
@@ -650,12 +679,12 @@ hilo::stitch_t::sendRefresh()
 	rfa::data::DataBuffer data (false);
 #ifdef CONFIG_32BIT_PRICE
 	rfa::data::Real32 real_value;
-	auto SetReal = [](rfa::data::DataBuffer* data, const rfa::data::Real32& value) {
+	auto SetReal = [](rfa::data::DataBuffer*const data, const rfa::data::Real32& value) {
 		data->setReal32 (value);
 	};
 #else
 	rfa::data::Real64 real_value;
-	auto SetReal = [](rfa::data::DataBuffer* data, const rfa::data::Real64& value) {
+	auto SetReal = [](rfa::data::DataBuffer*const data, const rfa::data::Real64& value) {
 		data->setReal64 (value);
 	};
 #endif /* CONFIG_32BIT_PRICE */
@@ -687,7 +716,7 @@ hilo::stitch_t::sendRefresh()
 	status.setStatusCode (rfa::common::RespStatus::NoneEnum);
 	response.setRespStatus (status);
 
-	std::for_each (stream_vector_.begin(), stream_vector_.end(), [&](std::shared_ptr<broadcast_stream_t>& stream)
+	std::for_each (stream_vector_.begin(), stream_vector_.end(), [&](const std::shared_ptr<broadcast_stream_t>& stream)
 	{
 		attribInfo.setName (stream->rfa_name);
 		it.start (fields_);
@@ -731,7 +760,7 @@ hilo::stitch_t::sendRefresh()
 			assert (rfa::message::MsgValidationOk == validation_status);
 		}
 #endif
-		provider_->send (*stream.get(), static_cast<rfa::common::Msg&> (response));
+		provider_->Send (stream.get(), &response);
 		VLOG(1) << stream->rfa_name << " hi:" << stream->hilo->high << " lo:" << stream->hilo->low;
 	});
 
@@ -749,8 +778,8 @@ hilo::stitch_t::sendRefresh()
 			break;
 
 /* reset bars */
-		std::for_each (stream_vector_.begin(), stream_vector_.end(), [](std::shared_ptr<broadcast_stream_t>& stream) {
-			stream->hilo->clear();
+		std::for_each (stream_vector_.begin(), stream_vector_.end(), [](const std::shared_ptr<broadcast_stream_t>& stream) {
+			stream->hilo->Clear();
 		});
 
 		DLOG(INFO) << "get_hilo /" << to_simple_string (ptime (kUnixEpoch, seconds (from))) << "/ /" << to_simple_string (ptime (kUnixEpoch, seconds (till))) << "/";
@@ -775,7 +804,7 @@ hilo::stitch_t::sendRefresh()
 		rfaDate.setMonth (/* rfa(1-12) */ 1 + _tm.tm_mon     /* tm(0-11) */);
 		rfaDate.setYear  (/* rfa(yyyy) */ 1900 + _tm.tm_year /* tm(yyyy-1900 */);
 
-		std::for_each (stream_vector_.begin(), stream_vector_.end(), [&](std::shared_ptr<broadcast_stream_t>& stream)
+		std::for_each (stream_vector_.begin(), stream_vector_.end(), [&](const std::shared_ptr<broadcast_stream_t>& stream)
 		{
 			rfa::common::RFA_String rfa_name (stream->rfa_name);
 			rfa_name.append (ss.str().c_str());
@@ -822,7 +851,7 @@ hilo::stitch_t::sendRefresh()
 			}
 #endif
 			const std::string key (rfa_name.c_str());
-			provider_->send (*stream->historical[key].get(), static_cast<rfa::common::Msg&> (response));
+			provider_->Send (stream->historical[key].get(), &response);
 			DVLOG(1) << rfa_name << " hi:" << stream->hilo->high << " lo:" << stream->hilo->low;
 
 /* do not reset analytic result set so next query extends previous result set */
@@ -849,7 +878,7 @@ hilo::stitch_t::sendRefresh()
 	assert (link_times.size() > 0);
 
 	const size_t chain_index_max = link_times.size() / _countof (kRdmLinkId);
-	std::for_each (stream_vector_.begin(), stream_vector_.end(), [&](std::shared_ptr<broadcast_stream_t>& stream)
+	std::for_each (stream_vector_.begin(), stream_vector_.end(), [&](const std::shared_ptr<broadcast_stream_t>& stream)
 	{
 /* e.g. 0#.DJI .. 3#.DJI */
 		for (int j = chain_index_max; j >= 0; j--)
@@ -934,7 +963,7 @@ hilo::stitch_t::sendRefresh()
 			}
 #endif
 			const std::string key (rfa_name.c_str());
-			provider_->send (*stream->chain[key].get(), static_cast<rfa::common::Msg&> (response));
+			provider_->Send (stream->chain[key].get(), &response);
 		}
 	});
 

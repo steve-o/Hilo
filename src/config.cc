@@ -24,7 +24,7 @@ using namespace xercesc;
 /** L"" prefix is used in preference to u"" because of MSVC2010 **/
 
 bool
-hilo::config_t::validate()
+hilo::config_t::Validate()
 {
 	if (service_name.empty()) {
 		LOG(ERROR) << "Undefined service name.";
@@ -34,9 +34,7 @@ hilo::config_t::validate()
 		LOG(ERROR) << "Undefined session, expecting one or more session node.";
 		return false;
 	}
-	for (auto it = sessions.begin();
-		it != sessions.end();
-		++it)
+	for (auto it = sessions.begin(); it != sessions.end(); ++it)
 	{
 		if (it->session_name.empty()) {
 			LOG(ERROR) << "Undefined session name.";
@@ -95,7 +93,7 @@ hilo::config_t::validate()
 }
 
 bool
-hilo::config_t::parseDomElement (
+hilo::config_t::ParseDomElement (
 	const DOMElement*	root
 	)
 {
@@ -107,7 +105,7 @@ hilo::config_t::parseDomElement (
 	nodeList = root->getElementsByTagName (L"config");
 
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseConfigNode (nodeList->item (i))) {
+		if (!ParseConfigNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <config> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -115,7 +113,7 @@ hilo::config_t::parseDomElement (
 	if (0 == nodeList->getLength())
 		LOG(WARNING) << "No <config> nodes found in configuration.";
 
-	if (!validate()) {
+	if (!Validate()) {
 		LOG(ERROR) << "Failed validation, malformed configuration file requires correction.";
 		return false;
 	}
@@ -125,7 +123,7 @@ hilo::config_t::parseDomElement (
 }
 
 bool
-hilo::config_t::parseConfigNode (
+hilo::config_t::ParseConfigNode (
 	const DOMNode*		node
 	)
 {
@@ -136,7 +134,7 @@ hilo::config_t::parseConfigNode (
 /* <Snmp> */
 	nodeList = elem->getElementsByTagName (L"Snmp");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseSnmpNode (nodeList->item (i))) {
+		if (!ParseSnmpNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <Snmp> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -144,7 +142,7 @@ hilo::config_t::parseConfigNode (
 /* <Rfa> */
 	nodeList = elem->getElementsByTagName (L"Rfa");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseRfaNode (nodeList->item (i))) {
+		if (!ParseRfaNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <Rfa> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -154,7 +152,7 @@ hilo::config_t::parseConfigNode (
 /* <crosses> */
 	nodeList = elem->getElementsByTagName (L"crosses");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseCrossesNode (nodeList->item (i))) {
+		if (!ParseCrossesNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <crosses> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -166,7 +164,7 @@ hilo::config_t::parseConfigNode (
 
 /* <Snmp> */
 bool
-hilo::config_t::parseSnmpNode (
+hilo::config_t::ParseSnmpNode (
 	const DOMNode*		node
 	)
 {
@@ -183,7 +181,7 @@ hilo::config_t::parseSnmpNode (
 /* <agentX> */
 	nodeList = elem->getElementsByTagName (L"agentX");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseAgentXNode (nodeList->item (i))) {
+		if (!ParseAgentXNode (nodeList->item (i))) {
 			vpf::XMLStringPool xml;
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <agentX> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
@@ -195,7 +193,7 @@ hilo::config_t::parseSnmpNode (
 }
 
 bool
-hilo::config_t::parseAgentXNode (
+hilo::config_t::ParseAgentXNode (
 	const DOMNode*		node
 	)
 {
@@ -219,7 +217,7 @@ hilo::config_t::parseAgentXNode (
 
 /* <Rfa> */
 bool
-hilo::config_t::parseRfaNode (
+hilo::config_t::ParseRfaNode (
 	const DOMNode*		node
 	)
 {
@@ -236,7 +234,7 @@ hilo::config_t::parseRfaNode (
 /* <service> */
 	nodeList = elem->getElementsByTagName (L"service");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseServiceNode (nodeList->item (i))) {
+		if (!ParseServiceNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <service> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -247,7 +245,7 @@ hilo::config_t::parseRfaNode (
 /* <session> */
 	nodeList = elem->getElementsByTagName (L"session");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseSessionNode (nodeList->item (i))) {
+		if (!ParseSessionNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <session> nth-node #" << (1 + i) << ".";
 			return false;
 		}
@@ -257,7 +255,7 @@ hilo::config_t::parseRfaNode (
 /* <monitor> */
 	nodeList = elem->getElementsByTagName (L"monitor");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseMonitorNode (nodeList->item (i))) {
+		if (!ParseMonitorNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <monitor> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -266,7 +264,7 @@ hilo::config_t::parseRfaNode (
 /* <eventQueue> */
 	nodeList = elem->getElementsByTagName (L"eventQueue");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseEventQueueNode (nodeList->item (i))) {
+		if (!ParseEventQueueNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <eventQueue> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -275,7 +273,7 @@ hilo::config_t::parseRfaNode (
 /* <vendor> */
 	nodeList = elem->getElementsByTagName (L"vendor");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseVendorNode (nodeList->item (i))) {
+		if (!ParseVendorNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <vendor> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -285,7 +283,7 @@ hilo::config_t::parseRfaNode (
 }
 
 bool
-hilo::config_t::parseServiceNode (
+hilo::config_t::ParseServiceNode (
 	const DOMNode*		node
 	)
 {
@@ -305,7 +303,7 @@ hilo::config_t::parseServiceNode (
 }
 
 bool
-hilo::config_t::parseSessionNode (
+hilo::config_t::ParseSessionNode (
 	const DOMNode*		node
 	)
 {
@@ -324,7 +322,7 @@ hilo::config_t::parseSessionNode (
 /* <publisher> */
 	nodeList = elem->getElementsByTagName (L"publisher");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parsePublisherNode (nodeList->item (i), session.publisher_name)) {
+		if (!ParsePublisherNode (nodeList->item (i), session.publisher_name)) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <publisher> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -333,7 +331,7 @@ hilo::config_t::parseSessionNode (
 /* <connection> */
 	nodeList = elem->getElementsByTagName (L"connection");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseConnectionNode (nodeList->item (i), session)) {
+		if (!ParseConnectionNode (nodeList->item (i), session)) {
 			LOG(ERROR) << "Failed parsing <connection> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -343,7 +341,7 @@ hilo::config_t::parseSessionNode (
 /* <login> */
 	nodeList = elem->getElementsByTagName (L"login");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseLoginNode (nodeList->item (i), session)) {
+		if (!ParseLoginNode (nodeList->item (i), session)) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <login> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -357,7 +355,7 @@ hilo::config_t::parseSessionNode (
 }
 
 bool
-hilo::config_t::parseConnectionNode (
+hilo::config_t::ParseConnectionNode (
 	const DOMNode*		node,
 	session_config_t&	session
 	)
@@ -379,7 +377,7 @@ hilo::config_t::parseConnectionNode (
 	nodeList = elem->getElementsByTagName (L"server");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		std::string server;
-		if (!parseServerNode (nodeList->item (i), server)) {
+		if (!ParseServerNode (nodeList->item (i), server)) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <server> nth-node #" << (1 + i) << ": \"" << text_content << "\".";			
 			return false;
@@ -393,7 +391,7 @@ hilo::config_t::parseConnectionNode (
 }
 
 bool
-hilo::config_t::parseServerNode (
+hilo::config_t::ParseServerNode (
 	const DOMNode*		node,
 	std::string&		server
 	)
@@ -409,7 +407,7 @@ hilo::config_t::parseServerNode (
 }
 
 bool
-hilo::config_t::parseLoginNode (
+hilo::config_t::ParseLoginNode (
 	const DOMNode*		node,
 	session_config_t&	session
 	)
@@ -429,7 +427,7 @@ hilo::config_t::parseLoginNode (
 }
 
 bool
-hilo::config_t::parseMonitorNode (
+hilo::config_t::ParseMonitorNode (
 	const DOMNode*		node
 	)
 {
@@ -445,7 +443,7 @@ hilo::config_t::parseMonitorNode (
 }
 
 bool
-hilo::config_t::parseEventQueueNode (
+hilo::config_t::ParseEventQueueNode (
 	const DOMNode*		node
 	)
 {
@@ -461,7 +459,7 @@ hilo::config_t::parseEventQueueNode (
 }
 
 bool
-hilo::config_t::parsePublisherNode (
+hilo::config_t::ParsePublisherNode (
 	const DOMNode*		node,
 	std::string&		name
 	)
@@ -475,7 +473,7 @@ hilo::config_t::parsePublisherNode (
 }
 
 bool
-hilo::config_t::parseVendorNode (
+hilo::config_t::ParseVendorNode (
 	const DOMNode*		node
 	)
 {
@@ -494,7 +492,7 @@ hilo::config_t::parseVendorNode (
 
 /* <crosses> */
 bool
-hilo::config_t::parseCrossesNode (
+hilo::config_t::ParseCrossesNode (
 	const DOMNode*		node
 	)
 {
@@ -525,7 +523,7 @@ hilo::config_t::parseCrossesNode (
 /* <synthetic> */
 	nodeList = elem->getElementsByTagName (L"synthetic");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseSyntheticNode (nodeList->item (i))) {
+		if (!ParseSyntheticNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <synthetic> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -536,7 +534,7 @@ hilo::config_t::parseCrossesNode (
 /* <pair> */
 	nodeList = elem->getElementsByTagName (L"pair");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parsePairNode (nodeList->item (i))) {
+		if (!ParsePairNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <pair> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -562,7 +560,7 @@ hilo::config_t::parseCrossesNode (
  */
 
 bool
-hilo::config_t::parseSyntheticNode (
+hilo::config_t::ParseSyntheticNode (
 	const DOMNode*		node
 	)
 {
@@ -684,7 +682,7 @@ hilo::config_t::parseSyntheticNode (
  */
 
 bool
-hilo::config_t::parsePairNode (
+hilo::config_t::ParsePairNode (
 	const DOMNode*		node
 	)
 {

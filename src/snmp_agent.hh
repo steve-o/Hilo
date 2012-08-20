@@ -28,8 +28,8 @@ namespace hilo
 		snmp_agent_t (stitch_t& stitch);
 		~snmp_agent_t();
 
-		bool run();
-		void clear();
+		bool Run();
+		void Clear();
 
 	private:
 		stitch_t& stitch_;

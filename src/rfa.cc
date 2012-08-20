@@ -104,7 +104,7 @@ hilo::rfa_t::~rfa_t()
 }
 
 bool
-hilo::rfa_t::init()
+hilo::rfa_t::Init()
 {
 	VLOG(2) << "Initializing RFA.";
 	rfa::common::Context::initialize();

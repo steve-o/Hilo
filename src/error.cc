@@ -7,7 +7,7 @@
 #include <rfa/rfa.hh>
 
 const char*
-hilo::severity_string (
+internal::severity_string (
 	const int severity_
 	)
 {
@@ -24,7 +24,7 @@ hilo::severity_string (
 }
 
 const char*
-hilo::classification_string (
+internal::classification_string (
 	const int classification_
 	)
 {

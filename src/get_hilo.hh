@@ -27,10 +27,10 @@ namespace hilo
 			bid_field_idx (-1),
 			ask_field_idx (-1)
 		{
-			clear();
+			Clear();
 		}
 
-		void clear() {
+		void Clear() {
 			last_bid = last_ask = 0.0;
 			is_null = true;
 		}
@@ -50,13 +50,13 @@ namespace hilo
 			math_op (MATH_OP_NOOP),
 			is_synthetic (false)
 		{
-			clear();
+			Clear();
 		}
 
-		void clear() {
+		void Clear() {
 			high = low = 0.0;
 			is_null = true;
-			legs.first.clear(); legs.second.clear();
+			legs.first.Clear(); legs.second.Clear();
 		}
 
 		std::string name;
@@ -69,10 +69,10 @@ namespace hilo
 	};
 
 	namespace reference {
-		void get_hilo (std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);
+		void get_hilo (const std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);
 	}
 	namespace single_iterator {
-		void get_hilo (std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);
+		void get_hilo (const std::vector<std::shared_ptr<hilo_t>>& hilo, __time32_t start, __time32_t end);
 	}
 
 } /* namespace hilo */

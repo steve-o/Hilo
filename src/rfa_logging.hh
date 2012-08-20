@@ -29,11 +29,11 @@ namespace logging
 		bool Unregister();
 
 /* RFA event callback. */
-		void processEvent (const rfa::common::Event& event_);
+		void processEvent (const rfa::common::Event& event_) override;
 
 	private:
 
-		void processLoggerNotifyEvent (const rfa::logger::LoggerNotifyEvent& event_);
+		void OnLoggerNotifyEvent (const rfa::logger::LoggerNotifyEvent& event_);
 
 		const hilo::config_t& config_;
 

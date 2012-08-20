@@ -33,7 +33,7 @@ namespace hilo {
 namespace reference {
 void
 get_hilo (
-	std::vector<std::shared_ptr<hilo_t>>& query,
+	const std::vector<std::shared_ptr<hilo_t>>& query,
 	__time32_t	from,		/* legacy from before 2003, yay. */
 	__time32_t	till
 	)
@@ -43,8 +43,7 @@ get_hilo (
 
 	DLOG(INFO) << "get_hilo(from=" << from << " till=" << till << ")";
 
-	std::for_each (query.begin(), query.end(),
-		[&](std::shared_ptr<hilo_t>& it)
+	std::for_each (query.begin(), query.end(), [&](const std::shared_ptr<hilo_t>& it)
 	{
 		FlexRecReader fr;
 		std::set<FlexRecBinding> binding_set;
@@ -73,7 +72,7 @@ get_hilo (
 		binding_set.insert (binding);
 
 /* lambda to function pointer is incomplete in MSVC2010, punt to the compiler to clean up. */
-		auto math_func = [&it](double a, double b) -> double {
+		auto MathOperator = [&it](double a, double b) -> double {
 			if (MATH_OP_TIMES == it->math_op)
 				return (double)(a * b);
 			else if (b == 0.0)
@@ -93,7 +92,7 @@ get_hilo (
 					<< ", \"text\": \"" << error_text << "\" }";
 				return;
 			}
-		} catch (std::exception& e) {
+		} catch (const std::exception& e) {
 			LOG(ERROR) << "FlexRecReader::Open raised exception " << e.what();
 			return;
 		}
@@ -128,8 +127,8 @@ get_hilo (
 						is_updated = true;
 						second_leg_bid_price = have_alt_bid_price ? alt_bid_price : bid_price;
 						second_leg_ask_price = have_alt_ask_price ? alt_ask_price : ask_price;
-						it->low  = math_func (first_leg_bid_price, second_leg_bid_price);
-						it->high = math_func (first_leg_ask_price, second_leg_ask_price);
+						it->low  = MathOperator (first_leg_bid_price, second_leg_bid_price);
+						it->high = MathOperator (first_leg_ask_price, second_leg_ask_price);
 						DLOG(INFO) << it->name << " start low=" << it->low << " high=" << it->high;
 						DLOG(INFO) << fr.GetCurrentSymbolName() << " bid " << bid_price << " alt-bid " << alt_bid_price << " ask " << ask_price << " alt-ask " << alt_ask_price;
 					}
@@ -147,8 +146,8 @@ get_hilo (
 						is_updated = true;
 						first_leg_bid_price = bid_price;
 						first_leg_ask_price = ask_price;
-						it->low  = math_func (first_leg_bid_price, second_leg_bid_price);
-						it->high = math_func (first_leg_ask_price, second_leg_ask_price);
+						it->low  = MathOperator (first_leg_bid_price, second_leg_bid_price);
+						it->high = MathOperator (first_leg_ask_price, second_leg_ask_price);
 						DLOG(INFO) << it->name << " start low=" << it->low << " high=" << it->high;
 					}
 				}
@@ -167,8 +166,8 @@ get_hilo (
 					second_leg_ask_price = have_alt_ask_price ? alt_ask_price : ask_price;
 				}
 			
-				const double synthetic_bid_price = math_func (first_leg_bid_price, second_leg_bid_price),
-					     synthetic_ask_price = math_func (first_leg_ask_price, second_leg_ask_price);
+				const double synthetic_bid_price = MathOperator (first_leg_bid_price, second_leg_bid_price),
+					     synthetic_ask_price = MathOperator (first_leg_ask_price, second_leg_ask_price);
 				if (synthetic_bid_price < it->low) {
 					it->low  = synthetic_bid_price;
 					DLOG(INFO) << it->name << " new low=" << it->low;
@@ -244,7 +243,7 @@ public:
 	{
 	}
 
-	void set_last_value (size_t idx_, double value_) {
+	void SetLastValue (size_t idx_, double value_) {
 		if (idx_ >= last_value.size())
 			last_value.resize (1 + idx_);
 		last_value[idx_] = value_;
@@ -259,7 +258,7 @@ public:
 
 void
 get_hilo (
-	std::vector<std::shared_ptr<hilo_t>>& query,
+	const std::vector<std::shared_ptr<hilo_t>>& query,
 	__time32_t	from,		/* legacy from before 2003, yay. */
 	__time32_t	till
 	)
@@ -273,8 +272,7 @@ get_hilo (
 	std::vector<double> fields;
 
 /* convert multiple queries into a single query expression */
-	std::for_each (query.begin(), query.end(),
-		[&](std::shared_ptr<hilo_t>& query_it)
+	std::for_each (query.begin(), query.end(), [&](const std::shared_ptr<hilo_t>& query_it)
 	{
 		auto symbol_it = symbol_map.find (query_it->legs.first.symbol_name);
 /* add new symbol into set */
@@ -286,7 +284,7 @@ get_hilo (
 		}
 
 /* map field into binding index and set last value cache */
-		auto add_field = [&](std::string& name) -> size_t {
+		auto AddField = [&](const std::string& name) -> size_t {
 			auto it = field_map.find (name);
 			size_t idx;
 			if (field_map.end() == it) {
@@ -299,11 +297,11 @@ get_hilo (
 			return idx;
 		};
 
-		query_it->legs.first.bid_field_idx = add_field (query_it->legs.first.bid_field);
-		symbol_it->second->set_last_value (query_it->legs.first.bid_field_idx, query_it->legs.first.last_bid);
+		query_it->legs.first.bid_field_idx = AddField (query_it->legs.first.bid_field);
+		symbol_it->second->SetLastValue (query_it->legs.first.bid_field_idx, query_it->legs.first.last_bid);
 
-		query_it->legs.first.ask_field_idx = add_field (query_it->legs.first.ask_field);
-		symbol_it->second->set_last_value (query_it->legs.first.ask_field_idx, query_it->legs.first.last_ask);
+		query_it->legs.first.ask_field_idx = AddField (query_it->legs.first.ask_field);
+		symbol_it->second->SetLastValue (query_it->legs.first.ask_field_idx, query_it->legs.first.last_ask);
 
 		if (!query_it->is_synthetic) {
 			symbol_it->second->non_synthetic_list.push_front (query_it);
@@ -324,11 +322,11 @@ get_hilo (
 			symbol_set.emplace (second_it->first);
 		}
 
-		query_it->legs.second.bid_field_idx = add_field (query_it->legs.second.bid_field);
-		second_it->second->set_last_value (query_it->legs.second.bid_field_idx, query_it->legs.second.last_bid);
+		query_it->legs.second.bid_field_idx = AddField (query_it->legs.second.bid_field);
+		second_it->second->SetLastValue (query_it->legs.second.bid_field_idx, query_it->legs.second.last_bid);
 
-		query_it->legs.second.ask_field_idx = add_field (query_it->legs.second.ask_field);
-		second_it->second->set_last_value (query_it->legs.second.ask_field_idx, query_it->legs.second.last_ask);
+		query_it->legs.second.ask_field_idx = AddField (query_it->legs.second.ask_field);
+		second_it->second->SetLastValue (query_it->legs.second.ask_field_idx, query_it->legs.second.last_ask);
 
 		first_it->second->as_first_leg_list.emplace_back (std::make_pair (second_it->second, query_it));
 		second_it->second->as_second_leg_list.emplace_back (std::make_pair (first_it->second, query_it));
@@ -338,40 +336,38 @@ get_hilo (
 	FlexRecBinding binding (kQuoteId);
 
 /* copy finalized bindings into new set */
-	std::for_each (field_map.begin(), field_map.end(),
-		[&](std::pair<const std::string, size_t>& field_pair)
-	{
+	std::for_each (field_map.begin(), field_map.end(), [&](std::pair<const std::string, size_t>& field_pair) {
 		binding.Bind (field_pair.first.c_str(), &fields[field_pair.second]);
 	});
 	binding_set.insert (binding);
 
-	auto update_non_synthetic = [&](hilo_t& query_item, std::shared_ptr<symbol_t>& symbol) {
-		const double bid_price = fields[query_item.legs.first.bid_field_idx];
-		const double ask_price = fields[query_item.legs.first.ask_field_idx];
-		if (query_item.is_null) {
-			query_item.is_null = false;
-			query_item.low  = bid_price;
-			query_item.high = ask_price;
-			DLOG(INFO) << query_item.name << " start low=" << bid_price << " high=" << ask_price;
+	auto UpdateNonSynthetic = [&fields](hilo_t*const query_item) {
+		const double bid_price = fields[query_item->legs.first.bid_field_idx];
+		const double ask_price = fields[query_item->legs.first.ask_field_idx];
+		if (query_item->is_null) {
+			query_item->is_null = false;
+			query_item->low     = bid_price;
+			query_item->high    = ask_price;
+			DLOG(INFO) << query_item->name << " start low=" << bid_price << " high=" << ask_price;
 			return;
 		}
-		if (bid_price < query_item.low) {
-			query_item.low  = bid_price;
-			DLOG(INFO) << query_item.name << " new low=" << bid_price;
+		if (bid_price < query_item->low) {
+			query_item->low     = bid_price;
+			DLOG(INFO) << query_item->name << " new low=" << bid_price;
 		}
-		if (ask_price > query_item.high) {
-			query_item.high = ask_price;
-			DLOG(INFO) << query_item.name << " new high=" << ask_price;
+		if (ask_price > query_item->high) {
+			query_item->high    = ask_price;
+			DLOG(INFO) << query_item->name << " new high=" << ask_price;
 		}
 	};
 
-	auto update_synthetic = [&fr](hilo_t& query_item, symbol_t& first_leg, symbol_t& second_leg) {
+	auto UpdateSynthetic = [](hilo_t*const query_item, const symbol_t& first_leg, const symbol_t& second_leg) {
 		if (first_leg.is_null || second_leg.is_null)
 			return;
 
 /* lambda to function pointer is incomplete in MSVC2010, punt to the compiler to clean up. */
-		auto math_func = [&query_item](double a, double b) -> double {
-			if (MATH_OP_TIMES == query_item.math_op)
+		auto MathOperator = [query_item](double a, double b) -> double {
+			if (MATH_OP_TIMES == query_item->math_op)
 				return (double)(a * b);
 			else if (b == 0.0)
 				return b;
@@ -379,24 +375,24 @@ get_hilo (
 				return (double)(a / b);
 		};
 
-		const double synthetic_bid_price = math_func (first_leg.last_value[query_item.legs.first.bid_field_idx], second_leg.last_value[query_item.legs.second.bid_field_idx]);
-		const double synthetic_ask_price = math_func (first_leg.last_value[query_item.legs.first.ask_field_idx], second_leg.last_value[query_item.legs.second.ask_field_idx]);
+		const double synthetic_bid_price = MathOperator (first_leg.last_value[query_item->legs.first.bid_field_idx], second_leg.last_value[query_item->legs.second.bid_field_idx]);
+		const double synthetic_ask_price = MathOperator (first_leg.last_value[query_item->legs.first.ask_field_idx], second_leg.last_value[query_item->legs.second.ask_field_idx]);
 
-		if (query_item.is_null) {
-			query_item.is_null = false;
-			query_item.low  = synthetic_bid_price;
-			query_item.high = synthetic_ask_price;
-			DLOG(INFO) << query_item.name << "start low=" << synthetic_bid_price << " high=" << synthetic_ask_price;
+		if (query_item->is_null) {
+			query_item->is_null = false;
+			query_item->low     = synthetic_bid_price;
+			query_item->high    = synthetic_ask_price;
+			DLOG(INFO) << query_item->name << "start low=" << synthetic_bid_price << " high=" << synthetic_ask_price;
 			return;
 		}
 
-		if (synthetic_bid_price < query_item.low) {
-			query_item.low  = synthetic_bid_price;
-			DLOG(INFO) << query_item.name << "new low=" << query_item.low;
+		if (synthetic_bid_price < query_item->low) {
+			query_item->low     = synthetic_bid_price;
+			DLOG(INFO) << query_item->name << "new low=" << query_item->low;
 		}
-		if (synthetic_ask_price > query_item.high) {
-			query_item.high = synthetic_ask_price;
-			DLOG(INFO) << query_item.name << "new high=" << query_item.high;
+		if (synthetic_ask_price > query_item->high) {
+			query_item->high    = synthetic_ask_price;
+			DLOG(INFO) << query_item->name << "new high=" << query_item->high;
 		}
 	};
 
@@ -406,7 +402,7 @@ get_hilo (
  */
 	try {
 		char error_text[1024];
-		const int cursor_status =fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */, error_text);
+		const int cursor_status = fr.Open (symbol_set, binding_set, from, till, 0 /* forward */, 0 /* no limit */, error_text);
 		if (1 != cursor_status) {
 			LOG(ERROR) << "FlexRecReader::Open failed { \"code\": " << cursor_status
 				<< ", \"text\": \"" << error_text << "\" }";
@@ -420,32 +416,26 @@ get_hilo (
 	while (fr.Next()) {
 		auto symbol = symbol_map[fr.GetCurrentSymbolName()];
 /* non-synthetic */
-		std::for_each (symbol->non_synthetic_list.begin(), symbol->non_synthetic_list.end(),
-			[&](std::shared_ptr<hilo_t>& query_it)
-		{
-			update_non_synthetic (*query_it.get(), symbol);
+		std::for_each (symbol->non_synthetic_list.begin(), symbol->non_synthetic_list.end(), [&](const std::shared_ptr<hilo_t>& query_it) {
+			UpdateNonSynthetic (query_it.get());
 		});
 /* synthetics */
 		symbol->is_null = false;
 /* cache last value */
-		for (int i = fields.size() - 1; i >= 0; i--)
+		for (int i = fields.size() - 1; i >= 0; i--) {
 			symbol->last_value[i] = fields[i];
-		std::for_each (symbol->as_first_leg_list.begin(), symbol->as_first_leg_list.end(),
-			[&](std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>> second_leg)
-		{
-			update_synthetic (*second_leg.second.get(), *symbol.get(), *second_leg.first.get());
+		}
+		std::for_each (symbol->as_first_leg_list.begin(), symbol->as_first_leg_list.end(), [&](std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>>& second_leg) {
+			UpdateSynthetic (second_leg.second.get(), *symbol.get(), *second_leg.first.get());
 		});
-		std::for_each (symbol->as_second_leg_list.begin(), symbol->as_second_leg_list.end(),
-			[&](std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>> first_leg)
-		{
-			update_synthetic (*first_leg.second.get(), *first_leg.first.get(), *symbol.get());
+		std::for_each (symbol->as_second_leg_list.begin(), symbol->as_second_leg_list.end(), [&](std::pair<std::shared_ptr<symbol_t>, std::shared_ptr<hilo_t>>& first_leg) {
+			UpdateSynthetic (first_leg.second.get(), *first_leg.first.get(), *symbol.get());
 		});
 	}	
 	fr.Close();
 
 /* cache symbol last values back into query vector, 1:M operation */
-	std::for_each (query.begin(), query.end(),
-		[&](std::shared_ptr<hilo_t>& query_it)
+	std::for_each (query.begin(), query.end(), [&](const std::shared_ptr<hilo_t>& query_it)
 	{
 		auto first_leg = symbol_map[query_it->legs.first.symbol_name];
 		query_it->legs.first.is_null  = first_leg->is_null;

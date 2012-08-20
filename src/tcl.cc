@@ -53,7 +53,7 @@ to_unix_epoch (
 /* Register Tcl API.
  */
 bool
-hilo::stitch_t::register_tcl_api (const char* id)
+hilo::stitch_t::RegisterTclApi (const char* id)
 {
 	for (size_t i = 0; i < _countof (kTclApi); ++i) {
 		registerCommand (id, kTclApi[i]);
@@ -65,7 +65,7 @@ hilo::stitch_t::register_tcl_api (const char* id)
 /* Unregister Tcl API.
  */
 bool
-hilo::stitch_t::unregister_tcl_api (const char* id)
+hilo::stitch_t::UnregisterTclApi (const char* id)
 {
 	for (size_t i = 0; i < _countof (kTclApi); ++i) {
 		deregisterCommand (id, kTclApi[i]);
@@ -117,17 +117,20 @@ hilo::stitch_t::execute (
 	try {
 		const char* command = cmdInfo.getCommandName();
 		if (0 == strcmp (command, kBasicFunctionName))
-			retval = tclHiloQuery (cmdInfo, cmdData);
+			retval = TclHiloQuery (cmdInfo, cmdData);
 		else if (0 == strcmp (command, kFeedLogFunctionName))
-			retval = tclFeedLogQuery (cmdInfo, cmdData);
+			retval = TclFeedLogQuery (cmdInfo, cmdData);
 		else if (0 == strcmp (command, kRepublishFunctionName))
-			retval = tclRepublishQuery (cmdInfo, cmdData);
+			retval = TclRepublishQuery (cmdInfo, cmdData);
 		else
 			Tcl_SetResult (interp, "unknown function", TCL_STATIC);
 	}
 /* FlexRecord exceptions */
 	catch (const vpf::PluginFrameworkException& e) {
 		/* yay broken Tcl API */
+		Tcl_SetResult (interp, const_cast<char*> (e.what()), TCL_VOLATILE);
+	}
+	catch (const std::exception& e) {
 		Tcl_SetResult (interp, const_cast<char*> (e.what()), TCL_VOLATILE);
 	}
 	catch (...) {
@@ -148,7 +151,7 @@ hilo::stitch_t::execute (
 /* hilo_query <symbol-list> [startTime] [endTime]
  */
 int
-hilo::stitch_t::tclHiloQuery (
+hilo::stitch_t::TclHiloQuery (
 	const vpf::CommandInfo& cmdInfo,
 	vpf::TCLCommandData& cmdData
 	)
@@ -210,7 +213,7 @@ hilo::stitch_t::tclHiloQuery (
 		char* rule_text = Tcl_GetStringFromObj (objPtr, &len);
 		auto rule = std::make_shared<hilo_t> ();
 		assert ((bool)rule);
-		if (len > 0 && parseRule (rule_text, *rule.get())) {
+		if (len > 0 && ParseRule (rule_text, *rule.get())) {
 			query.push_back (rule);
 			DLOG(INFO) << "#" << (1 + i) << " " << rule->name;
 		} else {
@@ -223,8 +226,7 @@ hilo::stitch_t::tclHiloQuery (
 
 /* Convert STL container result set into a new Tcl list. */
 	Tcl_Obj* resultListPtr = Tcl_NewListObj (0, NULL);
-	std::for_each (query.begin(), query.end(),
-		[&](std::shared_ptr<hilo_t> it)
+	std::for_each (query.begin(), query.end(), [&](const std::shared_ptr<hilo_t>& it)
 	{
 		DLOG(INFO) << "Into result list name=" << it->name << " high=" << it->high << " low=" << it->low;
 
@@ -296,7 +298,7 @@ uint64_t flexrecord_t::sequence_ = 0;
 /* hilo_feedlog <feedlog-file> <symbol-list> <interval> [startTime] [endTime]
  */
 int
-hilo::stitch_t::tclFeedLogQuery (
+hilo::stitch_t::TclFeedLogQuery (
 	const vpf::CommandInfo& cmdInfo,
 	vpf::TCLCommandData& cmdData
 	)
@@ -386,7 +388,7 @@ hilo::stitch_t::tclFeedLogQuery (
 		char* rule_text = Tcl_GetStringFromObj (objPtr, &len);
 		auto rule = std::make_shared<hilo_t> ();
 		assert ((bool)rule);
-		if (len > 0 && parseRule (rule_text, *rule.get())) {
+		if (len > 0 && ParseRule (rule_text, *rule.get())) {
 			query.push_back (rule);
 			DLOG(INFO) << "#" << (1 + i) << " " << rule.get()->name;
 		} else {
@@ -409,15 +411,14 @@ hilo::stitch_t::tclFeedLogQuery (
 			break;
 
 /* reset bars */
-		std::for_each (query.begin(), query.end(), [](std::shared_ptr<hilo_t>& hilo) {
-			hilo->clear();
+		std::for_each (query.begin(), query.end(), [](const std::shared_ptr<hilo_t>& it) {
+			it->Clear();
 		});
 
 		single_iterator::get_hilo (query, from, till);
 		
 /* create flexrecord for each pair */
-		std::for_each (query.begin(), query.end(),
-			[&](std::shared_ptr<hilo_t> it)
+		std::for_each (query.begin(), query.end(), [&](const std::shared_ptr<hilo_t>& it)
 		{
 			std::ostringstream symbol_name;
 			symbol_name << it->name << config_.suffix;
@@ -450,7 +451,7 @@ hilo::stitch_t::tclFeedLogQuery (
 /* hilo_republish
  */
 int
-hilo::stitch_t::tclRepublishQuery (
+hilo::stitch_t::TclRepublishQuery (
 	const vpf::CommandInfo& cmdInfo,
 	vpf::TCLCommandData& cmdData
 	)
@@ -467,11 +468,11 @@ hilo::stitch_t::tclRepublishQuery (
 	}
 
 	try {
-		sendRefresh();
+		SendRefresh();
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 	}
 	return TCL_OK;

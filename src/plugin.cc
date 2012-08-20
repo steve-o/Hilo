@@ -126,7 +126,7 @@ namespace
 
 /* no API to unregister type. */
 
-		virtual void* newInstance (const char* type)
+		virtual void* newInstance (const char* type) override
 		{
 			assert (0 == strcmp (kPluginType, type));
 			return static_cast<vpf::AbstractUserPlugin*> (new hilo::stitch_t());

@@ -62,25 +62,25 @@ namespace hilo
 	{
 		config_t();
 
-		bool parseDomElement (const xercesc::DOMElement* elem);
-		bool parseConfigNode (const xercesc::DOMNode* node);
-		bool parseSnmpNode (const xercesc::DOMNode* node);
-		bool parseAgentXNode (const xercesc::DOMNode* node);
-		bool parseRfaNode (const xercesc::DOMNode* node);
-		bool parseServiceNode (const xercesc::DOMNode* node);
-		bool parseConnectionNode (const xercesc::DOMNode* node, session_config_t& session);
-		bool parseServerNode (const xercesc::DOMNode* node, std::string& server);
-		bool parsePublisherNode (const xercesc::DOMNode* node, std::string& publisher);
-		bool parseLoginNode (const xercesc::DOMNode* node, session_config_t& session);
-		bool parseSessionNode (const xercesc::DOMNode* node);
-		bool parseMonitorNode (const xercesc::DOMNode* node);
-		bool parseEventQueueNode (const xercesc::DOMNode* node);
-		bool parseVendorNode (const xercesc::DOMNode* node);
-		bool parseCrossesNode (const xercesc::DOMNode* node);
-		bool parseSyntheticNode (const xercesc::DOMNode* node);
-		bool parsePairNode (const xercesc::DOMNode* node);
+		bool ParseDomElement (const xercesc::DOMElement* elem);
+		bool ParseConfigNode (const xercesc::DOMNode* node);
+		bool ParseSnmpNode (const xercesc::DOMNode* node);
+		bool ParseAgentXNode (const xercesc::DOMNode* node);
+		bool ParseRfaNode (const xercesc::DOMNode* node);
+		bool ParseServiceNode (const xercesc::DOMNode* node);
+		bool ParseConnectionNode (const xercesc::DOMNode* node, session_config_t& session);
+		bool ParseServerNode (const xercesc::DOMNode* node, std::string& server);
+		bool ParsePublisherNode (const xercesc::DOMNode* node, std::string& publisher);
+		bool ParseLoginNode (const xercesc::DOMNode* node, session_config_t& session);
+		bool ParseSessionNode (const xercesc::DOMNode* node);
+		bool ParseMonitorNode (const xercesc::DOMNode* node);
+		bool ParseEventQueueNode (const xercesc::DOMNode* node);
+		bool ParseVendorNode (const xercesc::DOMNode* node);
+		bool ParseCrossesNode (const xercesc::DOMNode* node);
+		bool ParseSyntheticNode (const xercesc::DOMNode* node);
+		bool ParsePairNode (const xercesc::DOMNode* node);
 
-		bool validate();
+		bool Validate();
 
 //  SNMP implant.
 		bool is_snmp_enabled;
