@@ -11,7 +11,7 @@ set(HILO_VERSION_MINOR 0)
 set(HILO_VERSION_BUILD 53)
 
 # Net-SNMP SDK installed, tested 5.7.1.
-set(NETSNMP_ROOT C:/usr)
+set(NETSNMP_ROOT D:/net-snmp-5.7.1/stage/vc100/x64/release)
 set(NETSNMP_INCLUDE_DIRS ${NETSNMP_ROOT}/include)
 set(NETSNMP_LIBRARY_DIRS ${NETSNMP_ROOT}/lib)
 set(NETSNMP_LIBRARIES
@@ -69,7 +69,7 @@ set(rfa_runtime_libraries
 )
 
 # Boost headers plus built libraries
-set(BOOST_ROOT d:/boost_1_50_0)
+set(BOOST_ROOT D:/boost_1_51_0)
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
 find_package (Boost 1.50 COMPONENTS thread REQUIRED)
@@ -111,10 +111,11 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_definitions(
 	-DWIN32
 	-DWIN32_LEAN_AND_MEAN
-# Windows Server 2008 R2
+# Windows Server 2008 R2, Windows 7
 	-D_WIN32_WINNT=0x0601
 # Net-SNMP Autoconf overrides
 	-DHAVE_STDINT_H
+	-DHAVE_SOCKLEN_T
 # RFA version
         -DRFA_LIBRARY_VERSION="7.2.1."
 # production release
@@ -127,8 +128,22 @@ if(CONFIG_32BIT_PRICE)
 	)
 endif(CONFIG_32BIT_PRICE)
 
-# SEH Exceptions
-set(CMAKE_CXX_FLAGS "/EHa")
+# SEH Exceptions.
+string(REGEX REPLACE "/EHsc" "/EHa" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+# Parallel make.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+
+# Optimization flags.
+# http://msdn.microsoft.com/en-us/magazine/cc301698.aspx
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} /LTCG")
+
+# Disable buffer security check.
+# http://msdn.microsoft.com/en-us/library/8dbf701c(v=vs.80).aspx
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GS-")
 
 #-----------------------------------------------------------------------------
 # source files
