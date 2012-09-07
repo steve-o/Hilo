@@ -8,7 +8,7 @@ project (Hilo)
 
 set(HILO_VERSION_MAJOR 3)
 set(HILO_VERSION_MINOR 1)
-set(HILO_VERSION_BUILD 54)
+set(HILO_VERSION_BUILD 55)
 
 # Net-SNMP SDK installed, tested 5.7.1.
 set(NETSNMP_ROOT D:/net-snmp-5.7.1/stage/vc100/x64/release)
@@ -21,7 +21,7 @@ set(NETSNMP_LIBRARIES
 )
 
 # TREP-VA 7.0 SDK
-set(VHAYU_ROOT D:/Vhayu-7.0.5)
+set(VHAYU_ROOT D:/Vhayu-7.0.0)
 set(VHAYU_INCLUDE_DIRS
 	${VHAYU_ROOT}/Engine/TBSDK/Include
 	${VHAYU_ROOT}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/include

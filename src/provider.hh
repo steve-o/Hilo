@@ -101,7 +101,7 @@ namespace hilo
 		const time_duration MTTR = seconds (static_cast<long> (cool.GetMTTR (now)));
 		const time_duration MTBF = seconds (static_cast<long> (cool.GetMTBF (now)));
 		o << "{ "
-			  "\"Username\": \"" << cool.GetLoginName() << "\""
+			  "\"Session\": \"" << cool.GetLoginName() << "\""
 			", \"AOT\": \"" << to_simple_string (cool.GetAccumulatedOutageTime (now)) << "\""
 			", \"NAF\": " << cool.GetAccumulatedFailures() <<
 			", \"Availability\": \"" << std::setprecision (3) << (100.0 * cool.GetAvailability (now)) << "%\""
@@ -196,7 +196,7 @@ namespace hilo
 			", \"Duration\": \"" << to_simple_string (event.GetDuration()) << "\""
 			", \"StartTime\": \"" << to_simple_string (event.GetStartTime()) << "\""
 			", \"EndTime\": \"" << to_simple_string (event.GetEndTime()) << "\""
-			", \"Username\": \"" << event.GetLoginName() << "\""
+			", \"Session\": \"" << event.GetLoginName() << "\""
 			" }";
 		return o;
 	}

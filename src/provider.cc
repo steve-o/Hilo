@@ -261,7 +261,7 @@ hilo::provider_t::WriteCoolTables (
 	using namespace boost::posix_time;
 	const auto now (second_clock::universal_time());
 	output->append ("  ****  COOL Event Table ****\n\n\n");
-	output->append ("Index Event Interval  Event-Time           Client-Name\n\n");
+	output->append ("Index Event Interval  Event-Time           Session-Name\n\n");
 	if ((bool)events_) {
 		boost::shared_lock<boost::shared_mutex> lock (events_lock_);
 		for (auto it = events_->begin(); it != events_->end(); ++it) {
@@ -288,7 +288,7 @@ hilo::provider_t::WriteCoolTables (
 	output->append ("\n\n");
 
 	output->append (" ****  COOL Object Table ****\n\n\n");
-	output->append ("Status AOT        NAF LAST-Change-Time     Client-Name\n\n");
+	output->append ("Status AOT        NAF LAST-Change-Time     Session-Name\n\n");
 	for (auto it = cool_.begin(); it != cool_.end(); ++it) {
 		std::ostringstream oss;
 		auto sp = it->second;
