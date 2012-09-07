@@ -231,6 +231,11 @@ hilo::config_t::ParseRfaNode (
 	if (!attr.empty())
 		key = attr;
 
+/* historyTableSize="rows" */
+	attr = xml.transcode (elem->getAttribute (L"historyTableSize"));
+	if (!attr.empty())
+		history_table_size = (unsigned)std::atol (attr.c_str());
+
 /* <service> */
 	nodeList = elem->getElementsByTagName (L"service");
 	for (int i = 0; i < nodeList->getLength(); i++) {

@@ -50,13 +50,14 @@ namespace hilo
 	};
 
 	class provider_t;
+	class cool_t;
 
 	class session_t :
 		public rfa::common::Client,
 		boost::noncopyable
 	{
 	public:
-		session_t (std::shared_ptr<provider_t> provider, const unsigned instance_id, const session_config_t& config, std::shared_ptr<rfa_t> rfa, std::shared_ptr<rfa::common::EventQueue> event_queue);
+		session_t (std::shared_ptr<provider_t> provider, const unsigned instance_id, const session_config_t& config, std::shared_ptr<rfa_t> rfa, std::shared_ptr<rfa::common::EventQueue> event_queue, std::shared_ptr<cool_t> cool);
 		~session_t();
 
 		bool Init() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
@@ -127,6 +128,10 @@ namespace hilo
 /* Last RespStatus details. */
 		int stream_state_;
 		int data_state_;
+
+/* Session is registered for outage recording.
+ */
+		std::shared_ptr<cool_t> cool_;
 
 /** Performance Counters **/
 		boost::posix_time::ptime last_activity_;

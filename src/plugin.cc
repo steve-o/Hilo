@@ -9,6 +9,9 @@
 
 #pragma comment (lib, "winmm")
 
+/* Boost string algorithms */
+#include <boost/algorithm/string.hpp>
+
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
@@ -21,6 +24,33 @@ static const char* kPluginType = "HiloPlugin";
 
 namespace
 {
+
+/* Vhayu log system wrapper */
+	static
+	bool
+	log_handler (
+		int				severity,
+		const char*		file,
+		int				line,
+		size_t			message_start,
+		const std::string&	str
+		)
+	{
+		int priority;
+		switch (severity) {
+		default:
+		case logging::LOG_INFO:		priority = eMsgInfo; break;
+		case logging::LOG_WARNING:	priority = eMsgLow; break;
+		case logging::LOG_ERROR:	priority = eMsgMedium; break;
+		case logging::LOG_FATAL:	priority = eMsgFatal; break;
+		}
+	/* Yay, broken APIs */
+		std::string str1 (boost::algorithm::trim_right_copy (str));
+		MsgLog (priority, 0, const_cast<char*> ("%s"), str1.c_str());
+	/* allow additional log targets */
+		return false;
+	}
+
 	class env_t
 	{
 	public:
@@ -51,6 +81,7 @@ namespace
 				logging::APPEND_TO_OLD_LOG_FILE,
 				logging::ENABLE_DCHECK_FOR_NON_OFFICIAL_RELEASE_BUILDS
 				);
+			logging::SetLogMessageHandler (log_handler);
 		}
 
 	protected:
@@ -61,16 +92,16 @@ namespace
 
 		logging::LoggingDestination DetermineLogMode (const CommandLine& command_line) {
 #ifdef NDEBUG
-			const logging::LoggingDestination kDefaultLoggingMode = logging::LOG_ONLY_TO_VHAYU_LOG;
+			const logging::LoggingDestination kDefaultLoggingMode = logging::LOG_NONE;
 #else
-			const logging::LoggingDestination kDefaultLoggingMode = logging::LOG_ONLY_TO_FILE;
+			const logging::LoggingDestination kDefaultLoggingMode = logging::LOG_TO_BOTH_FILE_AND_SYSTEM_DEBUG_LOG;
 #endif
 
 			logging::LoggingDestination log_mode;
-// Let --enable-logging=both force Vhayu and file logging, particularly useful for
+// Let --enable-logging=file force Vhayu and file logging, particularly useful for
 // non-debug builds where otherwise you can't get logs on fault at all.
-			if (command_line.GetSwitchValueASCII (switches::kEnableLogging) == "both")
-				log_mode = logging::LOG_TO_BOTH_FILE_AND_VHAYU_LOG;
+			if (command_line.GetSwitchValueASCII (switches::kEnableLogging) == "file")
+				log_mode = logging::LOG_ONLY_TO_FILE;
 			else
 				log_mode = kDefaultLoggingMode;
 			return log_mode;

@@ -18,7 +18,8 @@ hilo::session_t::session_t (
 	const unsigned instance_id,
 	const hilo::session_config_t& config,
 	std::shared_ptr<hilo::rfa_t> rfa,
-	std::shared_ptr<rfa::common::EventQueue> event_queue
+	std::shared_ptr<rfa::common::EventQueue> event_queue,
+	std::shared_ptr<hilo::cool_t> cool
 	) :
 	last_activity_ (boost::posix_time::microsec_clock::universal_time()),
 	provider_ (provider),
@@ -32,7 +33,8 @@ hilo::session_t::session_t (
 	rwf_minor_version_ (0),
 	is_muted_ (true),
 	stream_state_ (0),
-	data_state_ (0)
+	data_state_ (0),
+	cool_ (cool)
 {
 	ZeroMemory (cumulative_stats_, sizeof (cumulative_stats_));
 	ZeroMemory (snap_stats_, sizeof (snap_stats_));
@@ -44,6 +46,8 @@ hilo::session_t::session_t (
 
 hilo::session_t::~session_t()
 {
+	if ((bool)cool_ && cool_->IsOnline())
+		cool_->OnOutage();
 	VLOG(3) << prefix_<< "Unregistering RFA session clients.";
 	if (nullptr != item_handle_)
 		omm_provider_->unregisterClient (item_handle_), item_handle_ = nullptr;
@@ -51,6 +55,10 @@ hilo::session_t::~session_t()
 		omm_provider_->unregisterClient (error_item_handle_), error_item_handle_ = nullptr;
 	omm_provider_.reset();
 	session_.reset();
+	provider_.reset();
+	event_queue_.reset();
+	rfa_.reset();
+	LOG(INFO) << prefix_ << "Session closed.";
 }
 	
 bool
@@ -156,15 +164,24 @@ hilo::session_t::SendLoginRequest()
  * constructed messages of these types conform to the Reuters Domain
  * Models as specified in RFA API 7 RDM Usage Guide.
  */
-	RFA_String warningText;
-	const uint8_t validation_status = request.validateMsg (&warningText);
-	if (rfa::message::MsgValidationWarning == validation_status) {
-		LOG(WARNING) << prefix_ << "MMT_LOGIN::validateMsg: { "
-			"\"warningText\": \"" << warningText << "\""
-			" }";		cumulative_stats_[SESSION_PC_MMT_LOGIN_MALFORMED]++;
-	} else {
-		assert (rfa::message::MsgValidationOk == validation_status);
+	uint8_t validation_status = rfa::message::MsgValidationError;
+	try {
+		RFA_String warningText;
+		validation_status = request.validateMsg (&warningText);
 		cumulative_stats_[SESSION_PC_MMT_LOGIN_VALIDATED]++;
+		if (rfa::message::MsgValidationWarning == validation_status)
+			LOG(WARNING) << prefix_ << "MMT_LOGIN::validateMsg: { \"warningText\": \"" << warningText << "\" }";
+	} catch (const rfa::common::InvalidUsageException& e) {
+		cumulative_stats_[SESSION_PC_MMT_LOGIN_MALFORMED]++;
+		LOG(WARNING) << prefix_ <<
+			"MMT_LOGIN::InvalidUsageException: { " <<
+			  "\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+			", " << request <<
+			" }";
+	} catch (const std::exception& e) {
+		LOG(ERROR) << prefix_ << "Rfa::Exception: { "
+			"\"What\": \"" << e.what() << "\""
+			" }";
 	}
 
 /* Not saving the returned handle as we will destroy the provider to logout,
@@ -285,15 +302,15 @@ hilo::session_t::processEvent (
 		OnOMMItemEvent (static_cast<const rfa::sessionLayer::OMMItemEvent&>(event_));
 		break;
 
-        case rfa::sessionLayer::OMMCmdErrorEventEnum:
-                OnOMMCmdErrorEvent (static_cast<const rfa::sessionLayer::OMMCmdErrorEvent&>(event_));
-                break;
+	case rfa::sessionLayer::OMMCmdErrorEventEnum:
+		OnOMMCmdErrorEvent (static_cast<const rfa::sessionLayer::OMMCmdErrorEvent&>(event_));
+		break;
 
-        default:
+	default:
 		cumulative_stats_[SESSION_PC_RFA_EVENTS_DISCARDED]++;
 		LOG(WARNING) << prefix_ << "Uncaught: " << event_;
-                break;
-        }
+		break;
+	}
 }
 
 /* 7.5.8.1 Handling Item Events (Login Events).
@@ -383,14 +400,19 @@ hilo::session_t::OnLoginSuccess (
 		ResetTokens();
 		LOG(INFO) << prefix_ << "Unmuting provider.";
 		is_muted_ = false;
+		if ((bool)cool_ && !cool_->IsOnline())
+			cool_->OnRecovery();
 
 /* ignore any error */
-	} catch (rfa::common::InvalidUsageException& e) {
+	} catch (const rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::InvalidUsageException: { "
 					"\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 					" }";
 /* cannot publish until directory is sent. */
-		return;
+	} catch (const std::exception& e) {
+		LOG(ERROR) << prefix_ << "Rfa::Exception: { "
+			"\"What\": \"" << e.what() << "\""
+			" }";
 	}
 }
 
@@ -463,16 +485,24 @@ hilo::session_t::SendDirectoryResponse()
  * constructed messages of these types conform to the Reuters Domain
  * Models as specified in RFA API 7 RDM Usage Guide.
  */
-	RFA_String warningText;
-	uint8_t validation_status = response.validateMsg (&warningText);
-	if (rfa::message::MsgValidationWarning == validation_status) {
+	uint8_t validation_status = rfa::message::MsgValidationError;
+	try {
+		RFA_String warningText;
+		validation_status = response.validateMsg (&warningText);
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_VALIDATED]++;
-		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::validateMsg: { "
-					"\"warningText\": \"" << warningText << "\""
-					" }";
-	} else {
+		if (rfa::message::MsgValidationWarning == validation_status)		
+			LOG(WARNING) << prefix_ << "MMT_DIRECTORY::validateMsg: { \"warningText\": \"" << warningText << "\" }";
+	} catch (const rfa::common::InvalidUsageException& e) {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_MALFORMED]++;
-		assert (rfa::message::MsgValidationOk == validation_status);
+		LOG(WARNING) << prefix_ <<
+			"MMT_DIRECTORY::InvalidUsageException: { " <<
+			  "\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+			", " << response <<
+			" }";
+	} catch (const std::exception& e) {
+		LOG(ERROR) << prefix_ << "Rfa::Exception: { "
+			"\"What\": \"" << e.what() << "\""
+			" }";
 	}
 
 /* Create and throw away first token for MMT_DIRECTORY. */
@@ -515,6 +545,8 @@ hilo::session_t::OnLoginSuspect (
 {
 	cumulative_stats_[SESSION_PC_MMT_LOGIN_SUSPECT_RECEIVED]++;
 	is_muted_ = true;
+	if ((bool)cool_ && cool_->IsOnline())
+		cool_->OnOutage();
 }
 
 /* 7.5.8.1.2 Other Login States.
@@ -530,6 +562,8 @@ hilo::session_t::OnLoginClosed (
 	cumulative_stats_[SESSION_PC_MMT_LOGIN_CLOSED_RECEIVED]++;
 	LOG(INFO) << prefix_ << "Muting provider.";
 	is_muted_ = true;
+	if ((bool)cool_ && cool_->IsOnline())
+		cool_->OnOutage();
 }
 
 /* 7.5.8.2 Handling CmdError Events.

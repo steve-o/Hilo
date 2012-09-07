@@ -104,6 +104,9 @@ namespace hilo
 //  RSSL hostname or IP address and default RSSL port, e.g. 14002, 14003.
 		std::vector<session_config_t> sessions;
 
+//  Maximum number of historical outage events.
+		unsigned history_table_size;
+
 //  RFA application logger monitor name.
 		std::string monitor_name;
 
@@ -166,6 +169,7 @@ namespace hilo
 			", \"agentx_socket\": \"" << config.agentx_socket << "\""
 			", \"key\": \"" << config.key << "\""
 			", \"service_name:\" \"" << config.service_name << "\""
+			", \"history_table_size\": " << config.history_table_size <<
 			", \"sessions\": [";
 		for (auto it = config.sessions.begin();
 			it != config.sessions.end();

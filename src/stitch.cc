@@ -438,13 +438,15 @@ hilo::stitch_t::Clear()
 	event_pump_.reset();
 	stream_vector_.clear();
 	query_vector_.clear();
-	assert (provider_.use_count() <= 1);
+	if ((bool)provider_)
+		provider_->Clear();
+	CHECK (provider_.use_count() <= 1);
 	provider_.reset();
-	assert (log_.use_count() <= 1);
+	CHECK (log_.use_count() <= 1);
 	log_.reset();
-	assert (event_queue_.use_count() <= 1);
+	CHECK (event_queue_.use_count() <= 1);
 	event_queue_.reset();
-	assert (rfa_.use_count() <= 1);
+	CHECK (rfa_.use_count() <= 1);
 	rfa_.reset();
 }
 
@@ -479,9 +481,9 @@ hilo::stitch_t::OnTimer (
 		const boost::posix_time::ptime now (boost::posix_time::microsec_clock::universal_time());
 		const auto ms = (now - t).total_milliseconds();
 		if (0 == ms)
-			LOG(INFO) << "delta " << (now - t).total_microseconds() << "us";
+			DLOG(INFO) << "delta " << (now - t).total_microseconds() << "us";
 		else
-			LOG(INFO) << "delta " << ms << "ms";
+			DLOG(INFO) << "delta " << ms << "ms";
 	}
 
 	cumulative_stats_[STITCH_PC_TIMER_QUERY_RECEIVED]++;

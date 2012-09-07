@@ -115,6 +115,10 @@ namespace hilo
 			try {
 				while (true) {
 					boost::this_thread::sleep (due_time_);
+/* Prevent early firing */
+					const boost::posix_time::ptime now (boost::posix_time::second_clock::universal_time());
+					if (now < due_time_)
+						continue;
 					if (!cb_->OnTimer (due_time_))
 						break;
 					due_time_ += td_;
@@ -173,6 +177,7 @@ namespace hilo
 		int TclHiloQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 		int TclFeedLogQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 		int TclRepublishQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int TclCoolDump (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 
 		bool GetLastResetTime (__time32_t* t);
 		bool GetNextInterval (boost::posix_time::ptime* t);

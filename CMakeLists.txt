@@ -7,8 +7,8 @@ cmake_minimum_required (VERSION 2.8.8)
 project (Hilo)
 
 set(HILO_VERSION_MAJOR 3)
-set(HILO_VERSION_MINOR 0)
-set(HILO_VERSION_BUILD 53)
+set(HILO_VERSION_MINOR 1)
+set(HILO_VERSION_BUILD 54)
 
 # Net-SNMP SDK installed, tested 5.7.1.
 set(NETSNMP_ROOT D:/net-snmp-5.7.1/stage/vc100/x64/release)

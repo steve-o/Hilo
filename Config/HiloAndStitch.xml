@@ -56,7 +56,7 @@
      is not defined underneath the key.
 
   -->
-	<Rfa>
+	<Rfa historyTableSize="100">
 
 <!-- TREP-RT service name this plugin provides, compare to IDN_RDF or IDN_SELECTFEED. -->
 		<service name="NI_VTA"/>

@@ -25,14 +25,16 @@
 static const char* kHiloFlexRecordName = "Hilo";
 
 /* Tcl exported API. */
-static const char* kBasicFunctionName = "hilo_query";
-static const char* kFeedLogFunctionName = "hilo_feedlog";
-static const char* kRepublishFunctionName = "hilo_republish";
+static const char* kBasicApi	 = "hilo_query";
+static const char* kFeedLogApi	 = "hilo_feedlog";
+static const char* kRepublishApi = "hilo_republish";
+static const char* kCoolApi		 = "hilo_cool";
 
 static const char* kTclApi[] = {
-	kBasicFunctionName,
-	kFeedLogFunctionName,
-	kRepublishFunctionName
+	kBasicApi,
+	kFeedLogApi,
+	kRepublishApi,
+	kCoolApi
 };
 
 /* http://en.wikipedia.org/wiki/Unix_epoch */
@@ -116,12 +118,14 @@ hilo::stitch_t::execute (
 
 	try {
 		const char* command = cmdInfo.getCommandName();
-		if (0 == strcmp (command, kBasicFunctionName))
+		if (0 == strcmp (command, kBasicApi))
 			retval = TclHiloQuery (cmdInfo, cmdData);
-		else if (0 == strcmp (command, kFeedLogFunctionName))
+		else if (0 == strcmp (command, kFeedLogApi))
 			retval = TclFeedLogQuery (cmdInfo, cmdData);
-		else if (0 == strcmp (command, kRepublishFunctionName))
+		else if (0 == strcmp (command, kRepublishApi))
 			retval = TclRepublishQuery (cmdInfo, cmdData);
+		else if (0 == strcmp (command, kCoolApi))
+			retval = TclCoolDump (cmdInfo, cmdData);
 		else
 			Tcl_SetResult (interp, "unknown function", TCL_STATIC);
 	}
@@ -475,6 +479,25 @@ hilo::stitch_t::TclRepublishQuery (
 			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 	}
+	return TCL_OK;
+}
+
+int
+hilo::stitch_t::TclCoolDump (
+	const vpf::CommandInfo& cmdInfo,
+	vpf::TCLCommandData& cmdData
+	)
+{
+	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
+	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
+	std::string output;
+
+	if ((bool)provider_)
+		provider_->WriteCoolTables (&output);
+
+	Tcl_Obj* resultPtr = Tcl_NewStringObj (output.c_str(), static_cast<int> (output.size()));
+	Tcl_SetObjResult (interp, resultPtr);
+
 	return TCL_OK;
 }
 

@@ -29,6 +29,92 @@ using rfa::common::RFA_String;
 static const RFA_String kRdmFieldDictionaryName ("RWFFld");
 static const RFA_String kEnumTypeDictionaryName ("RWFEnum");
 
+hilo::cool_t::~cool_t()
+{
+	const auto now (boost::posix_time::second_clock::universal_time());
+	event_t final_duration (event_id_++, name_.c_str(), transition_time_, now, is_online_);
+	events_.push_back (final_duration);
+	if (!is_online_) accumulated_outage_time_ += now - transition_time_;
+}
+
+boost::posix_time::time_duration
+hilo::cool_t::GetAccumulatedOutageTime (
+	boost::posix_time::ptime now
+	) const
+{
+	if (is_online_)
+		return accumulated_outage_time_;
+	else
+		return accumulated_outage_time_ + (now - transition_time_);
+}
+
+void
+hilo::cool_t::OnRecovery()
+{
+	CHECK (!is_online_);
+	const auto now (boost::posix_time::second_clock::universal_time());
+	boost::unique_lock<boost::shared_mutex> (events_lock_);
+	event_t outage (event_id_++, name_.c_str(), transition_time_, now, is_online_);
+	events_.push_back (outage);
+/* start of UP duration */
+	is_online_ = true;
+	++accumulated_failures_;
+	accumulated_outage_time_ += now - transition_time_;
+	transition_time_ = now;
+}
+
+void
+hilo::cool_t::OnOutage()
+{
+	CHECK (is_online_);
+	const auto now (boost::posix_time::second_clock::universal_time());
+	boost::unique_lock<boost::shared_mutex> (events_lock_);
+	event_t online (event_id_++, name_.c_str(), transition_time_, now, is_online_);
+	events_.push_back (online);
+/* start of DOWN duration */
+	is_online_ = false;
+	transition_time_ = now;
+}
+
+/* Availability = 1 - AOT / (TC - RST)
+ */
+double
+hilo::cool_t::GetAvailability (boost::posix_time::ptime now) const
+{
+	const double AOT (GetAccumulatedOutageTime (now).total_seconds());
+	const double measurement_interval ((now - GetRecordingStartTime()).total_seconds());
+	if (measurement_interval < 1.0)
+		return 0.0;
+	else
+		return 1.0 - AOT / measurement_interval;
+}
+
+/* MTTR = AOT / NAF
+ */
+double
+hilo::cool_t::GetMTTR (boost::posix_time::ptime now) const
+{
+	const double AOT (GetAccumulatedOutageTime (now).total_seconds());
+	const double NAF (GetAccumulatedFailures());
+	if (NAF < 1.0)	/* overflow, round up to 1. */
+		return AOT;
+	else
+		return AOT / NAF;
+}
+
+/* MTBF = (TC - RST) / NAF
+ */
+double
+hilo::cool_t::GetMTBF (boost::posix_time::ptime now) const
+{
+	const double measurement_interval ((now - GetRecordingStartTime()).total_seconds());
+	const double NAF (GetAccumulatedFailures());
+	if (NAF < 1.0)
+		return measurement_interval;
+	else
+		return measurement_interval / NAF;
+}
+
 hilo::provider_t::provider_t (
 	const hilo::config_t& config,
 	std::shared_ptr<hilo::rfa_t> rfa,
@@ -39,7 +125,8 @@ hilo::provider_t::provider_t (
 	rfa_ (rfa),
 	event_queue_ (event_queue),
 	min_rwf_major_version_ (0),
-	min_rwf_minor_version_ (0)
+	min_rwf_minor_version_ (0),
+	event_id_ (0)
 {
 	ZeroMemory (cumulative_stats_, sizeof (cumulative_stats_));
 	ZeroMemory (snap_stats_, sizeof (snap_stats_));
@@ -49,16 +136,41 @@ hilo::provider_t::provider_t (
 
 hilo::provider_t::~provider_t()
 {
+	Clear();
+/* COOL */
+	LOG(INFO) << "Registered session summary:";
+	for (auto it = cool_.begin(); it != cool_.end(); ++it) {
+		LOG(INFO) << *(it->second.get());
+		cool_.erase (it);
+	}
+	if ((bool)events_) {
+		LOG(INFO) << "Outage event summary:";
+		for (auto it = events_->begin(); it != events_->end(); ++it)
+			LOG(INFO) << *it;
+	}
+	LOG(INFO) << "Provider closed.";
 }
 
 bool
 hilo::provider_t::Init()
 {
-/* allocate */
+/* COOL events */
+	if (config_.history_table_size > 0)
+	{
+/* pre-allocate history table */
+		events_.reset (new boost::circular_buffer<event_t> (config_.history_table_size));
+	}
+	
+/* allocate sessions */
 	unsigned i = 0;
 	for (auto it = config_.sessions.begin(); it != config_.sessions.end(); ++it)
 	{
-		std::unique_ptr<session_t> session (new session_t (shared_from_this(), i++, *it, rfa_, event_queue_));
+/* COOL measurement */
+		auto cool = std::make_shared<cool_t> (it->session_name, *events_.get(), events_lock_, event_id_);
+		CHECK((bool)cool);
+		cool_.emplace (std::make_pair (it->session_name, cool));
+
+		std::unique_ptr<session_t> session (new session_t (shared_from_this(), i++, *it, rfa_, event_queue_, cool));
 		sessions_.push_back (std::move (session));
 	}
 
@@ -78,6 +190,14 @@ hilo::provider_t::Init()
 	});
 
 	return true;
+}
+
+void
+hilo::provider_t::Clear()
+{
+	sessions_.clear();
+	event_queue_.reset();
+	rfa_.reset();
 }
 
 /* Create an item stream for a given symbol name.  The Item Stream maintains
@@ -130,6 +250,66 @@ hilo::provider_t::Send (
 	cumulative_stats_[PROVIDER_PC_MSGS_SENT]++;
 	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 	return true;
+}
+
+void
+hilo::provider_t::WriteCoolTables (
+	std::string* output
+	)
+{
+	CHECK (nullptr != output);
+	using namespace boost::posix_time;
+	const auto now (second_clock::universal_time());
+	output->append ("  ****  COOL Event Table ****\n\n\n");
+	output->append ("Index Event Interval  Event-Time           Client-Name\n\n");
+	if ((bool)events_) {
+		boost::shared_lock<boost::shared_mutex> lock (events_lock_);
+		for (auto it = events_->begin(); it != events_->end(); ++it) {
+			std::ostringstream oss;
+			oss << std::left
+			    << std::setw (5)
+			    << it->GetIndex()
+			    << ' '
+			    << std::setw (5)
+			    << (it->IsOnline() ? "UP" : "DOWN")
+			    << ' '
+			    << std::setw (9)
+			    << it->GetDuration().total_seconds()
+			    << ' '
+			    << std::setw (20)
+			    << it->GetStartTime()
+			    << std::setw (0)
+			    << ' '
+			    << it->GetLoginName()
+			    << '\n';
+			output->append (oss.str());
+		}
+	}
+	output->append ("\n\n");
+
+	output->append (" ****  COOL Object Table ****\n\n\n");
+	output->append ("Status AOT        NAF LAST-Change-Time     Client-Name\n\n");
+	for (auto it = cool_.begin(); it != cool_.end(); ++it) {
+		std::ostringstream oss;
+		auto sp = it->second;
+		oss << std::left
+		    << std::setw (6)
+		    << (sp->IsOnline() ? "UP" : "DOWN")
+		    << ' '
+		    << std::setw (10)
+		    << sp->GetAccumulatedOutageTime (now).total_seconds()
+		    << ' '
+		    << std::setw (3)
+		    << sp->GetAccumulatedFailures()
+		    << ' '
+		    << std::setw (20)
+		    << sp->GetLastChangeTime()
+		    << std::setw (0)
+		    << ' '
+		    << sp->GetLoginName()
+		    << '\n';
+		output->append (oss.str());
+	}
 }
 
 void
