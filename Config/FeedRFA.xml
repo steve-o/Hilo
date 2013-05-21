@@ -1,0 +1,1371 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+<FRRecordDefs>
+
+   <!-- FeedRFA.vhayu Version 1.65.11 2011/04/14 to be used in conjunction with exchgmap.vhayu version 1.65.11    -->
+   <!-- Added CorrectionIndex to FRHead element.                                                                  -->
+
+
+
+ <FieldMaps>
+
+  <FeedRFA>
+   <!-- This element is used exclusively by FeedRFA. Also note that FeedRFA does not use the DRDict element.                    -->
+   <!-- Last three of the leading 9 header fields plus all user fields for each FR record definition in this section,           -->
+   <!-- For FRCanCor, contains the last four of the leading 9 header fields plus FRCanCor-specific mapping for all user fields. -->   
+
+   <FRHead name="EqtyT" alias="Trade" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="T_TIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="T_LAST" type="t_double" />
+    <field name="T_BID" type="t_double" />
+    <field name="T_BIDSIZE" type="t_u64" />
+    <field name="EQ_BidCount" type="t_u32" /> 
+    <field name="EQ_BidBroker" type="t_string" size="33" /> 
+    <field name="EQ_BidTone" type="t_string" size="13" /> 
+    <field name="ET_BidExchange" type="t_string" size="33" />
+    <field name="T_ASK" type="t_double" />
+    <field name="T_ASKSIZE" type="t_u64" />
+    <field name="EQ_AskCount" type="t_u32" /> 
+    <field name="EQ_AskBroker" type="t_string" size="33" /> 
+    <field name="EQ_AskTone" type="t_string" size="13" /> 
+    <field name="ET_AskExchange" type="t_string" size="33" />
+    <field name="T_OPEN" type="t_double" />
+    <field name="T_HIGH" type="t_double" />
+    <field name="T_LOW" type="t_double" />
+    <field name="T_PREV" type="t_double" />
+    <field name="unused" /> 
+    <field name="T_TICK" type="t_u32" />
+    <field name="T_TRDVOL" type="t_u64" />
+    <field name="T_TOTVOL" type="t_u64" />
+    <field name="ET_TickCount" type="t_u32" /> 
+    <field name="ET_BuyerId" type="t_string" size="33" /> 
+    <field name="ET_SellerId" type="t_string" size="33" /> 
+    <field name="T_TRADEXCHG" type="t_string" size="33" />
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="T_EXTR_TIME" type="t_VHTime" /> 
+    <field name="T_SEQNUM" type="t_u64" />
+    <field name="unused" /> 
+    <field name="T_TRADECOND" type="t_string" size="33" />
+    <field name="T_EXTR_COND1" type="t_string" size="33" />
+    <field name="T_EXTR_COND2" type="t_string" size="33" />
+    <field name="T_EXTR_COND3" type="t_string" size="33" />
+    <field name="T_EXTR_COND4" type="t_string" size="33" />
+    <field name="T_EXTR_COND5" type="t_string" size="33" />
+    <field name="ET_Qualifier7" type="t_string" size="33" /> 
+    <field name="ET_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="EqFuQ" alias="Quote" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="Q_TIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="Q_BID" type="t_double" />
+    <field name="Q_BIDSIZE" type="t_u64" />
+    <field name="EQ_BidCount" type="t_u32" /> 
+    <field name="EQ_BidBroker" type="t_string" size="33" /> 
+    <field name="EQ_BidTone" type="t_string" size="13" /> 
+    <field name="Q_BIDEXCHG" type="t_string" size="33" />
+    <field name="Q_ASK" type="t_double" />
+    <field name="Q_ASKSIZE" type="t_u64" />
+    <field name="EQ_AskCount" type="t_u32" /> 
+    <field name="EQ_AskBroker" type="t_string" size="33" /> 
+    <field name="EQ_AskTone" type="t_string" size="13" /> 
+    <field name="Q_ASKEXCHG" type="t_string" size="33" />
+    <field name="EQ_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="Q_CONDSTR" type="t_string" size="33" />
+    <field name="Q_EXTR_COND1" type="t_string" size="33" />
+    <field name="Q_EXTR_COND2" type="t_string" size="33" />
+    <field name="Q_EXTR_COND3" type="t_string" size="33" />
+    <field name="Q_EXTR_COND4" type="t_string" size="33" />
+    <field name="Q_EXTR_COND5" type="t_string" size="33" />
+    <field name="EQ_Qualifier7" type="t_string" size="33" /> 
+    <field name="EQ_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="CorrectionQuote" alias="Quote" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="Q_TIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="Q_BID" type="t_double" />
+    <field name="Q_BIDSIZE" type="t_u64" />
+    <field name="EQ_BidCount" type="t_u32" /> 
+    <field name="EQ_BidBroker" type="t_string" size="33" /> 
+    <field name="EQ_BidTone" type="t_string" size="13" /> 
+    <field name="Q_BIDEXCHG" type="t_string" size="33" />
+    <field name="Q_ASK" type="t_double" />
+    <field name="Q_ASKSIZE" type="t_u64" />
+    <field name="EQ_AskCount" type="t_u32" /> 
+    <field name="EQ_AskBroker" type="t_string" size="33" /> 
+    <field name="EQ_AskTone" type="t_string" size="13" /> 
+    <field name="Q_ASKEXCHG" type="t_string" size="33" />
+    <field name="EQ_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="Q_CONDSTR" type="t_string" size="33" />
+    <field name="Q_EXTR_COND1" type="t_string" size="33" />
+    <field name="Q_EXTR_COND2" type="t_string" size="33" />
+    <field name="Q_EXTR_COND3" type="t_string" size="33" />
+    <field name="Q_EXTR_COND4" type="t_string" size="33" />
+    <field name="Q_EXTR_COND5" type="t_string" size="33" />
+    <field name="EQ_Qualifier7" type="t_string" size="33" /> 
+    <field name="EQ_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="FutrT" alias="Trade" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="T_TIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="F_LAST" type="t_double" />
+    <field name="T_BID" type="t_double" />
+    <field name="T_BIDSIZE" type="t_u64" />
+    <field name="EQ_BidCount" type="t_u32" /> 
+    <field name="EQ_BidBroker" type="t_string" size="33" /> 
+    <field name="EQ_BidTone" type="t_string" size="13" /> 
+    <field name="ET_BidExchange" type="t_string" size="33" />
+    <field name="T_ASK" type="t_double" />
+    <field name="T_ASKSIZE" type="t_u64" />
+    <field name="EQ_AskCount" type="t_u32" /> 
+    <field name="EQ_AskBroker" type="t_string" size="33" /> 
+    <field name="EQ_AskTone" type="t_string" size="13" /> 
+    <field name="ET_AskExchange" type="t_string" size="33" />
+    <field name="T_OPEN" type="t_double" />
+    <field name="T_HIGH" type="t_double" />
+    <field name="T_LOW" type="t_double" />
+    <field name="T_PREV" type="t_double" />
+    <field name="unused" />
+    <field name="T_TICK" type="t_u32" />
+    <field name="T_TRDVOL" type="t_u64" />
+    <field name="T_TOTVOL" type="t_u64" />
+    <field name="ET_TickCount" type="t_u32" /> 
+    <field name="ET_BuyerId" type="t_string" size="33" /> 
+    <field name="ET_SellerId" type="t_string" size="33" /> 
+    <field name="T_TRADEXCHG" type="t_string" size="33" />
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="T_EXTR_TIME" type="t_VHTime" /> 
+    <field name="T_SEQNUM" type="t_u64" />
+    <field name="unused" />
+    <field name="T_TRADECOND" type="t_string" size="33" />
+    <field name="T_EXTR_COND1" type="t_string" size="33" />
+    <field name="T_EXTR_COND2" type="t_string" size="33" />
+    <field name="T_EXTR_COND3" type="t_string" size="33" />
+    <field name="T_EXTR_COND4" type="t_string" size="33" />
+    <field name="T_EXTR_COND5" type="t_string" size="33" />
+    <field name="ET_Qualifier7" type="t_string" size="33" /> 
+    <field name="ET_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="BondT" alias="Trade" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="B_TRADETIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="B_LAST" type="t_double" />
+    <field name="B_BID" type="t_double" />
+    <field name="B_BIDSIZE" type="t_u64" />
+    <field name="BQ_BidCount" type="t_u32" /> 
+    <field name="BQ_BidBroker" type="t_string" size="33" /> 
+    <field name="BQ_BidTone" type="t_string" size="13" /> 
+    <field name="BT_BidExchange" type="t_string" size="33" />
+    <field name="B_ASK" type="t_double" />
+    <field name="B_ASKSIZE" type="t_u64" />
+    <field name="BQ_AskCount" type="t_u32" /> 
+    <field name="BQ_AskBroker" type="t_string" size="33" /> 
+    <field name="BQ_AskTone" type="t_string" size="13" /> 
+    <field name="BT_AskExchange" type="t_string" size="33" />
+    <field name="B_OPEN" type="t_double" />
+    <field name="B_HIGH" type="t_double" />
+    <field name="B_LOW" type="t_double" />
+    <field name="B_PREV" type="t_double" />
+    <field name="unused" /> 
+    <field name="T_TICK" type="t_u32" />
+    <field name="B_TRDVOL" type="t_u64" />
+    <field name="B_TOTVOL" type="t_u64" />
+    <field name="BT_TickCount" type="t_u32" /> 
+    <field name="BT_BuyerId" type="t_string" size="33" /> 
+    <field name="BT_SellerId" type="t_string" size="33" /> 
+    <field name="B_EXCHANGE" type="t_string" size="33" />
+    <field name="B_EXCHANGE" type="t_string" size="33" />
+    <field name="unused" /> 
+    <field name="T_SEQNUM" type="t_u64" />
+    <field name="unused" /> 
+    <field name="B_TRADECOND" type="t_string" size="33" />
+    <field name="T_EXTR_COND1" type="t_string" size="33" />
+    <field name="T_EXTR_COND2" type="t_string" size="33" />
+    <field name="T_EXTR_COND3" type="t_string" size="33" />
+    <field name="T_EXTR_COND4" type="t_string" size="33" />
+    <field name="T_EXTR_COND5" type="t_string" size="33" />
+    <field name="BT_Qualifier7" type="t_string" size="33" /> 
+    <field name="BT_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="BondQ" alias="Quote" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="B_QUOTETIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="B_BID" type="t_double" />
+    <field name="B_BIDSIZE" type="t_u64" />
+    <field name="BQ_BidCount" type="t_u32" /> 
+    <field name="BQ_BidBroker" type="t_string" size="33" /> 
+    <field name="BQ_BidTone" type="t_string" size="13" /> 
+    <field name="B_BIDEXCHG" type="t_string" size="33" />
+    <field name="B_ASK" type="t_double" />
+    <field name="B_ASKSIZE" type="t_u64" />
+    <field name="BQ_AskCount" type="t_u32" /> 
+    <field name="BQ_AskBroker" type="t_string" size="33" /> 
+    <field name="BQ_AskTone" type="t_string" size="13" /> 
+    <field name="B_ASKEXCHG" type="t_string" size="33" />
+    <field name="BQ_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="B_QUOTECOND" type="t_string" size="33" />
+    <field name="Q_EXTR_COND1" type="t_string" size="33" />
+    <field name="Q_EXTR_COND2" type="t_string" size="33" />
+    <field name="Q_EXTR_COND3" type="t_string" size="33" />
+    <field name="Q_EXTR_COND4" type="t_string" size="33" />
+    <field name="Q_EXTR_COND5" type="t_string" size="33" />
+    <field name="BQ_Qualifier7" type="t_string" size="33" /> 
+    <field name="BQ_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" />
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="MnymT" alias="Trade" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="M_TRADETIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="M_LAST" type="t_double" />
+    <field name="M_BID" type="t_double" />
+    <field name="M_BIDSIZE" type="t_u64" />
+    <field name="MQ_BidCount" type="t_u32" /> 
+    <field name="MQ_BidBroker" type="t_string" size="33" /> 
+    <field name="MQ_BidTone" type="t_string" size="13" /> 
+    <field name="MT_BidExchange" type="t_string" size="33" />
+    <field name="M_ASK" type="t_double" />
+    <field name="M_ASKSIZE" type="t_u64" />
+    <field name="MQ_AskCount" type="t_u32" /> 
+    <field name="MQ_AskBroker" type="t_string" size="33" /> 
+    <field name="MQ_AskTone" type="t_string" size="13" /> 
+    <field name="MT_AskExchange" type="t_string" size="33" />
+    <field name="M_OPEN" type="t_double" />
+    <field name="M_HIGH" type="t_double" />
+    <field name="M_LOW" type="t_double" />
+    <field name="M_PREV" type="t_double" />
+    <field name="unused" /> 
+    <field name="T_TICK" type="t_u32" />
+    <field name="M_TRDVOL" type="t_u64" />
+    <field name="M_TOTVOL" type="t_u64" />
+    <field name="MT_TickCount" type="t_u32" /> 
+    <field name="MT_BuyerId" type="t_string" size="33" /> 
+    <field name="MT_SellerId" type="t_string" size="33" /> 
+    <field name="M_EXCHANGE" type="t_string" size="33" />
+    <field name="M_EXCHANGE" type="t_string" size="33" />
+    <field name="unused" /> 
+    <field name="T_SEQNUM" type="t_u64" />
+    <field name="unused" /> 
+    <field name="M_TRADECOND" type="t_string" size="33" />
+    <field name="T_EXTR_COND1" type="t_string" size="33" />
+    <field name="T_EXTR_COND2" type="t_string" size="33" />
+    <field name="T_EXTR_COND3" type="t_string" size="33" />
+    <field name="T_EXTR_COND4" type="t_string" size="33" />
+    <field name="T_EXTR_COND5" type="t_string" size="33" />
+    <field name="MT_Qualifier7" type="t_string" size="33" /> 
+    <field name="MT_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" />
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="MnymQ" alias="Quote" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="M_QUOTETIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="M_BID" type="t_double" />
+    <field name="M_BIDSIZE" type="t_u64" />
+    <field name="MQ_BidCount" type="t_u32" /> 
+    <field name="MQ_BidBroker" type="t_string" size="33" /> 
+    <field name="MQ_BidTone" type="t_string" size="13" /> 
+    <field name="M_BIDEXCHG" type="t_string" size="33" />
+    <field name="M_ASK" type="t_double" />
+    <field name="M_ASKSIZE" type="t_u64" />
+    <field name="MQ_AskCount" type="t_u32" /> 
+    <field name="MQ_AskBroker" type="t_string" size="33" /> 
+    <field name="MQ_AskTone" type="t_string" size="13" /> 
+    <field name="M_ASKEXCHG" type="t_string" size="33" />
+    <field name="MQ_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="M_QUOTECOND" type="t_string" size="33" />
+    <field name="Q_EXTR_COND1" type="t_string" size="33" />
+    <field name="Q_EXTR_COND2" type="t_string" size="33" />
+    <field name="Q_EXTR_COND3" type="t_string" size="33" />
+    <field name="Q_EXTR_COND4" type="t_string" size="33" />
+    <field name="Q_EXTR_COND5" type="t_string" size="33" />
+    <field name="MQ_Qualifier7" type="t_string" size="33" /> 
+    <field name="MQ_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" />
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="CurrT" alias="Trade" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="C_TRADETIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="C_LAST" type="t_double" />
+    <field name="C_BID" type="t_double" />
+    <field name="C_BIDSIZE" type="t_u64" />
+    <field name="CQ_BidCount" type="t_u32" /> 
+    <field name="CQ_BidBroker" type="t_string" size="33" /> 
+    <field name="CQ_BidTone" type="t_string" size="13" /> 
+    <field name="CT_BidExchange" type="t_string" size="33" />
+    <field name="C_ASK" type="t_double" />
+    <field name="C_ASKSIZE" type="t_u64" />
+    <field name="CQ_AskCount" type="t_u32" /> 
+    <field name="CQ_AskBroker" type="t_string" size="33" /> 
+    <field name="CQ_AskTone" type="t_string" size="13" /> 
+    <field name="CT_AskExchange" type="t_string" size="33" />
+    <field name="C_OPEN" type="t_double" />
+    <field name="C_HIGH" type="t_double" />
+    <field name="C_LOW" type="t_double" />
+    <field name="C_PREV" type="t_double" />
+    <field name="unused" /> 
+    <field name="T_TICK" type="t_u32" />
+    <field name="C_TRDVOL" type="t_u64" />
+    <field name="C_TOTVOL" type="t_u64" />
+    <field name="CT_TickCount" type="t_u32" /> 
+    <field name="CT_BuyerId" type="t_string" size="33" /> 
+    <field name="CT_SellerId" type="t_string" size="33" /> 
+    <field name="C_EXCHANGE" type="t_string" size="33" />
+    <field name="C_EXCHANGE" type="t_string" size="33" />
+    <field name="unused" /> 
+    <field name="T_SEQNUM" type="t_u64" />
+    <field name="unused" /> 
+    <field name="C_TRADECOND" type="t_string" size="33" />
+    <field name="T_EXTR_COND1" type="t_string" size="33" />
+    <field name="T_EXTR_COND2" type="t_string" size="33" />
+    <field name="T_EXTR_COND3" type="t_string" size="33" />
+    <field name="T_EXTR_COND4" type="t_string" size="33" />
+    <field name="T_EXTR_COND5" type="t_string" size="33" />
+    <field name="CT_Qualifier7" type="t_string" size="33" /> 
+    <field name="CT_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="CurrQ" alias="Quote" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="C_QUOTETIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="C_BID" type="t_double" />
+    <field name="C_BIDSIZE" type="t_u64" />
+    <field name="CQ_BidCount" type="t_u32" /> 
+    <field name="CQ_BidBroker" type="t_string" size="33" /> 
+    <field name="CQ_BidTone" type="t_string" size="13" /> 
+    <field name="C_BIDEXCHG" type="t_string" size="33" />
+    <field name="C_ASK" type="t_double" />
+    <field name="C_ASKSIZE" type="t_u64" />
+    <field name="CQ_AskCount" type="t_u32" /> 
+    <field name="CQ_AskBroker" type="t_string" size="33" /> 
+    <field name="CQ_AskTone" type="t_string" size="13" /> 
+    <field name="C_ASKEXCHG" type="t_string" size="33" />
+    <field name="CQ_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="C_QUOTECOND" type="t_string" size="33" />
+    <field name="Q_EXTR_COND1" type="t_string" size="33" />
+    <field name="Q_EXTR_COND2" type="t_string" size="33" />
+    <field name="Q_EXTR_COND3" type="t_string" size="33" />
+    <field name="Q_EXTR_COND4" type="t_string" size="33" />
+    <field name="Q_EXTR_COND5" type="t_string" size="33" />
+    <field name="CQ_Qualifier7" type="t_string" size="33" /> 
+    <field name="CQ_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" />
+	<field name="C_GEN_VAL1" type="t_double" />
+	<field name="C_GEN_VAL3" type="t_double" />
+   </FRHead>
+
+   <FRHead name="INDX" alias="Trade" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="I_TIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="I_LAST" type="t_double" />
+    <field name="I_BID" type="t_double" />
+    <field name="IQ_BidSize" type="t_u64" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="IQ_BidTone" type="t_string" size="13" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="I_ASK" type="t_double" />
+    <field name="IQ_AskSize" type="t_u64" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="IQ_AskTone" type="t_string" size="13" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="I_OPEN" type="t_double" />
+    <field name="I_HIGH" type="t_double" />
+    <field name="I_LOW" type="t_double" />
+    <field name="I_CLOSE" type="t_double" />
+    <field name="unused" /> 
+    <field name="I_TICK" type="t_u32" />
+    <field name="I_TRDVOL" type="t_u64" />
+    <field name="I_VOLUME" type="t_u64" />
+    <field name="IT_TickCount" type="t_u32" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="unused" /> 
+    <field name="T_SEQNUM" type="t_u64" />
+    <field name="unused" /> 
+    <field name="I_COND" type="t_string" size="33" />
+    <field name="T_EXTR_COND1" type="t_string" size="33" />
+    <field name="T_EXTR_COND2" type="t_string" size="33" />
+    <field name="T_EXTR_COND3" type="t_string" size="33" />
+    <field name="T_EXTR_COND4" type="t_string" size="33" />
+    <field name="T_EXTR_COND5" type="t_string" size="33" />
+    <field name="IT_Qualifier7" type="t_string" size="33" /> 
+    <field name="IT_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="CorrectionIndex" alias="Trade" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="I_TIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="I_LAST" type="t_double" />
+    <field name="I_BID" type="t_double" />
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="I_ASK" type="t_double" />
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="I_OPEN" type="t_double" />
+    <field name="I_HIGH" type="t_double" />
+    <field name="I_LOW" type="t_double" />
+    <field name="I_CLOSE" type="t_double" />
+    <field name="unused" /> 
+    <field name="I_TICK" type="t_u32" />
+    <field name="I_TRDVOL" type="t_u64" />
+    <field name="I_VOLUME" type="t_u64" />
+    <field name="IT_TickCount" type="t_u32" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="unused" /> 
+    <field name="T_SEQNUM" type="t_u64" />
+    <field name="unused" /> 
+    <field name="I_COND" type="t_string" size="33" />
+    <field name="T_EXTR_COND1" type="t_string" size="33" />
+    <field name="T_EXTR_COND2" type="t_string" size="33" />
+    <field name="T_EXTR_COND3" type="t_string" size="33" />
+    <field name="T_EXTR_COND4" type="t_string" size="33" />
+    <field name="T_EXTR_COND5" type="t_string" size="33" />
+    <field name="IT_Qualifier7" type="t_string" size="33" /> 
+    <field name="IT_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <FRHead name="INDXQ" alias="Quote" >
+    <field name="recordcount" type="t_u64" /> 
+    <field name="I_TIME" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="I_BID" type="t_double" />
+    <field name="IQ_BidSize" type="t_u64" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="IQ_BidTone" type="t_string" size="13" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="I_ASK" type="t_double" />
+    <field name="IQ_AskSize" type="t_u64" /> 
+    <field name="unused" /> 
+    <field name="unused" /> 
+    <field name="IQ_AskTone" type="t_string" size="13" /> 
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+    <field name="IQ_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="Q_CONDSTR" type="t_string" size="33" />
+    <field name="Q_EXTR_COND1" type="t_string" size="33" />
+    <field name="Q_EXTR_COND2" type="t_string" size="33" />
+    <field name="Q_EXTR_COND3" type="t_string" size="33" />
+    <field name="Q_EXTR_COND4" type="t_string" size="33" />
+    <field name="Q_EXTR_COND5" type="t_string" size="33" />
+    <field name="IQ_Qualifier7" type="t_string" size="33" /> 
+    <field name="IQ_Qualifier8" type="t_string" size="33" /> 
+    <field name="unused" /> 
+   	<field name="unused" /> 
+   	<field name="unused" /> 
+   </FRHead>
+
+   <!-- FRCanCor starts from field 6 -->
+   <FRHead name="FRCanCor">
+    <field name="X_SOURCENAME" type="t_string" /> 
+    <field name="recordcount" type="t_u64" /> 
+    <field name="X_CURR_TIME" type="t_VHTime"/>
+    <field name="unused" /> 
+    <field name="cancortype" type="t_string" /> 
+    <field name="X_CCSRC" type="t_string" /> 
+    <field name="X_MYSEQNUM" type="t_u64" mode="S" /> 
+    <field name="X_PRIMEXCHG" type="t_string" mode="S" /> 
+    <field name="X_TRADECODE" type="t_string" mode="S" /> 
+    <field name="X_TRADEEXCH" type="t_string" mode="S" /> 
+    <field name="X_BACKSCANPERIOD" type="t_u64" mode="T" />
+    <field name="X_ORIG_SEQ" type="t_u64" mode="M" tgt="SequenceNumber" />
+    <field name="X_ORIG_PRICE" type="t_double" mode="M" tgt="LastPrice" />
+    <field name="X_ORIG_VOL" type="t_u64" mode="M" tgt="TickVolume" />
+    <field name="X_ORIG_TIME" type="t_VHTime" mode="M" tgt="VhExchgTime"/>
+    <field name="X_NEW_PRICE" type="t_double" mode="C" tgt="LastPrice" />
+    <field name="X_NEW_VOL" type="t_u64" mode="C" tgt="TickVolume" /> 
+   </FRHead>
+
+   <FRHead name="MD" alias="Depth" >
+    <field name="recordcount" type="t_u64" />
+    <field name="M_TIME_1" type="t_VHTime" />
+    <field name="unused" />
+    <field name="unused" /> 
+    <field name="FM_BidTone1" type="t_string" size="13" /> 
+    <field name="FM_AskTone1" type="t_string" size="13" /> 
+    <field name="FM_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="M_CONDSTR_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND1_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND2_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND3_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND4_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND5_1" type="t_string" size="33" />
+    <field name="FM_Qualifier7" type="t_string" size="33" /> 
+    <field name="FM_Qualifier8" type="t_string" size="33" /> 
+    <field name="M_BID_1" type="t_double" />
+    <field name="M_BIDSIZE_1" type="t_u64" />
+    <field name="FM_BidCount1" type="t_u32" />
+    <field name="M_ASK_1" type="t_double" />
+    <field name="M_ASKSIZE_1" type="t_u64" />
+    <field name="FM_AskCount1" type="t_u32" />
+    <field name="M_BID_2" type="t_double" />
+    <field name="M_BIDSIZE_2" type="t_u64" />
+    <field name="FM_BidCount2" type="t_u32" />
+    <field name="M_ASK_2" type="t_double" />
+    <field name="M_ASKSIZE_2" type="t_u64" />
+    <field name="FM_AskCount2" type="t_u32" />
+    <field name="M_BID_3" type="t_double" />
+    <field name="M_BIDSIZE_3" type="t_u64" />
+    <field name="FM_BidCount3" type="t_u32" />
+    <field name="M_ASK_3" type="t_double" />
+    <field name="M_ASKSIZE_3" type="t_u64" />
+    <field name="FM_AskCount3" type="t_u32" />
+    <field name="M_BID_4" type="t_double" />
+    <field name="M_BIDSIZE_4" type="t_u64" />
+    <field name="FM_BidCount4" type="t_u32" />
+    <field name="M_ASK_4" type="t_double" />
+    <field name="M_ASKSIZE_4" type="t_u64" />
+    <field name="FM_AskCount4" type="t_u32" />
+    <field name="M_BID_5" type="t_double" />
+    <field name="M_BIDSIZE_5" type="t_u64" />
+    <field name="FM_BidCount5" type="t_u32" />
+    <field name="M_ASK_5" type="t_double" />
+    <field name="M_ASKSIZE_5" type="t_u64" />
+    <field name="FM_AskCount5" type="t_u32" />
+    <field name="M_BID_6" type="t_double" />
+    <field name="M_BIDSIZE_6" type="t_u64" />
+    <field name="FM_BidCount6" type="t_u32" />
+    <field name="M_ASK_6" type="t_double" />
+    <field name="M_ASKSIZE_6" type="t_u64" />
+    <field name="FM_AskCount6" type="t_u32" />
+    <field name="M_BID_7" type="t_double" />
+    <field name="M_BIDSIZE_7" type="t_u64" />
+    <field name="FM_BidCount7" type="t_u32" />
+    <field name="M_ASK_7" type="t_double" />
+    <field name="M_ASKSIZE_7" type="t_u64" />
+    <field name="FM_AskCount7" type="t_u32" />
+    <field name="M_BID_8" type="t_double" />
+    <field name="M_BIDSIZE_8" type="t_u64" />
+    <field name="FM_BidCount8" type="t_u32" />
+    <field name="M_ASK_8" type="t_double" />
+    <field name="M_ASKSIZE_8" type="t_u64" />
+    <field name="FM_AskCount8" type="t_u32" />
+    <field name="M_BID_9" type="t_double" />
+    <field name="M_BIDSIZE_9" type="t_u64" />
+    <field name="FM_BidCount9" type="t_u32" />
+    <field name="M_ASK_9" type="t_double" />
+    <field name="M_ASKSIZE_9" type="t_u64" />
+    <field name="FM_AskCount9" type="t_u32" />
+    <field name="M_BID_10" type="t_double" />
+    <field name="M_BIDSIZE_10" type="t_u64" />
+    <field name="FM_BidCount10" type="t_u32" />
+    <field name="M_ASK_10" type="t_double" />
+    <field name="M_ASKSIZE_10" type="t_u64" />
+    <field name="FM_AskCount10" type="t_u32" />
+   </FRHead>
+
+   <FRHead name="ReinitDepth" alias="Depth" >
+    <field name="recordcount" type="t_u64" />
+    <field name="RD_Time" type="t_VHTime" />
+    <field name="unused" />
+    <field name="unused" /> 
+    <field name="RD_BidTone" type="t_string" size="13" /> 
+    <field name="RD_AskTone" type="t_string" size="13" /> 
+    <field name="RD_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="RD_Qualifier1" type="t_string" size="33" />
+    <field name="RD_Qualifier2" type="t_string" size="33" />
+    <field name="RD_Qualifier3" type="t_string" size="33" />
+    <field name="RD_Qualifier4" type="t_string" size="33" />
+    <field name="RD_Qualifier5" type="t_string" size="33" />
+    <field name="RD_Qualifier6" type="t_string" size="33" />
+    <field name="RD_Qualifier7" type="t_string" size="33" /> 
+    <field name="RD_Qualifier8" type="t_string" size="33" /> 
+    <field name="RD_Bid1" type="t_double" />
+    <field name="RD_BidSize1" type="t_u64" />
+    <field name="RD_BidCount1" type="t_u32" />
+    <field name="RD_Ask1" type="t_double" />
+    <field name="RD_AskSize1" type="t_u64" />
+    <field name="RD_AskCount1" type="t_u32" />
+    <field name="RD_Bid2" type="t_double" />
+    <field name="RD_BidSize2" type="t_u64" />
+    <field name="RD_BidCount2" type="t_u32" />
+    <field name="RD_Ask2" type="t_double" />
+    <field name="RD_AskSize2" type="t_u64" />
+    <field name="RD_AskCount2" type="t_u32" />
+    <field name="RD_Bid3" type="t_double" />
+    <field name="RD_BidSize3" type="t_u64" />
+    <field name="RD_BidCount3" type="t_u32" />
+    <field name="RD_Ask3" type="t_double" />
+    <field name="RD_AskSize3" type="t_u64" />
+    <field name="RD_AskCount3" type="t_u32" />
+    <field name="RD_Bid4" type="t_double" />
+    <field name="RD_BidSize4" type="t_u64" />
+    <field name="RD_BidCount4" type="t_u32" />
+    <field name="RD_Ask4" type="t_double" />
+    <field name="RD_AskSize4" type="t_u64" />
+    <field name="RD_AskCount4" type="t_u32" />
+    <field name="RD_Bid5" type="t_double" />
+    <field name="RD_BidSize5" type="t_u64" />
+    <field name="RD_BidCount5" type="t_u32" />
+    <field name="RD_Ask5" type="t_double" />
+    <field name="RD_AskSize5" type="t_u64" />
+    <field name="RD_AskCount5" type="t_u32" />
+    <field name="RD_Bid6" type="t_double" />
+    <field name="RD_BidSize6" type="t_u64" />
+    <field name="RD_BidCount6" type="t_u32" />
+    <field name="RD_Ask6" type="t_double" />
+    <field name="RD_AskSize6" type="t_u64" />
+    <field name="RD_AskCount6" type="t_u32" />
+    <field name="RD_Bid7" type="t_double" />
+    <field name="RD_BidSize7" type="t_u64" />
+    <field name="RD_BidCount7" type="t_u32" />
+    <field name="RD_Ask7" type="t_double" />
+    <field name="RD_AskSize7" type="t_u64" />
+    <field name="RD_AskCount7" type="t_u32" />
+    <field name="RD_Bid8" type="t_double" />
+    <field name="RD_BidSize8" type="t_u64" />
+    <field name="RD_BidCount8" type="t_u32" />
+    <field name="RD_Ask8" type="t_double" />
+    <field name="RD_AskSize8" type="t_u64" />
+    <field name="RD_AskCount8" type="t_u32" />
+    <field name="RD_Bid9" type="t_double" />
+    <field name="RD_BidSize9" type="t_u64" />
+    <field name="RD_BidCount9" type="t_u32" />
+    <field name="RD_Ask9" type="t_double" />
+    <field name="RD_AskSize9" type="t_u64" />
+    <field name="RD_AskCount9" type="t_u32" />
+    <field name="RD_Bid10" type="t_double" />
+    <field name="RD_BidSize10" type="t_u64" />
+    <field name="RD_BidCount10" type="t_u32" />
+    <field name="RD_Ask10" type="t_double" />
+    <field name="RD_AskSize10" type="t_u64" />
+    <field name="RD_AskCount10" type="t_u32" />
+   </FRHead>
+
+   <FRHead name="CorrectionDepth" alias="Depth" >
+    <field name="recordcount" type="t_u64" />
+    <field name="M_TIME_1" type="t_VHTime" />
+    <field name="unused" />
+    <field name="unused" /> 
+    <field name="FM_BidTone1" type="t_string" size="13" /> 
+    <field name="FM_AskTone1" type="t_string" size="13" /> 
+    <field name="FM_ListedExchg" type="t_string" size="33" /> 
+    <field name="unused" /> 
+    <field name="M_CONDSTR_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND1_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND2_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND3_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND4_1" type="t_string" size="33" />
+    <field name="M_EXTR_COND5_1" type="t_string" size="33" />
+    <field name="FM_Qualifier7" type="t_string" size="33" /> 
+    <field name="FM_Qualifier8" type="t_string" size="33" /> 
+    <field name="M_BID_1" type="t_double" />
+    <field name="M_BIDSIZE_1" type="t_u64" />
+    <field name="FM_BidCount1" type="t_u32" />
+    <field name="M_ASK_1" type="t_double" />
+    <field name="M_ASKSIZE_1" type="t_u64" />
+    <field name="FM_AskCount1" type="t_u32" />
+    <field name="M_BID_2" type="t_double" />
+    <field name="M_BIDSIZE_2" type="t_u64" />
+    <field name="FM_BidCount2" type="t_u32" />
+    <field name="M_ASK_2" type="t_double" />
+    <field name="M_ASKSIZE_2" type="t_u64" />
+    <field name="FM_AskCount2" type="t_u32" />
+    <field name="M_BID_3" type="t_double" />
+    <field name="M_BIDSIZE_3" type="t_u64" />
+    <field name="FM_BidCount3" type="t_u32" />
+    <field name="M_ASK_3" type="t_double" />
+    <field name="M_ASKSIZE_3" type="t_u64" />
+    <field name="FM_AskCount3" type="t_u32" />
+    <field name="M_BID_4" type="t_double" />
+    <field name="M_BIDSIZE_4" type="t_u64" />
+    <field name="FM_BidCount4" type="t_u32" />
+    <field name="M_ASK_4" type="t_double" />
+    <field name="M_ASKSIZE_4" type="t_u64" />
+    <field name="FM_AskCount4" type="t_u32" />
+    <field name="M_BID_5" type="t_double" />
+    <field name="M_BIDSIZE_5" type="t_u64" />
+    <field name="FM_BidCount5" type="t_u32" />
+    <field name="M_ASK_5" type="t_double" />
+    <field name="M_ASKSIZE_5" type="t_u64" />
+    <field name="FM_AskCount5" type="t_u32" />
+    <field name="M_BID_6" type="t_double" />
+    <field name="M_BIDSIZE_6" type="t_u64" />
+    <field name="FM_BidCount6" type="t_u32" />
+    <field name="M_ASK_6" type="t_double" />
+    <field name="M_ASKSIZE_6" type="t_u64" />
+    <field name="FM_AskCount6" type="t_u32" />
+    <field name="M_BID_7" type="t_double" />
+    <field name="M_BIDSIZE_7" type="t_u64" />
+    <field name="FM_BidCount7" type="t_u32" />
+    <field name="M_ASK_7" type="t_double" />
+    <field name="M_ASKSIZE_7" type="t_u64" />
+    <field name="FM_AskCount7" type="t_u32" />
+    <field name="M_BID_8" type="t_double" />
+    <field name="M_BIDSIZE_8" type="t_u64" />
+    <field name="FM_BidCount8" type="t_u32" />
+    <field name="M_ASK_8" type="t_double" />
+    <field name="M_ASKSIZE_8" type="t_u64" />
+    <field name="FM_AskCount8" type="t_u32" />
+    <field name="M_BID_9" type="t_double" />
+    <field name="M_BIDSIZE_9" type="t_u64" />
+    <field name="FM_BidCount9" type="t_u32" />
+    <field name="M_ASK_9" type="t_double" />
+    <field name="M_ASKSIZE_9" type="t_u64" />
+    <field name="FM_AskCount9" type="t_u32" />
+    <field name="M_BID_10" type="t_double" />
+    <field name="M_BIDSIZE_10" type="t_u64" />
+    <field name="FM_BidCount10" type="t_u32" />
+    <field name="M_ASK_10" type="t_double" />
+    <field name="M_ASKSIZE_10" type="t_u64" />
+    <field name="FM_AskCount10" type="t_u32" />
+   </FRHead>
+
+   <FRHead name="TradePhase">
+    <field name="uniqseqnum" type="t_u64" /> 
+    <field name="FR_CLOCK" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="tradephase" type="t_string" size="13" />
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+   </FRHead>
+
+   <FRHead name="Stat">
+    <field name="uniqseqnum" type="t_u64" /> 
+    <field name="FR_CLOCK" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="statuscode" type="t_string" size="13" />
+    <field name="T_LISTEXCHG" type="t_string" size="33" />
+   </FRHead>
+
+   <FRHead name="Auction">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="AuctionTime" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="AuctionType" type="t_string" size="33"/> 
+    <field name="AuctionPrice" type="t_double"/>
+    <field name="AuctionVolume" type="t_u64"/>
+    <field name="AuctionExchange" type="t_string" size="33" />
+   </FRHead>
+
+   <FRHead name="Link">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="LinkTime" type="t_VHTime" /> 	
+    <field name="unused" />
+    <field name="NextLink" type="t_string" size="22" />
+    <field name="PreviousLink" type="t_string" size="22" />
+    <field name="ChildSym1" type="t_string" size="22" />
+    <field name="ChildSym2" type="t_string" size="22" />
+    <field name="ChildSym3" type="t_string" size="22" />
+    <field name="ChildSym4" type="t_string" size="22" />
+    <field name="ChildSym5" type="t_string" size="22" />
+    <field name="ChildSym6" type="t_string" size="22" />
+    <field name="ChildSym7" type="t_string" size="22" />
+    <field name="ChildSym8" type="t_string" size="22" />
+    <field name="ChildSym9" type="t_string" size="22" />
+    <field name="ChildSym10" type="t_string" size="22" />
+    <field name="ChildSym11" type="t_string" size="22" />
+    <field name="ChildSym12" type="t_string" size="22" />
+    <field name="ChildSym13" type="t_string" size="22" />
+    <field name="ChildSym14" type="t_string" size="22" /> 
+   </FRHead>
+
+   <FRHead name="GBQuote">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="GBQuoteTime" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="GBBidPrice" type="t_double" /> 
+    <field name="GBBidYield" type="t_double" /> 
+    <field name="GBISMABidYield" type="t_double" /> 
+    <field name="GBBid2" type="t_double" /> 
+    <field name="GBBidSize" type="t_double" /> 
+    <field name="GBAskPrice" type="t_double" /> 
+    <field name="GBAskYield" type="t_double" /> 
+    <field name="GBISMAAskYield" type="t_double" /> 
+    <field name="GBAsk2" type="t_double" /> 
+    <field name="GBAskSize" type="t_double" /> 
+    <field name="GBContributor" type="t_string" size="13" /> 
+    <field name="GBCtbrLoc" type="t_string" size="4" /> 
+   </FRHead>
+
+   <FRHead name="GBRefData">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="GBRefTime" type="t_VHTime" /> 	
+    <field name="unused" /> 
+    <field name="GBExchangeID" type="t_string" size="4" /> 
+    <field name="GBCurrency" type="t_string" size="4" /> 
+    <field name="GBBondType" type="t_string" size="4" /> 
+    <field name="GBMaturity" type="t_string" size="12" /> 
+    <field name="GBCouponRate" type="t_double" /> 
+    <field name="GBCouponFrequency" type="t_string" size="9" /> 
+    <field name="GBRating" type="t_string" size="4" /> 
+    <field name="GBRatingSource" type="t_string" size="4" /> 
+    <field name="GBYieldType" type="t_string" size="4" /> 
+    <field name="GBNominal" type="t_double" />
+    <field name="GBTradingUnits" type="t_string" size="5" /> 
+    <field name="GBOfficialCode" type="t_string" size="13" /> 
+    <field name="GBOfficialCodeType" type="t_string" size="4" /> 
+    <field name="GBOfficialCode2" type="t_string" size="13" /> 
+    <field name="GBOfficialCode2Type" type="t_string" size="4" /> 
+    <field name="GBAccruedInterest" type="t_double" />
+    <field name="GBDuration" type="t_double" /> 
+    <field name="GBModifiedDuration" type="t_double" /> 
+    <field name="GBSettleDate" type="t_string" size="12" /> 
+   </FRHead>
+
+   <FRHead name="MMQuote">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="MMQuoteTime" type="t_VHTime" /> 	
+    <field name="unused" /> 
+    <field name="rootsymbol" type="t_string" size="33" /> 
+    <field name="parentexchg" type="t_string" size="4" /> 
+    <field name="MarketMaker" type="t_string" size="5" /> 
+    <field name="MMBid" type="t_double" /> 
+    <field name="MMBidSize" type="t_double" /> 
+    <field name="MMAsk" type="t_double" /> 
+    <field name="MMAskSize" type="t_double" /> 
+    <field name="MMQualifier1" type="t_string" size="4" /> 
+    <field name="MMQualifier2" type="t_string" size="4" />
+    <field name="MMQualifier3" type="t_string" size="2" />
+    </FRHead>
+
+   <FRHead name="NAV">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="NAVTime" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="NAVPrice" type="t_double" />
+    <field name="NAVTick" type="t_u32" />
+    <field name="NAVDate" type="t_string" size="12" />
+    <field name="NAVCount" type="t_u32"/>
+    <field name="NAVQualifier1" type="t_string" size="33" />
+    <field name="NAVQualifier2" type="t_string" size="33" />
+    <field name="NAVQualifier3" type="t_string" size="33" />
+   </FRHead>
+
+   <FRHead name="PermData">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="PermTime" type="t_VHTime" /> 
+    <field name="unused" /> 
+    <field name="Permission" type="t_string" size="13" />
+   </FRHead>
+
+   <FRHead name="FIRefData">
+    <field name="recordcount" type="t_u64" /> 
+    <field name="FIRefTime" type="t_VHTime" />       
+    <field name="unused" /> 
+    <field name="FICurrency" type="t_string" size="4" /> 
+    <field name="FIBondType" type="t_string" size="4" /> 
+    <field name="FIMaturityDate" type="t_string" size="14" /> 
+    <field name="FICouponRate" type="t_double" /> 
+    <field name="FICouponFrequency" type="t_string" size="9" /> 
+    <field name="FIRating" type="t_string" size="5" /> 
+    <field name="FIRatingSource" type="t_string" size="4" /> 
+    <field name="FITradingUnits" type="t_string" size="5" /> 
+    <field name="FIOfficialCode" type="t_string" size="13" /> 
+    <field name="FIOfficialCodeType" type="t_string" size="4" /> 
+    <field name="FIOfficialCode2" type="t_string" size="13" /> 
+    <field name="FIOfficialCode2Type" type="t_string" size="4" /> 
+    <field name="FIBackgroundRef" type="t_string" size="22" /> 
+    <field name="FISettleDate" type="t_string" size="14" /> 
+    <field name="FIIssueDate" type="t_string" size="14" /> 
+    <field name="FIIssuePrice" type="t_double" /> 
+    <field name="FITicker" type="t_string" size="7" /> 
+    <field name="FIAmountOS" type="t_string" size="17" />
+   </FRHead>
+
+   </FeedRFA>
+
+ </FieldMaps>
+
+ <FRDict name="VhayuFlexRecords">
+
+
+  <!-- defid 40001-40200 reserved for FeedRFA/FeedRDM by Los Gatos -->
+
+ <FRDef name="Trade" defid="40001">
+   <field name="LastPrice" type="t_double"/>
+   <field name="BidPrice" type="t_double"/>
+   <field name="BidSize" type="t_u64"/>
+   <field name="BidCount" type="t_u32"/> 
+   <field name="BidBroker" type="t_string" size="33"/> 
+   <field name="BidTone" type="t_string" size="13"/>
+   <field name="BidExchange" type="t_string" size="33"/>
+   <field name="AskPrice" type="t_double"/>
+   <field name="AskSize" type="t_u64"/>
+   <field name="AskCount" type="t_u32"/> 
+   <field name="AskBroker" type="t_string" size="33"/> 
+   <field name="AskTone" type="t_string" size="13"/>
+   <field name="AskExchange" type="t_string" size="33"/>
+   <field name="OpenPrice" type="t_double"/>
+   <field name="HighPrice" type="t_double"/>
+   <field name="LowPrice" type="t_double"/>
+   <field name="ClosePrice" type="t_double"/>
+   <field name="TickDirectionString" type="t_string" size="9" />
+   <field name="TickDirectionRaw"  type="t_u32" />
+   <field name="TickVolume" type="t_u64"/>
+   <field name="CummulativeVolume" type="t_u64"/>
+   <field name="TickCount" type="t_u32"/> 
+   <field name="BuyerId" type="t_string" size="33"/> 
+   <field name="SellerId" type="t_string" size="33"/> 
+   <field name="TradedExchange" type="t_string" size="33"/>
+   <field name="ListedExchange" type="t_string" size="33"/>
+   <field name="VendorTime" type="t_VHTime" />       
+   <field name="SequenceNumber" type="t_u64"/> 
+   <field name="TradingPhase" type="t_string" size="33"/> 
+   <field name="Qualifier1" type="t_string" size="33"/> 
+   <field name="Qualifier2" type="t_string" size="33"/> 
+   <field name="Qualifier3" type="t_string" size="33"/> 
+   <field name="Qualifier4" type="t_string" size="33"/> 
+   <field name="Qualifier5" type="t_string" size="33"/> 
+   <field name="Qualifier6" type="t_string" size="33"/> 
+   <field name="Qualifier7" type="t_string" size="33"/> 
+   <field name="Qualifier8" type="t_string" size="33"/> 
+   <field name="EstimatedNextPrice" type="t_double"/>
+	<field name="GeneralValue1" type="t_double"/>
+	<field name="GeneralValue3" type="t_double"/>
+ </FRDef>
+
+ <FRDef name="Quote" defid="40002">
+   <field name="BidPrice" type="t_double"/>
+   <field name="BidSize" type="t_u64"/>
+   <field name="BidCount" type="t_u32"/> 
+   <field name="BidBroker" type="t_string" size="33"/> 
+   <field name="BidTone" type="t_string" size="13"/>
+   <field name="BidExchange" type="t_string" size="33"/>
+   <field name="AskPrice" type="t_double"/>
+   <field name="AskSize" type="t_u64"/>
+   <field name="AskCount" type="t_u32"/> 
+   <field name="AskBroker" type="t_string" size="33"/> 
+   <field name="AskTone" type="t_string" size="13"/>
+   <field name="AskExchange" type="t_string" size="33"/>
+   <field name="ListedExchange" type="t_string" size="33"/>
+   <field name="TradingPhase" type="t_string" size="33"/> 
+   <field name="Qualifier1" type="t_string" size="33"/> 
+   <field name="Qualifier2" type="t_string" size="33"/> 
+   <field name="Qualifier3" type="t_string" size="33"/> 
+   <field name="Qualifier4" type="t_string" size="33"/> 
+   <field name="Qualifier5" type="t_string" size="33"/> 
+   <field name="Qualifier6" type="t_string" size="33"/> 
+   <field name="Qualifier7" type="t_string" size="33"/> 
+   <field name="Qualifier8" type="t_string" size="33"/> 
+   <field name="EstimatedNextPrice" type="t_double"/>
+	<field name="GeneralValue1" type="t_double"/>
+	<field name="GeneralValue3" type="t_double"/>
+ </FRDef>
+
+ <FRDef name="FRCanCor" defid="40003" class="VhCanCor">
+  <field name="Command" type="t_string" /> 
+  <field name="ccSrc" type="t_string" /> 
+  <field name="CCField1" type="t_string"/>
+  <field name="CCField2" type="t_string"/>
+  <field name="CCField3" type="t_string"/>
+  <field name="CCField4" type="t_string"/>
+  <field name="CCField5" type="t_string"/>
+  <field name="CCField6" type="t_string"/>
+  <field name="CCField7" type="t_string"/>
+  <field name="CCField8" type="t_string"/>
+  <field name="CCField9" type="t_string"/>
+  <field name="CCField10" type="t_string"/>
+  <field name="CCField11" type="t_string"/>
+  <field name="CCField12" type="t_string"/>
+  <field name="CCField13" type="t_string"/>
+  <field name="CCField14" type="t_string"/>
+  <field name="CCField15" type="t_string"/>
+  <field name="CCField16" type="t_string"/>
+  <field name="CCField17" type="t_string"/>
+  <field name="CCField18" type="t_string"/>
+  <field name="CCField19" type="t_string"/>
+  <field name="CCField20" type="t_string"/>
+  <field name="CCField21" type="t_string"/>
+  <field name="CCField22" type="t_string"/>
+  <field name="CCField23" type="t_string"/>
+  <field name="CCField24" type="t_string"/>
+  <field name="CCField25" type="t_string"/>
+  <field name="CCField26" type="t_string"/>
+  <field name="CCField27" type="t_string"/>
+  <field name="CCField28" type="t_string"/>
+  <field name="CCField29" type="t_string"/>
+  <field name="CCField30" type="t_string"/>
+  <field name="CCField31" type="t_string"/>
+  <field name="CCField32" type="t_string"/>
+  <field name="CCField33" type="t_string"/>
+  <field name="CCField34" type="t_string"/>
+  <field name="CCField35" type="t_string"/>
+  <field name="CCField36" type="t_string"/>
+  <field name="CCField37" type="t_string"/>
+  <field name="CCField38" type="t_string"/>
+  <field name="CCField39" type="t_string"/>
+  <field name="CCField40" type="t_string"/>
+  <field name="CCField41" type="t_string"/>
+  <field name="CCField42" type="t_string"/>
+  <field name="CCField43" type="t_string"/>
+  <field name="CCField44" type="t_string"/>
+  <field name="CCField45" type="t_string"/>
+  <field name="CCField46" type="t_string"/>
+  <field name="CCField47" type="t_string"/>
+  <field name="CCField48" type="t_string"/>
+  <field name="CCField49" type="t_string"/>
+  <field name="CCField50" type="t_string"/>
+  <field name="CCField51" type="t_string"/>
+  <field name="CCField52" type="t_string"/>
+  <field name="CCField53" type="t_string"/>
+  <field name="CCField54" type="t_string"/>
+  <field name="CCField55" type="t_string"/>
+  <field name="CCField56" type="t_string"/>
+  <field name="CCField57" type="t_string"/>
+  <field name="CCField58" type="t_string"/>
+  <field name="CCField59" type="t_string"/>
+  <field name="CCField60" type="t_string"/>
+  <field name="CCField61" type="t_string"/>
+  <field name="CCField62" type="t_string"/>
+  <field name="CCField63" type="t_string"/>
+  <field name="CCField64" type="t_string"/>
+  <field name="CCField65" type="t_string"/>
+  <field name="CCField66" type="t_string"/>
+  <field name="CCField67" type="t_string"/>
+  <field name="CCField68" type="t_string"/>
+  <field name="CCField69" type="t_string"/>
+  <field name="CCField70" type="t_string"/>
+  <field name="CCField71" type="t_string"/>
+  <field name="CCField72" type="t_string"/>
+  <field name="CCField73" type="t_string"/>
+  <field name="CCField74" type="t_string"/>
+  <field name="CCField75" type="t_string"/>
+  <field name="CCField76" type="t_string"/>
+  <field name="CCField77" type="t_string"/>
+  <field name="CCField78" type="t_string"/>
+  <field name="CCField79" type="t_string"/>
+  <field name="CCField80" type="t_string"/>
+  <field name="CCField81" type="t_string"/>
+  <field name="CCField82" type="t_string"/>
+  <field name="CCField83" type="t_string"/>
+  <field name="CCField84" type="t_string"/>
+  <field name="CCField85" type="t_string"/>
+  <field name="CCField86" type="t_string"/>
+  <field name="CCField87" type="t_string"/>
+  <field name="CCField88" type="t_string"/>
+  <field name="CCField89" type="t_string"/>
+  <field name="CCField90" type="t_string"/>
+  <field name="CCField91" type="t_string"/>
+  <field name="CCField92" type="t_string"/>
+  <field name="CCField93" type="t_string"/>
+  <field name="CCField94" type="t_string"/>
+  <field name="CCField95" type="t_string"/>
+  <field name="CCField96" type="t_string"/>
+  <field name="CCField97" type="t_string"/>
+  <field name="CCField98" type="t_string"/>
+  <field name="CCField99" type="t_string"/>
+  <field name="CCField100" type="t_string"/>
+ </FRDef>
+
+ <FRDef name="Depth" defid="40004" class="VhDOM">
+   <field name="LevelsInDepth" type="t_u32"/>
+   <field name="BidTone1" type="t_string" size="13"/>
+   <field name="AskTone1" type="t_string" size="13"/>
+   <field name="ListedExchange" type="t_string" size="33"/>
+   <field name="TradingPhase" type="t_string" size="33"/>
+   <field name="Qualifier1" type="t_string" size="33"/>
+   <field name="Qualifier2" type="t_string" size="33"/>
+   <field name="Qualifier3" type="t_string" size="33"/>
+   <field name="Qualifier4" type="t_string" size="33"/>
+   <field name="Qualifier5" type="t_string" size="33"/>
+   <field name="Qualifier6" type="t_string" size="33"/>
+   <field name="Qualifier7" type="t_string" size="33"/>
+   <field name="Qualifier8" type="t_string" size="33"/>
+   <field name="BidPrice1" type="t_double"/>
+   <field name="BidSize1" type="t_u64"/>
+   <field name="BidCount1" type="t_u32"/>
+   <field name="AskPrice1" type="t_double"/>
+   <field name="AskSize1" type="t_u64"/>
+   <field name="AskCount1" type="t_u32"/>
+   <field name="BidPrice2" type="t_double"/>
+   <field name="BidSize2" type="t_u64"/>
+   <field name="BidCount2" type="t_u32"/>
+   <field name="AskPrice2" type="t_double"/>
+   <field name="AskSize2" type="t_u64"/>
+   <field name="AskCount2" type="t_u32"/>
+   <field name="BidPrice3" type="t_double"/>
+   <field name="BidSize3" type="t_u64"/>
+   <field name="BidCount3" type="t_u32"/>
+   <field name="AskPrice3" type="t_double"/>
+   <field name="AskSize3" type="t_u64"/>
+   <field name="AskCount3" type="t_u32"/>
+   <field name="BidPrice4" type="t_double"/>
+   <field name="BidSize4" type="t_u64"/>
+   <field name="BidCount4" type="t_u32"/>
+   <field name="AskPrice4" type="t_double"/>
+   <field name="AskSize4" type="t_u64"/>
+   <field name="AskCount4" type="t_u32"/>
+   <field name="BidPrice5" type="t_double"/>
+   <field name="BidSize5" type="t_u64"/>
+   <field name="BidCount5" type="t_u32"/>
+   <field name="AskPrice5" type="t_double"/>
+   <field name="AskSize5" type="t_u64"/>
+   <field name="AskCount5" type="t_u32"/>
+   <field name="BidPrice6" type="t_double"/>
+   <field name="BidSize6" type="t_u64"/>
+   <field name="BidCount6" type="t_u32"/>
+   <field name="AskPrice6" type="t_double"/>
+   <field name="AskSize6" type="t_u64"/>
+   <field name="AskCount6" type="t_u32"/>
+   <field name="BidPrice7" type="t_double"/>
+   <field name="BidSize7" type="t_u64"/>
+   <field name="BidCount7" type="t_u32"/>
+   <field name="AskPrice7" type="t_double"/>
+   <field name="AskSize7" type="t_u64"/>
+   <field name="AskCount7" type="t_u32"/>
+   <field name="BidPrice8" type="t_double"/>
+   <field name="BidSize8" type="t_u64"/>
+   <field name="BidCount8" type="t_u32"/>
+   <field name="AskPrice8" type="t_double"/>
+   <field name="AskSize8" type="t_u64"/>
+   <field name="AskCount8" type="t_u32"/>
+   <field name="BidPrice9" type="t_double"/>
+   <field name="BidSize9" type="t_u64"/>
+   <field name="BidCount9" type="t_u32"/>
+   <field name="AskPrice9" type="t_double"/>
+   <field name="AskSize9" type="t_u64"/>
+   <field name="AskCount9" type="t_u32"/>
+   <field name="BidPrice10" type="t_double"/>
+   <field name="BidSize10" type="t_u64"/>
+   <field name="BidCount10" type="t_u32"/>
+   <field name="AskPrice10" type="t_double"/>
+   <field name="AskSize10" type="t_u64"/>
+   <field name="AskCount10" type="t_u32"/>
+ </FRDef>
+
+ <FRDef name="TradePhase" defid="40005">
+  <field name="TradePhase" type="t_string" size="13" />
+  <field name="ListedExchange" type="t_string" size="33" />
+ </FRDef>
+
+ <FRDef name="Stat" defid="40006">
+  <field name="StatusCode" type="t_string" size="13" />
+  <field name="ListedExchange" type="t_string" size="33" />
+ </FRDef>
+
+ <FRDef name="Auction" defid="40010" >
+  <field name="AuctionType" type="t_string" size="33"/> 
+  <field name="AuctionPrice" type="t_double"/>
+  <field name="AuctionVolume" type="t_u64"/>
+  <field name="ListedExchange" type="t_string" size="33"/>
+ </FRDef>
+
+ <FRDef name="Link" defid="40013">
+  <field name="NextLink" type="t_string" size="22" />
+  <field name="PreviousLink" type="t_string" size="22" />
+  <field name="ChildSym1" type="t_string" size="22" />
+  <field name="ChildSym2" type="t_string" size="22" />
+  <field name="ChildSym3" type="t_string" size="22" />
+  <field name="ChildSym4" type="t_string" size="22" />
+  <field name="ChildSym5" type="t_string" size="22" />
+  <field name="ChildSym6" type="t_string" size="22" />
+  <field name="ChildSym7" type="t_string" size="22" />
+  <field name="ChildSym8" type="t_string" size="22" />
+  <field name="ChildSym9" type="t_string" size="22" />
+  <field name="ChildSym10" type="t_string" size="22" />
+  <field name="ChildSym11" type="t_string" size="22" />
+  <field name="ChildSym12" type="t_string" size="22" />
+  <field name="ChildSym13" type="t_string" size="22" />
+  <field name="ChildSym14" type="t_string" size="22" />
+ </FRDef>
+
+ <FRDef name="GBQuote" defid="40014">
+  <field name="GBBidPrice" type="t_double" /> 
+  <field name="GBBidYield" type="t_double" /> 
+  <field name="GBISMABidYield" type="t_double" /> 
+  <field name="GBBid2" type="t_double" /> 
+  <field name="GBBidSize" type="t_double" /> 
+  <field name="GBAskPrice" type="t_double" /> 
+  <field name="GBAskYield" type="t_double" /> 
+  <field name="GBISMAAskYield" type="t_double" /> 
+  <field name="GBAsk2" type="t_double" /> 
+  <field name="GBAskSize" type="t_double" /> 
+  <field name="GBContributor" type="t_string" size="13" /> 
+  <field name="GBCtbrLoc" type="t_string" size="4" /> 
+ </FRDef>
+
+ <FRDef name="GBRefData" defid="40015">
+  <field name="GBExchangeID" type="t_string" size="4" /> 
+  <field name="GBCurrency" type="t_string" size="4" /> 
+  <field name="GBBondType" type="t_string" size="4" /> 
+  <field name="GBMaturity" type="t_string" size="12" /> 
+  <field name="GBCouponRate" type="t_double" /> 
+  <field name="GBCouponFrequency" type="t_string" size="9" /> 
+  <field name="GBRating" type="t_string" size="4" /> 
+  <field name="GBRatingSource" type="t_string" size="4" /> 
+  <field name="GBYieldType" type="t_string" size="4" /> 
+  <field name="GBNominal" type="t_double" />
+  <field name="GBTradingUnits" type="t_string" size="5" /> 
+  <field name="GBOfficialCode" type="t_string" size="13" /> 
+  <field name="GBOfficialCodeType" type="t_string" size="4" /> 
+  <field name="GBOfficialCode2" type="t_string" size="13" /> 
+  <field name="GBOfficialCode2Type" type="t_string" size="4" /> 
+  <field name="GBAccruedInterest" type="t_double" />
+  <field name="GBDuration" type="t_double" /> 
+  <field name="GBModifiedDuration" type="t_double" /> 
+  <field name="GBSettleDate" type="t_string" size="12" /> 
+  </FRDef>
+
+ <FRDef name="MMQuote" defid="40016">
+  <field name="rootsymbol" type="t_string" size="33" /> 
+  <field name="parentexchg" type="t_string" size="4" /> 
+  <field name="MarketMaker" type="t_string" size="5" /> 
+  <field name="MMBid" type="t_double" /> 
+  <field name="MMBidSize" type="t_double" /> 
+  <field name="MMAsk" type="t_double" /> 
+  <field name="MMAskSize" type="t_double" /> 
+  <field name="MMQualifier1" type="t_string" size="4" /> 
+  <field name="MMQualifier2" type="t_string" size="4" />
+  <field name="MMQualifier3" type="t_string" size="2" />
+ </FRDef>
+
+ <FRDef name="NAV" defid="40017">
+  <field name="NAV" type="t_double" />
+  <field name="TickDirectionRaw" type="t_u32" />
+  <field name="Date" type="t_string" size="12" />
+  <field name="TickCount" type="t_u32"/>
+  <field name="Qualifier1" type="t_string" size="33" />
+  <field name="Qualifier2" type="t_string" size="33" />
+  <field name="Qualifier3" type="t_string" size="33" />
+ </FRDef>
+
+ <FRDef name="PermData" defid="40018">
+  <field name="Permission" type="t_string" size="13" />
+ </FRDef>
+
+ <FRDef name="FIQuote" defid="40019">
+   <field name="BidPrice" type="t_double"/>
+   <field name="BidSize" type="t_u64"/>
+   <field name="BidCount" type="t_u32"/> 
+   <field name="BidBroker" type="t_string" size="33"/> 
+   <field name="BidTone" type="t_string" size="13"/>
+   <field name="BidExchange" type="t_string" size="33"/>
+   <field name="AskPrice" type="t_double"/>
+   <field name="AskSize" type="t_u64"/>
+   <field name="AskCount" type="t_u32"/> 
+   <field name="AskBroker" type="t_string" size="33"/> 
+   <field name="AskTone" type="t_string" size="13"/>
+   <field name="AskExchange" type="t_string" size="33"/>
+   <field name="ListedExchange" type="t_string" size="33"/>
+   <field name="TradingPhase" type="t_string" size="33"/> 
+   <field name="Qualifier1" type="t_string" size="33"/> 
+   <field name="Qualifier2" type="t_string" size="33"/> 
+   <field name="Qualifier3" type="t_string" size="33"/> 
+   <field name="Qualifier4" type="t_string" size="33"/> 
+   <field name="Qualifier5" type="t_string" size="33"/> 
+   <field name="Qualifier6" type="t_string" size="33"/> 
+   <field name="Qualifier7" type="t_string" size="33"/> 
+   <field name="Qualifier8" type="t_string" size="33"/> 
+   <field name="EstimatedNextPrice" type="t_double"/>
+   <field name="BidYield" type="t_double"/>
+   <field name="AskYield" type="t_double"/>
+   <field name="ISMABidYield" type="t_double"/>
+   <field name="ISMAAskYield" type="t_double"/>
+   <field name="SwapSpread" type="t_double"/>
+   <field name="AssetSwapSpread" type="t_double"/>
+   <field name="BMKSpread" type="t_double"/>
+   <field name="ZSpread" type="t_double"/>
+   <field name="OASpread" type="t_double"/>
+   <field name="DailyReturn" type="t_double"/>
+   <field name="ModifiedDuration" type="t_double"/>
+   <field name="Convexity" type="t_double"/>
+   <field name="BPV" type="t_double"/>
+   <field name="AccruedInterest" type="t_double"/>
+   <field name="InterpolatedCDSBasis" type="t_double"/>
+   <field name="InterpolatedCDSSpread" type="t_double"/>
+   <field name="ClosestToMatCDSBasis" type="t_double"/>
+   <field name="SimpleMargin" type="t_double"/>
+   <field name="DiscountMargin" type="t_double"/>
+   <field name="Duration" type="t_double"/>
+   <field name="Equity" type="t_double"/>
+   <field name="Parity" type="t_double"/>
+   <field name="Premium" type="t_double"/>
+   <field name="CreditSpread" type="t_double"/>
+   <field name="InputVolatility" type="t_double"/>
+   <field name="BMKYield" type="t_double"/>
+   <field name="BaseIndex" type="t_double"/>
+   <field name="CurrentIndex" type="t_double"/>
+   <field name="IndexRatio" type="t_double"/>
+ </FRDef>
+
+ <FRDef name=" FIRefData " defid="40020">
+  <field name="Currency" type="t_string" size="4" />
+  <field name="BondType" type="t_string" size="4" />
+  <field name="MaturityDate" type="t_string" size="14" />
+  <field name="CouponRate" type="t_double" />
+  <field name="CouponFrequency" type="t_string" size="9" />
+  <field name="Rating" type="t_string" size="5" />
+  <field name="RatingSource" type="t_string" size="4" />
+  <field name="TradingUnits" type="t_string" size="5" />
+  <field name="OfficialCode" type="t_string" size="13" />
+  <field name="OfficialCodeType" type="t_string" size="4" />
+  <field name="OfficialCode2" type="t_string" size="13" />
+  <field name="OfficialCode2Type" type="t_string" size="4" />
+  <field name="BackgroundRef" type="t_string" size="22" />
+  <field name="SettleDate" type="t_string" size="14" />
+  <field name="IssueDate" type="t_string" size="14" />
+  <field name="IssuePrice" type="t_double" />
+  <field name="Ticker" type="t_string" size="7" />
+  <field name="AmountOS" type="t_string" size="7" />
+ </FRDef>
+
+ </FRDict>
+</FRRecordDefs>

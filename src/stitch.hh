@@ -123,7 +123,7 @@ namespace hilo
 						break;
 					due_time_ += td_;
 				}
-			} catch (boost::thread_interrupted const&) {
+			} catch (const boost::thread_interrupted&) {
 				LOG(INFO) << "Timer thread interrupted.";
 			}
 		}
